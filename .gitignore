@@ -14,7 +14,8 @@ __pycache__/
 papers/
 ../papers/
 
-# root-level build-artifact PDFs (the canonical served copies live in web/site/pdf/)
+# PDFs are distributed via GitHub Releases, not committed (keeps the repo lean)
 /TheCompressionBook-Vol*.pdf
 /TheCompressionBook-VolI.pdf
 /sk.pdf
+web/site/pdf/

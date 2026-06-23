@@ -1,0 +1,24 @@
+The Compression Book — Licensing
+=================================
+
+This repository contains two kinds of material under two different licenses.
+
+1. THE BOOK CONTENT — prose, figures, diagrams, and the typeset book
+   (everything under chapters/, the .typ chapter sources, the built website in
+   web/site/, and the PDFs) — is licensed under:
+
+       Creative Commons Attribution 4.0 International (CC BY 4.0)
+
+   The Compression Book © 2026 Alexandre Betry is licensed under CC BY 4.0.
+   You are free to share and adapt the material for any purpose, even
+   commercially, provided you give appropriate credit.
+   Full text: https://creativecommons.org/licenses/by/4.0/legalcode
+   Summary:   https://creativecommons.org/licenses/by/4.0/
+
+2. THE SOURCE CODE — the build tooling and all program code, including
+   build_site.py, lib.typ, web.typ, and every Python code listing and the
+   `tinyzip` project source that appears in the book — is licensed under the
+   MIT License (see LICENSE-CODE).
+
+If you redistribute or adapt the book, attribute it as:
+   "The Compression Book by Alexandre Betry (CC BY 4.0)".

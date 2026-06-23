@@ -7,6 +7,8 @@ ROOT = "/home/ezechiel203/Projects/RESEARCH/compression/book"
 SITE = f"{ROOT}/web/site"
 RAW = f"{SITE}/_raw"
 TYPST = os.path.expanduser("~/.local/bin/typst")
+# PDFs are distributed via a GitHub Release (keeps the repo/Pages lean); links point there.
+PDF_BASE = "https://github.com/ezechiel203/the-compression-book/releases/download/v1.0.0"
 os.makedirs(RAW, exist_ok=True)
 os.makedirs(f"{SITE}/pdf", exist_ok=True)
 
@@ -52,10 +54,10 @@ def sidebar(cur):
     parts.append('</nav>')
     return "".join(parts)
 
-TOPBAR = ('<div class="topbar"><button id="menuBtn" aria-label="menu">☰</button>'
-          '<a class="brand" href="index.html">The Compression Book</a>'
-          '<span class="spacer"></span><span class="vol">{vol}</span>'
-          '<a href="pdf/TheCompressionBook-{volfile}.pdf" class="vol">PDF ↓</a></div>')
+TOPBAR = (f'<div class="topbar"><button id="menuBtn" aria-label="menu">☰</button>'
+          f'<a class="brand" href="index.html">The Compression Book</a>'
+          f'<span class="spacer"></span><span class="vol">{{vol}}</span>'
+          f'<a href="{PDF_BASE}/TheCompressionBook-{{volfile}}.pdf" class="vol">PDF ↓</a></div>')
 SCRIPT = ('<script>document.getElementById("menuBtn").onclick=function(){'
           'document.getElementById("sb").classList.toggle("open")};'
           'document.querySelectorAll(".sidebar a").forEach(a=>a.onclick=()=>'
@@ -108,7 +110,7 @@ for i, v in enumerate(volumes, 1):
     pp = pages_of(pdf)
     cards.append(f'<a class="volcard" href="ch{first:02d}.html"><div class="vn">{html.escape(vol_short[v])}</div>'
                  f'<div class="vt">{html.escape(vol_title[v])}</div>'
-                 f'<div class="vm">{len(cs)} chapters · {pp} pp · <a href="pdf/TheCompressionBook-Vol{i}.pdf">PDF</a></div></a>')
+                 f'<div class="vm">{len(cs)} chapters · {pp} pp · <a href="{PDF_BASE}/TheCompressionBook-Vol{i}.pdf">PDF</a></div></a>')
 total_pp = sum(pages_of(f"{SITE}/pdf/TheCompressionBook-Vol{i}.pdf") for i in range(1, 6))
 index = f'''<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -123,7 +125,7 @@ solutions, and diagrams throughout. Read it in your browser, or download each vo
 <div class="volgrid">{''.join(cards)}</div>
 <p class="dl"><b>Start reading:</b> <a href="ch01.html">Chapter 1 — What Is Compression?</a>
 &nbsp;·&nbsp; {total_pp} pages total &nbsp;·&nbsp;
-<a href="pdf/TheCompressionBook-Vol1.pdf">all PDFs in the menu</a></p>
+<a href="{PDF_BASE}/TheCompressionBook-Vol1.pdf">download PDFs</a></p>
 </div></body></html>'''
 open(f"{SITE}/index.html", "w").write(index)
 

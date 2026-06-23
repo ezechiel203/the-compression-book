@@ -29,10 +29,10 @@ else from scratch. Five volumes, **81 chapters, ~768,000 words, ~4,068 pages**.
 
 ## Read it
 
-- **Website** (reflowable HTML, responsive, with collapsible solutions and SVG diagrams):
-  the built site is in [`web/site/`](web/site/). Serve it locally with
-  `cd web/site && python3 -m http.server 9999` then open <http://localhost:9999/>.
-- **PDFs**: one per volume, in [`web/site/pdf/`](web/site/pdf/).
+- **Online** (reflowable, responsive, with collapsible solutions and SVG diagrams):
+  **<https://ezechiel203.github.io/the-compression-book/>**
+- **PDFs**: one per volume, on the [latest release](https://github.com/ezechiel203/the-compression-book/releases/latest).
+- **Locally**: `cd web/site && python3 -m http.server 9999` then open <http://localhost:9999/>.
 
 ## Build it yourself
 
@@ -68,4 +68,6 @@ invariant, cross-chapter articulation, and `tinyzip` consistency), typeset with 
 
 ## License
 
-© 2026. All rights reserved unless a license file is added.
+Dual-licensed: the **book content** (prose, figures, the typeset book) under
+[CC BY 4.0](LICENSE), and the **source code** (build tooling, `lib.typ`/`web.typ`,
+`build_site.py`, and the `tinyzip` code) under the [MIT License](LICENSE-CODE).
