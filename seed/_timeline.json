@@ -1,0 +1,252 @@
+{
+ "timeline": [
+  {
+   "year": "1924-1928",
+   "event": "Harry Nyquist (1924) and Ralph Hartley (1928) lay the quantitative groundwork for information theory at Bell Labs."
+  },
+  {
+   "year": "1948",
+   "event": "Claude Shannon publishes 'A Mathematical Theory of Communication', introducing entropy, the bit, and the source coding theorem (entropy H as the lossless compression lower bound); Shannon and Fano develop Shannon-Fano coding; the paper also sketches the rate for a source relative to a fidelity criterion, seeding rate-distortion theory."
+  },
+  {
+   "year": "1951",
+   "event": "Shannon estimates the entropy of printed English at ~1-1.5 bits per character via human next-letter prediction experiments."
+  },
+  {
+   "year": "1952",
+   "event": "David Huffman publishes the optimal prefix-code construction ('A Method for the Construction of Minimum-Redundancy Codes', Proceedings of the IRE)."
+  },
+  {
+   "year": "1959",
+   "event": "Shannon's 'Coding Theorems for a Discrete Source with a Fidelity Criterion' (IRE Convention Record) formalizes and names the rate-distortion function R(D) for lossy compression."
+  },
+  {
+   "year": "1960-1964",
+   "event": "Ray Solomonoff introduces algorithmic probability, shortest-program description, and universal inductive inference, reducing optimal prediction to data compression and grounding the later compression-equals-prediction argument."
+  },
+  {
+   "year": "1965",
+   "event": "Andrey Kolmogorov independently defines the complexity of an individual string (Kolmogorov complexity), the shortest-program length of a string."
+  },
+  {
+   "year": "1966-1969",
+   "event": "Gregory Chaitin independently develops algorithmic complexity theory and later defines the uncomputable halting probability Omega."
+  },
+  {
+   "year": "1974",
+   "event": "Nasir Ahmed, T. Natarajan, and K. R. Rao publish the Discrete Cosine Transform (DCT) in IEEE Transactions on Computers, a fast signal-independent approximation to the KLT."
+  },
+  {
+   "year": "1976",
+   "event": "Jorma Rissanen and Richard Pasco independently publish practical finite-precision arithmetic coding, decoupling the probabilistic model from the bit-coder."
+  },
+  {
+   "year": "1977",
+   "event": "Abraham Lempel and Jacob Ziv publish LZ77 (sliding-window dictionary coding) in IEEE Trans. Information Theory; Karlheinz Brandenburg begins research on perceptual audio coding at the University of Erlangen-Nuremberg."
+  },
+  {
+   "year": "1978",
+   "event": "Lempel and Ziv publish LZ78 (explicit-dictionary variant); Jorma Rissanen publishes 'Modeling by Shortest Data Description', coining the Minimum Description Length (MDL) principle and the two-part code."
+  },
+  {
+   "year": "1979",
+   "event": "Rissanen and Langdon publish 'Arithmetic Coding' (IBM J. Res. Dev.); G. Nigel N. Martin presents range coding at Southampton."
+  },
+  {
+   "year": "1980",
+   "event": "Boris Ryabko describes the Move-To-Front (book stack) transform (later independently presented by Bentley, Sleator, Tarjan and Wei in 1986)."
+  },
+  {
+   "year": "1981",
+   "event": "Krichevsky and Trofimov give the add-1/2 estimator with ~(1/2)log2(n)-per-parameter universal redundancy."
+  },
+  {
+   "year": "1984",
+   "event": "Terry Welch (Sperry) publishes LZW ('A Technique for High-Performance Data Compression', IEEE Computer, June); John Cleary and Ian Witten introduce PPM (Prediction by Partial Matching), with variants PPMA and PPMB."
+  },
+  {
+   "year": "1985",
+   "event": "LZW patent US 4,558,302 issued (December)."
+  },
+  {
+   "year": "1986",
+   "event": "Princen and Bradley publish analysis/synthesis filter banks based on time-domain aliasing cancellation (TDAC), the precursor to the MDCT."
+  },
+  {
+   "year": "1987",
+   "event": "Princen, Johnson, and Bradley introduce the full MDCT at ICASSP (the lapped transform underlying modern lossy audio codecs); Witten, Neal, and Cleary publish the widely-used practical arithmetic coding implementation (Communications of the ACM); CompuServe's GIF format adopts LZW compression."
+  },
+  {
+   "year": "1988",
+   "event": "ITU-T H.261 establishes the macroblock + motion-compensation + DCT template for video coding."
+  },
+  {
+   "year": "1988-1990",
+   "event": "IBM files/obtains the QM-coder patent US 4,905,297 (granted Feb 1990), part of the arithmetic-coding patent thicket."
+  },
+  {
+   "year": "late 1980s",
+   "event": "JJ Johnston (Bell Labs) defines perceptual entropy and builds PXFM; Brandenburg's OCF and these ideas merge into ASPEC."
+  },
+  {
+   "year": "1990",
+   "event": "Alistair Moffat improves PPM with variants PPMC and PPMD; Manber and Myers introduce suffix arrays (SODA), the data structure that makes practical BWT construction feasible."
+  },
+  {
+   "year": "1991",
+   "event": "Phil Katz designs DEFLATE for PKZIP 2 (later RFC 1951, 1996)."
+  },
+  {
+   "year": "1991-1993",
+   "event": "MP3 (MPEG-1 Audio Layer III) standardized at Fraunhofer IIS: committee draft 1991, finalized 1992, published 1993 as ISO/IEC 11172-3, bringing psychoacoustic masking and the MDCT to mass audio compression."
+  },
+  {
+   "year": "1992",
+   "event": "JPEG image standard published as ITU-T T.81 / ISO 10918-1 (DCT + perceptually-tuned quantization + Huffman; Wallace's explanatory papers 1991-1992); it specifies an arithmetic-coding mode (~10% better) but the free IJG implementation ships only Huffman; MPEG-1 video standardized, introducing the I/P/B frame structure."
+  },
+  {
+   "year": "1994",
+   "event": "Burrows and Wheeler publish the Burrows-Wheeler Transform in DEC SRC Research Report 124, 'A Block-Sorting Lossless Data Compression Algorithm'; Unisys announces GIF/LZW royalty enforcement (December)."
+  },
+  {
+   "year": "1994-1995",
+   "event": "MPEG-2 / H.262 finalized; becomes the codec of DVD and digital television."
+  },
+  {
+   "year": "1995",
+   "event": "The '.mp3' file extension chosen via an internal Fraunhofer IIS poll (July)."
+  },
+  {
+   "year": "1996",
+   "event": "Julian Seward releases bzip2 (18 July), the canonical RLE+BWT+MTF+RLE+Huffman pipeline (Huffman chosen to avoid arithmetic-coding patents); PNG released as a lossless, patent-free alternative to GIF using prediction filters plus DEFLATE and adding an alpha channel."
+  },
+  {
+   "year": "1997",
+   "event": "AAC standardized as MPEG-2 Part 7 (ISO/IEC 13818-7, April) by Fraunhofer, Dolby, Sony, AT&T and Nokia; folded into MPEG-4 in 1999."
+  },
+  {
+   "year": "1998",
+   "event": "Igor Pavlov begins developing LZMA, later the core of 7-Zip; Fraunhofer/Thomson begin enforcing MP3 patent licensing (September), triggering the royalty-free codec movement."
+  },
+  {
+   "year": "2000",
+   "event": "JPEG 2000 adopts wavelet transforms as a multi-scale alternative to block DCT; Ferragina and Manzini introduce the FM-index, turning the BWT into a compressed searchable self-index; Matt Mahoney publishes 'Fast Text Compression with Neural Networks' (AAAI FLAIRS); Chris Montgomery's Xiph.Org freezes Ogg Vorbis 1.0 (May), a royalty-free MDCT codec."
+  },
+  {
+   "year": "2000-2001",
+   "event": "JPEG 2000 (ISO 15444-1) finalized with wavelet coding; technically superior but adoption lagged due to memory/compute cost and patent uncertainty."
+  },
+  {
+   "year": "2001",
+   "event": "Josh Coalson releases FLAC 1.0 under a BSD license; Apple ships the iPod, accelerating MP3/AAC adoption."
+  },
+  {
+   "year": "2002",
+   "event": "Mahoney releases PAQ1, launching the PAQ context-mixing family; Dmitry Shkarin's PPMII/PPMd sets the PPM ratio standard."
+  },
+  {
+   "year": "2003",
+   "event": "H.264/AVC finalized (May) by the Joint Video Team of ITU-T VCEG and ISO/IEC MPEG; ~2x MPEG-2 efficiency, the long-running workhorse codec."
+  },
+  {
+   "year": "2006",
+   "event": "Marcus Hutter founds the Hutter Prize on enwik8, framing compression as a proxy for intelligence; Mahoney's paq8f sets the baseline and Alexander Rhatushnyak wins with paq8hp5."
+  },
+  {
+   "year": "2007",
+   "event": "Jarek Duda proposes Asymmetric Numeral Systems (ANS); core IBM arithmetic-coding patents (e.g. US 4,905,297) lapse, but the ecosystem has long since standardized on Huffman; Legg and Hutter publish a universal mathematical measure of machine intelligence."
+  },
+  {
+   "year": "2009",
+   "event": "Jarek Duda publishes the ANS paper (arXiv:0902.0271), refined through ~2013; Bowtie (Langmead et al.) and BWA (Li and Durbin) use FM-indexes for fast genomic read alignment."
+  },
+  {
+   "year": "2009-2015",
+   "event": "Mahoney develops ZPAQ, a self-describing archival context-mixing format."
+  },
+  {
+   "year": "2010",
+   "event": "Google acquires On2 (Feb, ~$124.6M) and releases royalty-free VP8 (May) in the WebM container; Google announces WebP, based on VP8's intra coding."
+  },
+  {
+   "year": "2011",
+   "event": "Yann Collet releases LZ4 and Google releases Snappy (speed-first LZ codecs); CRAM reference-based genomic format introduced (Fritz et al.); product quantization for vector search introduced (Jegou, Douze, Schmid)."
+  },
+  {
+   "year": "2012",
+   "event": "Opus standardized as IETF RFC 6716 (September), combining SILK and CELT for royalty-free low-latency audio."
+  },
+  {
+   "year": "2013",
+   "event": "H.265/HEVC finalized (~50% over H.264) but hit by patent-pool fragmentation; Google's VP9 released (June); Apache Parquet columnar format released, based on Google's Dremel design."
+  },
+  {
+   "year": "2014",
+   "event": "zfp error-bounded floating-point array compressor introduced by Peter Lindstrom (LLNL)."
+  },
+  {
+   "year": "2015",
+   "event": "Facebook's Zstandard and Apple's LZFSE ship using ANS for entropy coding; Google open-sources Brotli (Alakuijala and Szabadka; RFC 7932 in 2016); HEIF container standardized by MPEG (HEIC pairs it with HEVC/H.265); Alliance for Open Media (AOMedia) formed (Sept); Gorilla time-series compression (Pelkonen et al., VLDB); Deep Compression pruning (Han, Mao, Dally) and knowledge distillation (Hinton, Vinyals, Dean)."
+  },
+  {
+   "year": "2016",
+   "event": "Yann Collet releases Zstandard v1.0 at Facebook (Aug 31; later RFC 8878); SZ prediction-based error-bounded lossy compressor introduced (Di and Cappello, Argonne)."
+  },
+  {
+   "year": "2016-2017",
+   "event": "Johannes Balle, Valero Laparra, and Eero Simoncelli introduce end-to-end optimized image compression and the quantization-as-noise trick (ICLR 2017, with a 2016 GDN precursor), launching learned nonlinear transform coding via rate-distortion-optimized autoencoders (Balle and Theis, independently)."
+  },
+  {
+   "year": "2017",
+   "event": "zstd enters the Linux kernel (4.14, November) for btrfs/squashfs/modules; Rhatushnyak's phda9 wins the enwik8-era Hutter Prize (15,284,944 bytes, Nov 4); Apple makes HEIC the default iPhone photo format; the last relevant MP3 US patents expire (~April) and Fraunhofer terminates its MP3 licensing program; Google's PIK and the JPEG XL effort adopt ANS as their entropy coder."
+  },
+  {
+   "year": "2018",
+   "event": "AV1 released by AOMedia (royalty-free, ~30% better than HEVC; YouTube begins deployment); Balle, Minnen et al. publish the scale hyperprior (ICLR), and Minnen, Balle, Toderici add an autoregressive context model (NeurIPS), the first learned codec to beat BPG on PSNR and MS-SSIM; after USPTO rejection and EFF advocacy, Google abandons its broad ANS patent application; Gagie, Navarro and Prezza present the r-index (SODA), an O(r)-space BWT index for highly repetitive texts."
+  },
+  {
+   "year": "2019",
+   "event": "AVIF specification 1.0 released (Feb 19), the royalty-free AV1-based image format from AOMedia; Google's PIK adopts ANS; Blau and Michaeli formalize the rate-distortion-perception tradeoff; Lu et al. present DVC (CVPR), the first fully end-to-end neural video codec; Fabrice Bellard releases the first nncp neural lossless compressor (LSTM-based)."
+  },
+  {
+   "year": "2020",
+   "event": "H.266/VVC finalized (6 July), ~50% over HEVC; Netflix begins AV1 streaming; the Hutter Prize switches to the 1 GB enwik9 and expands the purse to 500,000 euro; HiFiC (Mentzer et al., NeurIPS) uses a GAN loss for high-fidelity generative image compression preferred over MSE codecs at half the bitrate; AVIF gains browser support starting with Chrome 85."
+  },
+  {
+   "year": "2021",
+   "event": "nncp v2 switches to a Transformer architecture, topping the Large Text Compression Benchmark; COIN (Dupont et al., ICLR workshop) compresses images by overfitting and storing a small network's weights; Microsoft's DCVC conditional-coding video line begins; LoRA low-rank adaptation introduced (Hu et al.); Firefox 93 adds AVIF support."
+  },
+  {
+   "year": "2021-2022",
+   "event": "JPEG XL (ISO/IEC 18181) finalized, merging Google's PIK and Cloudinary's FUIF; royalty-free, ANS-based, with lossless JPEG transcoding."
+  },
+  {
+   "year": "2022",
+   "event": "Microsoft obtains a US patent on an rANS modification despite Duda's prior art, reviving patent-thicket concerns; GPTQ one-shot LLM weight quantization (Frantar et al.); CRAM 3.1 published; Safari 16.1 adds AVIF support (reaching >95% of users)."
+  },
+  {
+   "year": "2023",
+   "event": "Delétang, Ruoss et al. (Google DeepMind) publish 'Language Modeling Is Compression' (arXiv:2309.10668), showing a 70B Chinchilla LLM + arithmetic coding compresses LibriSpeech to 16.4% (vs FLAC's 30.3%) and ImageNet patches to 43.4% (vs PNG's 58.5%), empirically uniting prediction and compression; Saurabh Kumar's fast-cmix wins the Hutter Prize; Bellard releases ts_zip; Google removes JPEG XL from Chrome 110 citing weak ecosystem interest and memory-safety concerns, sparking community backlash."
+  },
+  {
+   "year": "2024",
+   "event": "Kaido Orav's fx-cmix (Feb), then fx2-cmix with Byron Knoll (submitted Aug 11, accepted Oct 8) set the current enwik9 Hutter Prize record of 110,793,128 bytes (7,950 euro); 'Language Modeling Is Compression' presented at ICLR; Huang, Zhang, Shan, He publish 'Compression Represents Intelligence Linearly' (r about -0.95); Opus 1.5 (March) adds ML tools LACE/NoLACE and DRED; AWQ wins MLSys Best Paper; DeepSeek-V2 (May) and V3 (Dec) ship Multi-head Latent Attention; CUSZ-i GPU compressor at SC24; JARVIS3 genomic encoder; DCVC-DC/FM reportedly surpass VVC/H.266; JPEG AI's first edition published (October)."
+  },
+  {
+   "year": "2025",
+   "event": "JPEG AI approved as an ISO/IEC/ITU International Standard (Jan); zstd v1.5.7 (February) adds hooks for Intel QAT hardware-accelerated match finding; one-step diffusion codecs StableCodec (ICCV) and OneDC (NeurIPS) reach ultra-low bitrates below 0.01 bpp; Trifecta Tech Foundation ships libbzip2-rs / bzip2 crate 0.6.0 (June), a 100% Rust reimplementation, and a dynamic r-index appears on arXiv (April); Access Advance acquires Via-LA's HEVC/VVC pools (Dec)."
+  },
+  {
+   "year": "2026",
+   "event": "Chrome 145 (Feb 10/11, 2026) re-adds JPEG XL via a memory-safe Rust decoder (jxl-rs), with default-on enablement expected across Chromium/Edge in H2 2026; sub-2-bit vector quantization (VPTQ, QTIP), KV-cache compression (PolarQuant, AISTATS 2026), and LLM-assisted genomic compressors (AgentGC) push the frontier; AOMedia year-end-2025 AV2 launch (~30% over AV1) rolls out; compression rate is adopted as a robustness/quality metric for evaluating LLMs, with consensus shifting to viewing compression as a necessary signature of capable models rather than a complete definition of intelligence; Opus remains the reference real-time/VoIP/WebRTC codec."
+  }
+ ],
+ "corrections": [
+  "Deduplicated and merged numerous repeated milestones that appeared across draft sections: Shannon 1948 (3 copies), Shannon 1959 rate-distortion (2 copies), Solomonoff algorithmic probability (3 copies), Kolmogorov/Chaitin complexity (2 copies), bzip2 1996 (2 copies), Princen/Bradley MDCT 1986-1987 (2 copies), JPEG 1992 (2 copies), Rissanen arithmetic coding 1976 (2 copies), Hutter Prize 2006 (2 copies), ANS/Duda 2007-2009 (2 copies), fx2-cmix Hutter record (3 copies), Blau-Michaeli RDP tradeoff (2 copies), and the DeepMind 'Language Modeling Is Compression' paper (4 copies).",
+  "Standardized the dating of DeepMind's 'Language Modeling Is Compression': arXiv preprint is September 2023 (arXiv:2309.10668) and the paper was presented at ICLR 2024 — both facts retained rather than treating the two draft entries (2023 vs 2024) as conflicting/separate events. All quantitative claims verified (LibriSpeech 16.4% vs FLAC 30.3%, ImageNet patches 43.4% vs PNG 58.5%).",
+  "Reconciled the MP3 standardization date: one draft entry said '1993' and another said '1991-1993'. Verified that the correct framing is the multi-year ISO process (committee draft 1991, finalized 1992, published 1993 as ISO/IEC 11172-3); used '1991-1993' and removed the standalone '1993 standardized' claim.",
+  "Verified the LZW timeline: Welch's paper is 1984 (IEEE Computer, June) and the LZW patent US 4,558,302 issued December 1985 — split into separate 1984 and 1985 entries to avoid conflating publication with patent issuance.",
+  "Confirmed (no change needed) several easily-mistaken facts: Shannon 1959 rate-distortion paper title and venue; Manber-Myers suffix arrays 1990 (SODA); Burrows-Wheeler DEC SRC Research Report 124 (1994); Witten-Neal-Cleary arithmetic coding 1987 (CACM); Ahmed-Natarajan-Rao DCT 1974 (IEEE Trans. Computers); H.266/VVC finalized 6 July 2020; AVIF 1.0 spec 19 Feb 2019; zstd Content-Encoding in Chrome 123 (March 2024) and Firefox 126 (May 2024); phda9 Hutter Prize record 15,284,944 bytes (Nov 2017); fx2-cmix enwik9 record 110,793,128 bytes; Chrome 145 JPEG XL re-add via jxl-rs (Feb 2026).",
+  "Reorganized all entries into a single chronologically sorted master timeline, placing multi-year-range entries (e.g. 1991-1993, 2016-2017) at the start year of their range and folding same-year events from different draft sections together."
+ ]
+}

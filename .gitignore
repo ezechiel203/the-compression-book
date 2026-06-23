@@ -1,0 +1,20 @@
+# backups / intermediates / build scratch
+drafts_v1/
+chapters_preaudit/
+web/site/_raw/
+_serve/
+chapters/_web*.typ
+_chk.typ
+_maintest.typ
+__pycache__/
+*.pyc
+.DS_Store
+
+# downloaded source papers (copyrighted; not ours to redistribute)
+papers/
+../papers/
+
+# root-level build-artifact PDFs (the canonical served copies live in web/site/pdf/)
+/TheCompressionBook-Vol*.pdf
+/TheCompressionBook-VolI.pdf
+/sk.pdf

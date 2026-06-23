@@ -1,0 +1,1123 @@
+#import "../lib.typ": *
+#import "@preview/cetz:0.4.2"
+
+= Learned Image Compression: Autoencoders and Hyperpriors
+
+#epigraph[
+  We do not design the transform. We design the _objective_, and let the
+  gradient find the transform.
+][paraphrasing Johannes Ballé, on end-to-end optimized compression]
+
+Here is a puzzle that should bother you. For fifty years, every image codec
+worth the name was built the same way. A human engineer sat down, reasoned
+about the mathematics of natural pictures, and _hand-designed_ a transform to
+shuffle the pixels into a more compressible shape. For JPEG (Chapter 42) that
+transform was the discrete cosine transform, an idea borrowed from Fourier and
+pinned down in 1974. For JPEG 2000 (Chapter 43) it was the wavelet. Then came a
+quantizer, also hand-tuned, and an entropy coder, also hand-tuned, and the
+three were bolted together and shipped. The DCT did not _know_ anything about
+photographs of cats or sunsets or circuit boards. It was a fixed mathematical
+recipe that happened to work reasonably well on the kinds of smooth, locally
+correlated signals that cameras produce.
+
+So here is the puzzle. We _have_ millions of real photographs sitting on disk.
+We _have_, since Chapter 56, a machine — the neural network — that can look at
+millions of examples and discover structure no human bothered to write down.
+Why on earth are we still using a transform that was designed before most
+photographs were even digital? Why not let the machine look at a mountain of
+real images and _invent its own transform_, one shaped precisely to the
+statistics of the pictures we actually send each other — and, while it is at it,
+invent its own quantizer and its own entropy model too, all three trained
+_together_ so they cooperate instead of merely coexisting?
+
+That question, asked seriously around 2016, set off the most important shift in
+image compression since JPEG. The answer is a family of codecs that contain no
+hand-designed transform at all. They are trained, the way a child learns faces,
+by being shown an enormous number of examples and nudged — millions of tiny
+nudges — toward producing small files that still look right. By 2018 these
+_learned codecs_ matched the best hand-built engineering. By 2025 the very first
+international standard built on them, JPEG AI, was beating the reigning video-grade
+still codec by nearly thirty percent. This chapter is the story of how that
+happened, and exactly how the machinery works, built from the pieces you already
+own.
+
+#recap[
+  We are standing on a tall stack. From *Chapter 21* we have the
+  *rate–distortion function* $R(D)$: the unavoidable trade between bits spent
+  and distortion suffered, and the Lagrangian way of exploring it by minimizing
+  $D + lambda R$. From *Chapters 18–19* we have *entropy* $H$ as the true cost
+  in bits of a symbol stream, and the fact that a good *probability model* is
+  what lets an entropy coder (*Chapters 24, 26, 27*) actually reach that cost.
+  From *Chapter 23* we have the hinge of the whole book: *compression is
+  prediction* — the better you predict the next symbol, the fewer bits it costs.
+  From *Chapter 42* we have the *transform → quantize → entropy-code* pipeline of
+  JPEG, the skeleton we are about to rebuild out of neural parts. And from
+  *Chapter 56* we have the *autoencoder*: an encoder network that squeezes data
+  through a narrow *bottleneck* and a decoder network that reconstructs it,
+  trained by *gradient descent* to make the reconstruction faithful. This
+  chapter fuses all of that into one trained machine.
+]
+
+#objectives((
+  [Explain why a learned codec keeps JPEG's three-stage skeleton but replaces every stage with a trained neural network.],
+  [Write down the *rate–distortion loss* $L = R + lambda D$ that a learned codec minimizes, and say in plain words what each term costs.],
+  [Explain the *quantization gradient problem* — why rounding breaks training — and the *additive-uniform-noise* trick that repairs it.],
+  [Understand *GDN*, the biologically-inspired nonlinearity Ballé used in place of the everyday activation function.],
+  [Explain a *hyperprior*: a second little autoencoder that transmits side information describing the entropy model itself, and why that beats a fixed prior.],
+  [Trace the *context model* idea — predicting each latent from its decoded neighbours — and the brutal speed cost of doing it serially, plus the 2020 fixes that made it parallel.],
+  [Place the milestone papers (Ballé 2016/2017/2018, Minnen 2018, Cheng 2020, Minnen–Singh 2020) and the JPEG AI standard on a clear timeline, and state honestly where learned codecs win and lose in 2026.],
+))
+
+== The same skeleton, new bones
+
+Let us begin by refusing to throw anything away. The learned codec is not a
+revolution that burns the past; it is a renovation that keeps the load-bearing
+walls. Look again at the JPEG pipeline from Chapter 42. An image goes in. A
+*transform* (the DCT) spreads its energy so that most of the information piles
+up into a few numbers and the rest are near zero. Those transform numbers are
+*quantized* — rounded to a coarse grid, and this is the _only_ lossy step, the
+one place information is actually thrown away. Finally an *entropy coder*
+(Huffman, in classic JPEG) writes the quantized numbers to bits, spending fewer
+bits on the common values and more on the rare ones.
+
+#fig([The three-stage skeleton, classical and learned, side by side. The boxes
+are the same; only their _contents_ change from fixed recipes to trained
+networks.], cetz.canvas({
+  import cetz.draw: *
+  let stage(x, y, w, t1, t2, col) = {
+    rect((x, y), (x + w, y + 0.9), fill: col, stroke: 0.6pt)
+    content((x + w/2, y + 0.6), text(size: 7pt, weight: "bold")[#t1])
+    content((x + w/2, y + 0.28), text(size: 6pt)[#t2])
+  }
+  // classical row
+  content((-0.7, 2.45), text(size: 7pt, weight: "bold")[JPEG])
+  stage(0.4, 2.0, 1.8, "transform", "fixed DCT", rgb("#eef4fb"))
+  stage(2.5, 2.0, 1.8, "quantize", "fixed step", rgb("#fbf7ef"))
+  stage(4.6, 2.0, 1.9, "entropy code", "Huffman", rgb("#eef4fb"))
+  line((2.2, 2.45), (2.5, 2.45), mark: (end: ">"))
+  line((4.3, 2.45), (4.6, 2.45), mark: (end: ">"))
+  // learned row
+  content((-0.7, 0.95), text(size: 7pt, weight: "bold")[learned])
+  stage(0.4, 0.5, 1.8, "g_a network", "trained", rgb("#e6f0ea"))
+  stage(2.5, 0.5, 1.8, "quantize", "round", rgb("#e6f0ea"))
+  stage(4.6, 0.5, 1.9, "entropy code", "learned p", rgb("#e6f0ea"))
+  line((2.2, 0.95), (2.5, 0.95), mark: (end: ">"))
+  line((4.3, 0.95), (4.6, 0.95), mark: (end: ">"))
+  content((3.4, -0.2), text(size: 6.5pt, style: "italic")[same three jobs — every box now learned from data])
+}))
+
+The learned codec keeps all three boxes and rips out their fixed contents. The
+transform becomes a neural network. The quantizer stays a rounding step (we will
+see it must, and why that is the hard part). The entropy coder stays a real
+arithmetic or range coder from Chapter 26 — but the _probability model_ that
+drives it becomes a neural network too. And the masterstroke, the thing that
+makes the whole idea work, is that all the trainable parts are optimized
+*together, end to end*, against a single objective that counts both the bits and
+the damage. Nothing is tuned in isolation. The transform learns to produce
+numbers that the entropy model finds cheap to code; the entropy model learns the
+exact statistics the transform produces. They grow up together.
+
+=== An autoencoder with a price tag
+
+In Chapter 56 you met the *autoencoder*: two networks back to back. The
+*encoder*, which we will now call $g_a$ (the "analysis transform"), takes the
+image $x$ and produces a compact bundle of numbers we call the *latent*,
+$y = g_a (x)$. The *decoder*, $g_s$ (the "synthesis transform"), takes a latent
+and rebuilds a picture, $hat(x) = g_s (hat(y))$. The hat on $hat(y)$ is a
+warning that the latent we actually transmit is not exactly $y$; it has been
+quantized first. The hat on $hat(x)$ is the matching warning that what comes out
+is not exactly what went in — this is lossy compression, after all.
+
+#gomaths("Function names with subscripts: g_a and g_s")[
+  Do not be spooked by the symbols. $g_a$ and $g_s$ are just _names_ for two
+  functions, the way $f$ and $g$ named functions back in Chapter 6. The little
+  letters are mnemonics: $a$ for *analysis* (taking the picture apart into a
+  code) and $s$ for *synthesis* (putting a picture back together from a code).
+  Writing $y = g_a (x)$ means "feed image $x$ into the analysis function and call
+  the result $y$." A function here is an enormous one — millions of additions and
+  multiplications arranged in layers — but the _idea_ is identical to $y = 2x+1$:
+  numbers in, numbers out.
+]
+
+What is genuinely new compared with the autoencoder of Chapter 56 is the *price
+tag*. A plain autoencoder is trained only to reconstruct well: make $hat(x)$ look
+like $x$. But "looks like $x$" is only half a compressor. The other half is
+"and the code is _small_." A latent of a million floating-point numbers
+reconstructs beautifully and compresses nothing. So the learned codec trains
+against two demands at once, and the tension between them is exactly the
+*rate–distortion trade-off* from Chapter 21, now baked directly into the
+training objective:
+
+$ L = R(hat(y)) + lambda dot D(x, hat(x)). $
+
+Read it left to right in plain English. $L$ is the *loss* — the badness score we
+are trying to push down. $R(hat(y))$ is the *rate*: how many bits the quantized
+latent will cost to transmit. $D(x, hat(x))$ is the *distortion*: how badly the
+reconstruction differs from the original, usually measured as mean squared error
+(the average of the squared pixel differences, our old friend from Chapter 21
+and the PSNR of Chapter 42). And $lambda$ (the Greek letter _lambda_) is the
+knob from Chapter 21 that sets the exchange rate between bits and quality.
+
+#keyidea[
+  A learned image codec is an autoencoder trained to minimize
+  $L = R + lambda D$ — bits _plus_ a penalty for distortion — where *every*
+  ingredient (the analysis transform $g_a$, the synthesis transform $g_s$, and
+  the probability model that turns the latent into a bit count $R$) is a neural
+  network, and all of them are trained _jointly_ by gradient descent. The
+  network does not just learn to reconstruct; it learns to produce a latent that
+  is _cheap to entropy-code_.
+]
+
+#gomaths("The Lagrange multiplier λ, as a price")[
+  We met the Greek letter $lambda$ (_lambda_) in Chapter 21 as the *Lagrange
+  multiplier* that trades two competing quantities against each other. Here it is
+  simply a *price*: the number of units of distortion you are willing to pay to
+  save one bit. The loss $L = R + lambda D$ adds bits and distortion onto one
+  common scale, with $lambda$ as the exchange rate. Tiny example: if
+  $lambda = 100$, then reducing distortion by $0.01$ is "worth" $1$ bit of rate,
+  so the optimizer will happily spend a bit to buy that much quality. If
+  $lambda = 1$, the same quality is worth only $0.01$ bits — the optimizer would
+  rather keep the bit. There is nothing mystical here: $lambda$ is a dial that
+  converts "how much do I care about quality versus size?" into one number the
+  math can minimize. Each setting of the dial picks one point on the
+  rate–distortion curve of Chapter 21.
+]
+
+Turn the knob and you slide along the rate–distortion curve. Crank $lambda$ up
+and distortion is punished heavily, so the network spends bits freely to keep
+quality high: big files, gorgeous pictures. Turn $lambda$ down and bits become
+expensive relative to quality, so the network learns to throw detail away: tiny
+files, softer pictures. Each value of $lambda$ trains a _different network_ that
+lives at a different point on the curve. This is the learned echo of JPEG's
+quality slider, except that instead of one fixed codec dialed to different
+quantization steps, you literally train a fresh transform for each operating
+point — a transform that has _learned_ what to keep and what to sacrifice at
+that exact budget.
+
+#gomaths("Why distortion is usually mean squared error")[
+  *Mean squared error* (MSE) between an original image $x$ and a reconstruction
+  $hat(x)$ is the average, over all pixels, of the squared difference:
+  $ D = 1/N sum_(i=1)^N (x_i - hat(x)_i)^2, $
+  where $N$ is the number of pixels and $x_i$ is the $i$-th pixel value. Squaring
+  does two jobs: it makes every error positive (so over- and under-shoots do not
+  cancel), and it punishes big mistakes far more than small ones (an error of 10
+  costs 100, an error of 1 costs only 1). Tiny example: original pixels
+  $(100, 50)$, reconstruction $(102, 47)$. The errors are $2$ and $-3$; squared,
+  $4$ and $9$; mean, $(4+9)/2 = 6.5$. Lower is better; zero means perfect. We met
+  MSE behind PSNR in Chapter 42 — PSNR is just MSE turned into a logarithmic
+  decibel scale so that "bigger is better."
+]
+
+== The rate term: counting bits with a model
+
+The distortion term $D$ is easy: feed the image in, get the reconstruction out,
+measure the squared difference. The rate term $R$ is the subtle one, and getting
+it right is most of the art. How do you count, _during training_, how many bits
+the quantized latent will cost — before you have even built the bitstream?
+
+The answer comes straight from Chapters 18 and 23. Recall the central law: if you
+have a probability model $p$ that assigns probability $p(s)$ to a symbol $s$,
+then an ideal entropy coder spends $-log_2 p(s)$ bits on it. Common symbols
+(high $p$) are cheap; rare symbols (low $p$) are dear. The expected cost over the
+whole latent is the *cross-entropy* between the true distribution of latents and
+the model $p$ — exactly the quantity Chapter 23 told us equals expected code
+length. So the rate is
+
+$ R = EE[-log_2 p(hat(y))], $
+
+the average, over the elements of the latent, of $-log_2$ of the probability the
+model assigns to each one. To make $R$ small the network has two levers: make
+the latent itself more predictable (so the model can assign high probabilities),
+and make the model $p$ accurate (so it does not waste bits being surprised). Both
+levers are trained at once.
+
+#mathrecall[The blackboard-bold $EE[dot]$ is the *expectation* (probability-weighted
+average) of Chapter 10 — "the average cost of a code," the very lens that chapter
+taught us to read every code length through. So $R = EE[-log_2 p(hat(y))]$ reads
+"the average number of bits, over all the latent elements, of coding each one." And
+$-log_2 p$ is the *surprisal* of Chapter 18 — the number of bits an ideal coder
+spends on an event of probability $p$. Probability $1/2$ costs $-log_2 (1/2) = 1$
+bit; probability $1/256$ costs $8$ bits. Rarer is dearer.]
+
+#keyidea[
+  The rate term $R$ is not a real bitstream — during training it is a
+  _differentiable estimate_ of bits, computed as $-log_2 p(hat(y))$ from a
+  learned probability model $p$. Because $R$ is a smooth function of the
+  network's numbers, gradient descent can push on it: the network literally feels
+  "this latent is expensive" and adjusts to make it cheaper. The model $p$ is the
+  beating heart of a learned codec; almost every research advance since 2017 has
+  been a better $p$.
+]
+
+This is the moment the thesis of Chapter 23 — *compression is prediction* —
+becomes concrete and mechanical. The probability model $p$ is a _predictor_ of
+the latent. The better it predicts, the smaller $R$. The entire research program
+of learned compression, from 2017 to today, is the search for better predictors
+of the latent. Hold onto that; every section below is a smarter $p$.
+
+=== The quantization wall
+
+Now we hit the wall that nearly killed the whole idea. The latent $y$ comes out
+of the encoder as ordinary floating-point numbers — $1.273$, $-0.488$, and so
+on. To compress them we must *quantize*: round each to a whole number, say to
+$1$, $0$. Only whole numbers from a finite alphabet can be entropy-coded, and
+rounding is the single lossy step (just as in JPEG). Fine. But remember _how_ a
+neural network learns, from Chapter 56: by *gradient descent*. You compute how
+much the loss would change if you nudged each internal number a hair, and you
+step in the direction that lowers the loss. That requires the loss to have a
+*gradient* — a slope — with respect to every trainable number, all the way back
+through every operation.
+
+Rounding has no useful slope. Picture the staircase graph of the round-to-nearest
+function: it is flat between the steps (slope exactly zero) and jumps vertically
+at each half-integer (slope undefined). Nudge the input $1.273$ a tiny bit and
+the output stays glued at $1$ — the slope is zero almost everywhere. A zero
+gradient is a dead telephone line: no information about how to improve can travel
+back through it. Stack a rounding step in the middle of your network and the
+gradient hits it, reads "zero," and the encoder $g_a$ in front of it never
+learns anything. The pipeline is severed.
+
+#fig([The rounding staircase has zero slope between steps and infinite slope at
+the jumps, so no gradient flows. Replacing it during training with the original
+value plus uniform noise gives a flat, friendly slope of $1$.], cetz.canvas({
+  import cetz.draw: *
+  // axes
+  line((0,0),(5,0), mark:(end:">")); content((5.2,0), text(size:7pt)[$y$])
+  line((0,0),(0,3.2), mark:(end:">")); content((0,3.4), text(size:7pt)[out])
+  // staircase
+  let st = rgb("#9a2617")
+  line((0.2,0.5),(1.2,0.5), stroke: 1.2pt+st)
+  line((1.2,1.5),(2.2,1.5), stroke: 1.2pt+st)
+  line((2.2,2.5),(3.2,2.5), stroke: 1.2pt+st)
+  content((3.9,2.5), text(size:6.5pt, fill:st)[round]) 
+  // identity line (noise surrogate, slope 1)
+  let id = rgb("#0b6e4f")
+  line((0.2,0.3),(3.2,2.8), stroke: (paint: id, dash:"dashed", thickness: 1pt))
+  content((3.9,2.0), text(size:6.5pt, fill:id)[y + noise])
+}))
+
+#pitfall[
+  You cannot just "ignore" the rounding during training and round only at test
+  time. If the encoder is trained on smooth, un-rounded latents it will happily
+  hide information in tiny fractional digits — the difference between $1.273$ and
+  $1.274$ — that rounding will then obliterate, and quality collapses. The
+  network must be trained to live _with_ quantization, which means quantization
+  (or a faithful stand-in for it) has to be present during training. The problem
+  is making that stand-in differentiable.
+]
+
+=== The noise trick: rounding you can differentiate
+
+The fix, introduced by Ballé and colleagues and now used by essentially every
+learned codec, is beautiful in its simplicity. Rounding $y$ to the nearest
+integer introduces an error: the gap between $y$ and its rounded value. For a
+value uniformly spread within its quantization cell, that error is spread
+uniformly between $-1/2$ and $+1/2$. So during training, instead of rounding,
+*add a random number drawn uniformly from $-1/2$ to $+1/2$*:
+
+$ tilde(y) = y + u, quad u tilde "Uniform"(-1/2, 1/2). $
+
+This _additive uniform noise_ is a stand-in for quantization that gets the
+statistics right — the noisy value $tilde(y)$ is jittered by the same amount that
+rounding would have jittered it — yet, unlike the staircase, it is a smooth
+function of $y$ with a perfectly healthy slope of $1$. Add a constant (even a
+random one) and the gradient passes straight through unharmed. The telephone line
+is reconnected. The encoder once again feels how its choices ripple forward to
+the rate and the distortion, and it can learn.
+
+#gomaths("The uniform distribution and why its noise mimics rounding")[
+  A *uniform distribution* on the interval from $-1/2$ to $+1/2$ means: every
+  value in that range is equally likely, like a perfectly fair spinner that can
+  stop anywhere between $-0.5$ and $+0.5$. Now picture rounding. Any value
+  between $0.5$ and $1.5$ rounds to $1$; the _error_ you make (rounded minus
+  original) ranges across exactly $-1/2$ to $+1/2$, and if the originals are
+  spread evenly, that error is uniform on that interval. So _adding_ uniform
+  $(-1/2,1/2)$ noise to $y$ produces a value whose distance from $y$ has the same
+  spread as the rounding error would — a statistical twin of quantization. Tiny
+  example: $y = 1.273$. Rounding gives $1$, an error of $-0.273$. The noise model
+  instead produces some $tilde(y)$ like $1.273 + 0.18 = 1.453$; across many draws,
+  the spread of the jitter matches rounding's. The point is the swap costs us
+  little in realism but buys us a usable gradient.
+]
+
+Why is uniform noise the _right_ surrogate, and not, say, Gaussian noise? Because
+its spread exactly matches the spread of the error that rounding actually makes.
+We can prove that, and the proof needs nothing past Chapter 10's variance.
+
+#theorem("The noise surrogate matches the rounding error's spread")[
+  Round-to-nearest maps a value to its closest integer; for inputs spread evenly
+  across a quantization cell, the rounding _error_ is uniform on
+  $(-1/2, 1/2)$. The additive training noise is _also_ uniform on
+  $(-1/2, 1/2)$. Both therefore have mean $0$ and variance $1/12$ — the noise is a
+  faithful, same-spread stand-in for quantization.
+]
+
+#mathrecall[The big "S" sign $integral$ is just a *continuous sum* (Chapter 11):
+to average $u^2$ over the interval, we add up $u^2$ across every point and divide
+by the interval's width (here width $1$, so the division is invisible). The one
+mechanical rule we use is the *power rule* for integrals from Chapter 11, also used
+on this exact $u^2$ in Chapter 39: the running total of $u^2$ is $u^3/3$, so we
+evaluate $u^3/3$ at the two ends and subtract. No new machinery — only the
+"continuous sum" idea you already own.]
+
+#proof[
+  Let $u$ be uniform on $(-1/2, 1/2)$. Its mean is, by symmetry, $0$. Its variance
+  (Chapter 10: the average squared distance from the mean) is the integral
+  $ "Var"(u) = integral_(-1/2)^(1/2) u^2 dif u = [u^3/3]_(-1/2)^(1/2)
+            = 1/3 (1/8 + 1/8) = 1/12. $
+  Now the rounding error. For an input $y$ uniformly distributed within its cell,
+  the error $r = round(y) - y$ ranges over $(-1/2, 1/2)$ and is itself uniform
+  there — so it has the identical mean $0$ and variance $1/12$. The additive
+  training noise and the true quantization error are the _same_ random quantity in
+  distribution. Adding the noise during training therefore exposes the network to
+  exactly the perturbation it will face at test time, while — unlike rounding —
+  remaining a differentiable function of $y$ (the derivative of $y + u$ with
+  respect to $y$ is $1$). That is precisely the surrogate we wanted: same
+  statistics, usable gradient.
+]
+
+#gopython("Checking the variance match by simulation")[
+  Do not take the algebra on faith — simulate it. We draw many random values,
+  measure the variance of the rounding error and of the uniform noise, and confirm
+  both land near $1/12 approx 0.0833$. Python 3.14 with the `random` module.
+  ```python
+  import random
+
+  def variance(xs: list[float]) -> float:
+      m = sum(xs) / len(xs)
+      return sum((x - m) ** 2 for x in xs) / len(xs)
+
+  random.seed(0)
+  ys = [random.uniform(0.0, 10.0) for _ in range(200_000)]
+  round_err = [round(y) - y for y in ys]                  # quantization error
+  noise     = [random.uniform(-0.5, 0.5) for _ in ys]     # training surrogate
+
+  print(f"rounding-error var: {variance(round_err):.4f}")
+  print(f"uniform-noise  var: {variance(noise):.4f}")
+  print(f"theory 1/12       : {1/12:.4f}")
+  # rounding-error var: 0.0833
+  # uniform-noise  var: 0.0833
+  # theory 1/12       : 0.0833
+  ```
+  All three agree: the noise really is a statistical twin of rounding. The
+  underscore in `200_000` is just Python's digit separator (Chapter 15) — it reads
+  as two hundred thousand and changes nothing.
+]
+
+There is a deeper truth lurking here, and it ties this whole construction back to
+Chapter 56. Training an autoencoder to minimize $R + lambda D$ with this uniform
+noise turns out to be _mathematically identical_ to fitting a *variational
+autoencoder* (the VAE of Chapter 56). The distortion term plays the role of the
+VAE's reconstruction term, and the rate term plays the role of the VAE's
+*KL-divergence* penalty (Chapter 20) — the "regularizer" that pulls the latent
+toward a simple prior. In other words: a learned compressor _is_ a VAE whose
+KL term is literally measured in bits. Compression is variational inference. We
+will not lean on the heavier VAE machinery here, but it is worth knowing that the
+two communities were, unknowingly, building the same thing.
+
+#aside[
+  At _test_ time, when you actually compress a file, there is no noise: you round
+  honestly, entropy-code the integers with the trained model $p$, and ship the
+  bits. The noise is purely a training-time crutch to keep the gradients
+  flowing. Some codecs use a hybrid — round in the distortion path but add noise
+  in the rate path — because that combination empirically matches the true
+  rounded behaviour even better. The principle is unchanged: be differentiable
+  while learning, be exact while shipping.
+]
+
+== Ballé's transform: convolutions and GDN
+
+We now have the objective ($L = R + lambda D$) and the trick that makes it
+trainable (noise for quantization). What does the transform network $g_a$
+actually look like inside? Two ingredients: *convolutions* and a special
+nonlinearity called *GDN*.
+
+A photograph is not a flat list of numbers; it is a grid, and the same kinds of
+patterns — edges, textures, gradients — appear all over it. It would be wasteful
+to learn a separate detector for an edge in the top-left corner and another for
+the identical edge in the bottom-right. A *convolutional* layer learns one small
+pattern detector (a little grid of weights, called a _filter_ or _kernel_) and
+slides it across the entire image, applying the same detector everywhere. This is
+the workhorse of all image neural networks, and the analysis transform $g_a$ is a
+short stack of convolutional layers that progressively shrink the spatial grid
+(each layer downsamples, the way the DCT folds an $8 times 8$ block into
+coefficients) while growing the number of *channels* — parallel feature maps,
+each one a different learned "kind of pattern."
+
+#gopython("Convolution as a sliding dot product")[
+  A convolution slides a small weight grid (the _kernel_) over the input,
+  multiplying and summing at each position. Here is the idea in 1-D, in pure
+  Python 3.14, so you can see there is no magic — just a sliding weighted sum.
+  ```python
+  def conv1d(signal: list[float], kernel: list[float]) -> list[float]:
+      k = len(kernel)
+      out: list[float] = []
+      for i in range(len(signal) - k + 1):
+          window = signal[i:i + k]                 # slice out k samples
+          out.append(sum(s * w for s, w in zip(window, kernel)))
+      return out
+
+  # an edge detector: respond where neighbours differ
+  print(conv1d([0, 0, 9, 9, 9], [-1, 1]))   # -> [0, 9, 0, 0]
+  ```
+  The kernel `[-1, 1]` fires (outputs 9) exactly at the jump from 0 to 9 and is
+  silent on the flat stretches — it _detects an edge_. A real 2-D image
+  convolution does this over a small square window across both dimensions, with
+  many kernels learned by gradient descent rather than chosen by hand. The
+  `zip` pairs each sample with its weight; `sum(... for ...)` is the
+  comprehension you met in the Python primer (Chapter 16).
+]
+
+Between the convolutional layers sits the nonlinearity — the bend that lets a
+network represent more than a straight line (Chapter 56). Most image networks use
+a plain *ReLU* (replace negatives with zero). Ballé made a different, inspired
+choice. He reasoned that the goal of the transform is to _decorrelate and
+equalize_ the signal — to spread information out so no single number carries too
+much, which is exactly what makes a signal compressible. Biology already solved
+this: neurons in the visual cortex perform *divisive normalization*, dividing
+each unit's response by a pooled measure of its neighbours' activity, which tends
+to gaussianize and decorrelate natural-image statistics. Ballé built a trainable
+version and called it *Generalized Divisive Normalization*, GDN.
+
+#gomaths("Generalized Divisive Normalization (GDN), gently")[
+  Suppose a layer produces several feature values $w_1, w_2, ..., w_n$ at one
+  spatial spot. Plain activation looks at each one alone. GDN instead _divides_
+  each value by a quantity built from _all_ of them:
+  $ "GDN"(w_i) = w_i / sqrt(beta_i + sum_j gamma_(i j) w_j^2). $
+  In words: take feature $i$, and shrink it in proportion to how loud the whole
+  neighbourhood of features is. The $beta$'s and $gamma$'s are _learned_ numbers
+  that decide how much each feature suppresses each other. If everything nearby is
+  quiet, the denominator is small and $w_i$ passes through; if the neighbourhood
+  is blaring, $w_i$ gets damped. The effect is to flatten the wildly unequal
+  energy of raw image features into something more uniform — and uniform,
+  decorrelated numbers are precisely what compresses well. The decoder uses the
+  exact inverse, IGDN, to undo it. You do not need the formula to follow the rest
+  of the chapter; just hold the picture: _GDN is a learned, biologically-inspired
+  way of equalizing the signal so it compresses better than ReLU allows._
+]
+
+#history[
+  *Generalized Divisive Normalization* was introduced by *Johannes Ballé, Valero
+  Laparra, and Eero Simoncelli* in *"Density Modeling of Images using a
+  Generalized Normalization Transformation"* (ICLR 2016) — Simoncelli being a
+  leading vision scientist, which is why the idea came from the biology of the
+  eye. They folded it into a full codec the next year. The lesson is delicious:
+  the single best-performing nonlinearity for image compression was not borrowed
+  from mainstream deep learning at all; it was borrowed from the human visual
+  system, the very thing the codec is trying to please.
+]
+
+#algo(
+  name: "End-to-End Optimized Image Compression (Ballé 2017)",
+  year: "2016–2017",
+  authors: "Johannes Ballé, Valero Laparra, Eero Simoncelli",
+  aim: "Replace the hand-designed transform/quantize/entropy pipeline with one autoencoder trained end-to-end on the rate–distortion loss.",
+  complexity: "Encode and decode are a few convolutional passes — fast and roughly symmetric; vastly cheaper than later context models.",
+  strengths: "First fully learned codec to rival JPEG 2000 on standard metrics; introduced GDN and the additive-uniform-noise quantization surrogate that the whole field still uses.",
+  weaknesses: "Used a fixed (per-channel) entropy model that could not adapt to local image content, leaving rate on the table.",
+  superseded: "The 2018 scale hyperprior, which made the entropy model adaptive.",
+)[
+  This is the foundation stone. The analysis transform $g_a$ is convolutions +
+  GDN; the synthesis $g_s$ is the mirror image with IGDN; quantization is round
+  (noise during training); the entropy coder is a real range coder (Chapter 26)
+  driven by a learned probability model. Train on a large set of natural images,
+  one network per $lambda$. The paper showed, for the first time, that pure
+  gradient descent could discover a transform competitive with decades of
+  hand-engineering.
+]
+
+#checkpoint[Why can't the transform network just use ordinary rounding during
+training and learn normally?][Because rounding has zero gradient almost
+everywhere, so no learning signal flows back through it to the encoder; you
+replace it with additive uniform noise, which has the same statistical effect on
+the latent but a healthy slope of $1$, restoring the gradient.]
+
+== The hyperprior: transmitting a description of the model
+
+The 2017 codec had one obvious weakness, and naming it leads straight to the
+chapter's centerpiece. Its entropy model $p$ was _fixed_: after training, every
+image was coded with the same probability table for the latents. But the right
+table is not the same everywhere. Consider a single photograph — a calm blue sky
+in the upper third, busy foliage in the lower two-thirds. Over the sky, the
+latent values are small and tightly clustered (a sharp, narrow distribution).
+Over the foliage, they swing wildly (a broad, spread-out distribution). A single
+fixed model cannot be sharp _and_ broad at once. If it is narrow, it is shocked
+by the foliage and wastes bits; if it is broad, it is needlessly uncertain about
+the sky and wastes bits there. Either way, money is left on the table.
+
+The classical codecs faced this exact problem and solved it with _adaptive_
+entropy coding (the adaptive models of Chapters 24 and 26, which update their
+statistics as they go). The learned answer, introduced by Ballé, Minnen, Singh,
+Hwang, and Johnston in *"Variational Image Compression with a Scale Hyperprior"*
+(ICLR 2018), is more elegant and more powerful: build a _second, tiny
+autoencoder_ that looks at the latent and transmits a short description of its
+local statistics as *side information*. That description is the *hyperprior*.
+
+#keyidea[
+  A *hyperprior* is a small second autoencoder stacked on top of the main one. It
+  examines the main latent $y$ and emits a few extra bits — *side information*,
+  the hyper-latent $z$ — that tell the decoder, region by region, _how spread out
+  the local latents are_ (their Gaussian scale, i.e. standard deviation). The
+  decoder reads this cheat-sheet first, configures a custom probability model for
+  each part of the image, and then decodes the main payload far more cheaply. You
+  spend a few bits describing the model in order to save many bits using it.
+]
+
+Here is the flow. A *hyper-analysis* network $h_a$ takes the main latent and
+produces the hyper-latent $z = h_a (y)$. This $z$ is itself quantized and
+entropy-coded (with its own small fixed model) and sent first — it is tiny, a few
+percent of the total. On the other end, a *hyper-synthesis* network $h_s$ reads
+$hat(z)$ and outputs, for _every element_ of the main latent, the parameters of a
+Gaussian: in the basic version, just a *scale* $sigma$ (how spread out), and in
+the improved "mean–scale" version a *mean* $mu$ as well (where it is centered).
+Armed with a per-element $mu$ and $sigma$, the main entropy coder uses a tailored
+Gaussian probability for each latent value instead of one global table. Sharp
+where the image is calm, broad where it is busy — automatically, learned, and
+paid for with a handful of side bits.
+
+#fig([The hyperprior architecture. The main path (left, dark) compresses the
+image through $g_a$/$g_s$. The hyper path (right, light) compresses a description
+of the main latent's _statistics_, which it feeds into the entropy model so each
+latent element gets its own Gaussian.], cetz.canvas({
+  import cetz.draw: *
+  let bx(x,y,w,h,t,col) = {
+    rect((x,y),(x+w,y+h), fill: col, stroke: 0.6pt)
+    content((x+w/2, y+h/2), text(size: 6.5pt, weight:"bold")[#t])
+  }
+  let main = rgb("#0b5394").lighten(70%)
+  let hyp  = rgb("#0b6e4f").lighten(70%)
+  // main path bottom row
+  content((0.1,0.4), text(size:7pt)[$x$])
+  bx(0.5,0.0,1.0,0.8,"g_a", main)
+  content((1.85,0.4), text(size:7pt)[$y$])
+  bx(2.2,0.0,1.1,0.8,"Q + AE", rgb("#d9e2ec"))
+  bx(3.5,0.0,1.0,0.8,"g_s", main)
+  content((4.85,0.4), text(size:7pt)[$hat(x)$])
+  line((1.5,0.4),(2.2,0.4), mark:(end:">"))
+  line((3.3,0.4),(3.5,0.4), mark:(end:">"))
+  // hyper path top
+  bx(2.2,2.0,1.1,0.8,"h_a", hyp)
+  content((3.6,2.4), text(size:6.5pt)[$z$])
+  bx(3.8,2.0,1.1,0.8,"Q+AE", rgb("#d9e2ec"))
+  bx(5.1,2.0,1.0,0.8,"h_s", hyp)
+  // wires
+  line((2.75,0.8),(2.75,2.0), mark:(end:">"))   // y up into h_a
+  content((3.05,1.4), text(size:6pt)[$y$])
+  line((3.3,2.4),(3.8,2.4), mark:(end:">"))
+  line((4.9,2.4),(5.1,2.4), mark:(end:">"))
+  line((5.6,2.0),(5.6,0.9),(2.75,0.9), stroke:(dash:"dashed"), mark:(end:">"))
+  content((4.4,1.05), text(size:6pt, fill: rgb("#0b6e4f"))[$mu, sigma$ per element])
+  content((5.7,2.95), text(size:6pt)[side info])
+}))
+
+=== A worked example: why side information pays
+
+Numbers make the bargain vivid. Imagine a stretch of latent values that, taken as
+a whole, range over a fairly broad spread — say a standard deviation of $8$. If
+we entropy-code them under one fixed Gaussian of scale $8$, the cost per value is
+governed by that wide uncertainty.
+
+#gomaths("Bits of a Gaussian value, by its standard deviation")[
+  For a value drawn from a Gaussian (bell curve) of standard deviation $sigma$,
+  quantized to unit steps, an ideal coder spends about
+  $ log_2 (sigma sqrt(2 pi e)) approx log_2 sigma + 2.05 quad "bits per value." $
+  You do not need the derivation: this is exactly the _differential entropy_ of a
+  Gaussian we met in Chapter 21, $h = 1/2 log_2(2 pi e thin sigma^2) = log_2(sigma
+  sqrt(2 pi e))$ — the continuous source's "bits per value." Just read the
+  consequence: *halving the standard deviation
+  saves about one bit per value*, because $log_2$ of half is one less. A spread
+  of $sigma = 8$ costs about $log_2 8 + 2.05 = 3 + 2.05 = 5.05$ bits; a spread of
+  $sigma = 2$ costs about $1 + 2.05 = 3.05$ bits. Narrower is cheaper, by exactly
+  the logarithm of the ratio.
+]
+
+Now suppose that broad spread of $8$ was an illusion of averaging: locally, the
+region is really two calm zones, one with $sigma = 2$ and one with $sigma = 2$,
+that merely sit at different centers. If we transmit a few side bits saying "this
+half has mean $-6$, that half has mean $+6$, both with scale $2$," the main coder
+can now use $sigma = 2$ everywhere. Cost drops from about $5.05$ to about $3.05$
+bits per value — a saving of $2$ bits per latent. Suppose the side information
+costs, amortized, $0.2$ bits per latent to send. Net saving: $2 - 0.2 = 1.8$ bits
+per latent. Across hundreds of thousands of latents in a real image, that is a
+large fraction off the file. _That_ is the hyperprior's bargain: a small, fixed
+investment in describing the model buys a large, repeated discount on using it.
+
+#misconception[The hyperprior compresses the image a second time.][It does not.
+The hyperprior compresses a _description of the main latent's statistics_ — the
+spreads and centers of its Gaussians — not the image content. It is metadata
+about the entropy model, sent so the decoder can configure the right
+distribution before it reads the main payload. The image information still lives
+entirely in the main latent.]
+
+#algo(
+  name: "Scale Hyperprior",
+  year: "2018",
+  authors: "Johannes Ballé, David Minnen, Saurabh Singh, Sung Jin Hwang, Nick Johnston",
+  aim: "Make the entropy model content-adaptive by transmitting per-element Gaussian scales (and later means) as compressed side information.",
+  complexity: "One extra small autoencoder; still fully parallel encode/decode — no serial bottleneck. Practical and fast.",
+  strengths: "First learned codec to clearly beat the best hand-built ones on perceptual metrics (MS-SSIM); the per-element Gaussian model became the template for everything after.",
+  weaknesses: "Assumes latent elements are independent given the side info; ignores the strong correlations between neighbouring latents, which the next idea exploits.",
+  superseded: "Joint autoregressive + hierarchical models (Minnen 2018), which add a neighbour-aware context model.",
+)[
+  The hyperprior is the single most influential architectural idea in learned
+  image compression. Almost every codec since 2018 — including the JPEG AI
+  standard — carries a hyperprior or a direct descendant of it. The "mean–scale"
+  variant, which sends both $mu$ and $sigma$, is the common baseline.
+]
+
+== Context models: predicting each latent from its neighbours
+
+The hyperprior treats the latent elements as independent once the side
+information is known. But they are not independent. Neighbouring latents are
+correlated — if this spot is bright, the spot beside it probably is too — exactly
+the kind of local correlation that PNG's filters (Chapter 44) and modern image
+codecs exploit in pixel space. There is still redundancy to squeeze, and the way
+to squeeze it is the oldest trick in this book: *predict each symbol from the ones
+already seen*, and only pay for the surprise.
+
+A *context model* (also called an *autoregressive* model) does precisely that. To
+code latent element number $n$, it looks at the latents _already decoded_ — the
+neighbours above and to the left — and predicts the distribution of element $n$
+from them. Because the decoder has also already decoded those same neighbours, it
+can run the identical prediction and stay in lockstep. This is the spatial twin
+of the order-$k$ context models of Chapters 23 and 33, and of the predictive
+coding in JPEG-LS (Chapter 42): condition the probability of each symbol on its
+context, and the entropy coder gets a sharper, cheaper distribution.
+
+Minnen, Ballé, and Toderici combined this context model with the hyperprior in
+*"Joint Autoregressive and Hierarchical Priors for Learned Image Compression"*
+(NeurIPS 2018). The entropy model for each latent now fuses two sources: the
+*hierarchical* prior (the hyperprior's per-element Gaussian from side
+information) _and_ the *autoregressive* context (the prediction from decoded
+neighbours). With both, their codec became *the first learned method to beat
+BPG* — the strong still-image codec carved out of HEVC/H.265 — on both PSNR and
+MS-SSIM, with roughly a $15.8%$ rate reduction over the previous learned
+state of the art. Learned compression had, for the first time, beaten the best of
+classical engineering on its own metrics.
+
+#fig([An autoregressive context model decodes latents in raster order. Element
+$n$ (the cross) is predicted from its already-decoded neighbours (shaded);
+undecoded latents (white) are off-limits. The dependency makes decoding _serial_:
+each element must wait for the ones before it.], cetz.canvas({
+  import cetz.draw: *
+  let g = 0.55
+  for r in range(4) {
+    for c in range(5) {
+      let known = (r < 1) or (r == 1 and c < 2)
+      let cur = (r == 1 and c == 2)
+      let col = if cur { rgb("#9a2617").lighten(40%) } else if known { rgb("#0b6e4f").lighten(60%) } else { white }
+      rect((c*g, (3-r)*g), (c*g+g, (3-r)*g+g), fill: col, stroke: 0.5pt)
+      if cur { content((c*g+g/2, (3-r)*g+g/2), text(size:8pt, weight:"bold")[$times$]) }
+    }
+  }
+  content((3.6,1.4), text(size:6.5pt, fill: rgb("#0b6e4f"))[decoded =])
+  content((3.6,1.1), text(size:6.5pt)[context])
+  content((3.6,0.5), text(size:6.5pt)[white = not])
+  content((3.6,0.25), text(size:6.5pt)[yet known])
+}))
+
+Cheng, Sun, Takeuchi, and Katto pushed the entropy model further in
+*"Learned Image Compression with Discretized Gaussian Mixture Likelihoods and
+Attention Modules"* (CVPR 2020). Two upgrades: replace each element's single
+Gaussian with a *mixture* of Gaussians (several bell curves added together, which
+can fit lopsided or multi-peaked latent distributions a single bell cannot), and
+sprinkle in *attention* modules (layers that let the network focus capacity on
+the hard, detailed regions of an image). The result was the first learned codec
+to draw *level with VVC* — H.266, the newest video-grade standard (Chapter 53) —
+on PSNR. In four years, learned codecs had gone from "promising" to "tied with
+the state of the art in standardized compression."
+
+=== The wound: serial decoding
+
+This is where we must be honest, because the context model carries a curse. By
+construction it is *serial*: element $n$'s distribution depends on element
+$n-1$ having already been decoded, which depends on $n-2$, and so on. You cannot
+decode the latents in parallel; you must crawl through them one at a time, in
+order, each one waiting for the network to predict its distribution from the
+freshly-decoded neighbours. A modern image has hundreds of thousands of latent
+elements. Running the prediction network once per element, in sequence, makes the
+decoder *staggeringly slow* — easily tens to hundreds of times slower than a
+classical codec that decodes whole blocks at once. This is the central, defining
+wound of high-ratio learned compression, and it is the reason the best research
+codecs were, for years, impractical to deploy.
+
+#pitfall[
+  Do not confuse the encoder's cost with the decoder's. In classical streaming
+  codecs (HEVC, AV1) the encoder is the slow one and the _decoder_ is blisteringly
+  fast — perfect for "compress once, watch a billion times." The autoregressive
+  context model breaks this asymmetry: it makes the _decoder_ the slow part, the
+  exact opposite of what deployment wants. A fast encoder and a glacial decoder is
+  almost the worst possible shape for a video or web codec.
+]
+
+=== Buying back the speed: parallel context
+
+The field's response, from 2020 onward, was to keep the _benefit_ of context
+modelling while killing the strict serial dependency. The trick is to give up
+"every latent depends on every previously-decoded latent" in favour of a
+carefully chosen partial order that decodes in a handful of parallel passes
+instead of hundreds of thousands of serial steps.
+
+The cleanest idea is the *channel-wise* model of Minnen and Singh,
+*"Channel-wise Autoregressive Entropy Models for Learned Image Compression"*
+(ICIP 2020). Instead of making each _spatial_ position wait for its neighbours,
+they split the latent's channels into a few groups and decode the groups in
+order: the first group from the hyperprior alone, the second group conditioned on
+the first, and so on — a handful of steps, not hundreds of thousands. Within each
+group, every spatial position decodes _in parallel_. It recovered most of the
+context model's compression gain (about $6.7%$ rate savings over a strong
+context-adaptive baseline on the Kodak test images) while restoring practical
+speed.
+
+The other famous fix is the *checkerboard* context of He and colleagues (CVPR
+2021): colour the latent grid like a checkerboard, decode all the black squares
+in parallel (using only the hyperprior), then decode all the white squares in
+parallel using the just-decoded black squares as context. Two passes instead of
+hundreds of thousands, with almost all the compression benefit intact. Between
+channel-wise and checkerboard schemes, the serial wound was largely cauterized —
+and these parallel context models are what the JPEG AI standard and the strongest
+2024–2026 codecs actually use.
+
+#scoreboard(caption: "learned image codecs vs. the classical bar (Kodak-class, rough relative standing)",
+  [JPEG (Ch 42)], [baseline], [—], [1992 hand-built DCT pipeline],
+  [JPEG 2000 (Ch 43)], [smaller], [—], [wavelet; \~Ballé-2017 territory],
+  [Ballé 2017 (learned)], [≈ JPEG 2000], [—], [first end-to-end learned transform],
+  [Scale hyperprior 2018], [smaller], [—], [first learned codec to beat the hand-built ones (MS-SSIM)],
+  [Minnen 2018 (context)], [smaller still], [≈ −15.8% vs prior learned], [first to beat BPG (HEVC-class)],
+  [Cheng 2020 (GMM+attn)], [smallest], [≈ VVC], [first learned codec level with H.266],
+  [JPEG AI (2025 std)], [smallest], [≈ −28.5% vs VVC-intra], [first learned international standard],
+)
+
+#note[
+  The scoreboard above is _relative standing_, not byte counts on `tinyzip`'s
+  running sample: these codecs need a trained neural network and a GPU, far beyond
+  the from-scratch Python pipeline `tinyzip` is. The numbers are the headline
+  rate-savings each paper reported on standard image sets (Kodak and friends).
+  The trajectory is the point — five years from "matches a 2000-era codec" to
+  "beats the newest video-grade standard by nearly a third."
+]
+
+== Why the learned rate term is honest
+
+It is fair to be suspicious. The training loss _estimates_ the rate as
+$-log_2 p(hat(y))$ using the network's _own_ model $p$. Could the network cheat —
+make $p$ optimistic to fake a low rate while the real bitstream is fat? It cannot,
+and the reason is a clean theorem you already have the tools to prove. The bits
+the real entropy coder spends are governed by the _model the decoder uses_, which
+is the same $p$. And coding against any model $p$ costs, on average, at least the
+true entropy of the source — never less. So the trained $p$ cannot conjure bits
+from nowhere; the rate it reports is a genuine cost.
+
+#theorem("Cross-entropy is never below entropy")[
+  Let the latent symbols truly follow distribution $q$, and let the codec code
+  them under model $p$. The expected code length is the *cross-entropy*
+  $H(q, p) = -sum_s q(s) log_2 p(s)$, and it satisfies
+  $ H(q, p) >= H(q) = -sum_s q(s) log_2 q(s), $
+  with equality only when $p = q$. So coding under a learned model is never
+  cheaper than the true entropy, and is cheapest exactly when the model is right.
+]
+
+#proof[
+  The gap between the two sides is the *Kullback–Leibler divergence* of
+  Chapter 20:
+  $ H(q,p) - H(q) = sum_s q(s) log_2 q(s)/p(s) = D_("KL")(q parallel p). $
+  We proved in Chapter 20 (Gibbs' inequality) that $D_("KL")(q parallel p) >= 0$
+  for any two distributions, with equality if and only if $p = q$. Hence
+  $H(q,p) >= H(q)$, and the only way to hit the floor is to model the source
+  exactly. The learned codec, by minimizing the rate term, is _driving
+  $D_("KL")$ toward zero_ — that is, training $p$ to match the true latent
+  distribution $q$ as closely as it can. There is no cheating: a smaller reported
+  rate means a genuinely better model, which means genuinely fewer real bits.
+]
+
+#keyidea[
+  Minimizing the rate term $R = EE[-log_2 p(hat(y))]$ is the same thing as making
+  the model $p$ match the true latent distribution $q$ — it minimizes the
+  KL-divergence between them. "Better predictor" and "fewer bits" are not two
+  goals the network balances; by this theorem they are _one and the same goal_.
+  Chapter 23's thesis, made mechanical.
+]
+
+Here is the rate term in code, so you can watch a model's quality turn directly
+into a bit count. We will model latents element-by-element with a per-element
+Gaussian, exactly as the hyperprior provides, and compute the predicted bits.
+
+#gopython("Computing the learned rate from a Gaussian model")[
+  Given each latent value, its predicted mean `mu`, and its predicted scale
+  `sigma`, the bits to code it are $-log_2$ of the probability mass the Gaussian
+  puts on its quantization cell. We approximate that mass as the bell-curve height
+  times the cell width (1), then take $-log_2$. Pure Python 3.14 plus `math`.
+  ```python
+  import math
+
+  def gauss_pmf(value: float, mu: float, sigma: float) -> float:
+      """Approx. probability mass of one unit-width quantization cell."""
+      sigma = max(sigma, 1e-6)                       # never divide by zero
+      z = (value - mu) / sigma
+      height = math.exp(-0.5 * z * z) / (sigma * math.sqrt(2 * math.pi))
+      return min(max(height, 1e-12), 1.0)            # clamp into (0, 1]
+
+  def rate_bits(latents: list[float],
+                mus: list[float],
+                sigmas: list[float]) -> float:
+      total = 0.0
+      for v, mu, sg in zip(latents, mus, sigmas):
+          p = gauss_pmf(round(v), mu, sg)
+          total += -math.log2(p)                     # surprisal in bits
+      return total
+
+  # A calm region: values near their predicted means, tight scale -> cheap.
+  calm = rate_bits([0.0, 1.0, -1.0], [0.0, 1.0, -1.0], [1.0, 1.0, 1.0])
+  # A busy region: same values, but the model is wrong and unsure -> dear.
+  busy = rate_bits([0.0, 1.0, -1.0], [3.0, -2.0, 4.0], [4.0, 4.0, 4.0])
+  print(f"calm: {calm:.2f} bits   busy: {busy:.2f} bits")
+  # calm: 3.98 bits   busy: 11.92 bits
+  ```
+  The _same three values_ cost three times as many bits under a worse model. That gap
+  is the rate term feeling pain — and gradient descent spends its whole life
+  shrinking it, by training the hyperprior to predict `mu` and `sigma` well.
+]
+
+#aside[
+  The real codecs integrate the Gaussian over the exact cell
+  ($Phi(v+1/2) - Phi(v-1/2)$, using the cumulative bell curve) rather than using
+  the height-times-width shortcut above, which keeps the rate estimate exact even
+  for wide cells. The idea is identical; only the arithmetic is more careful.
+]
+
+== From paper to standard: JPEG AI, and the state of play in 2026
+
+For a decade learned codecs lived in research papers and GitHub repositories.
+Crossing into a real, interoperable standard is a different mountain — it demands
+that an encoder built by one company and a decoder built by another agree
+bit-for-bit, on hardware nobody has met. That mountain was climbed.
+
+*JPEG AI* is the first international standard for learning-based image coding. Its
+first edition was published in late 2024, and in early 2025 it was approved as an
+ISO/IEC/ITU International Standard. Architecturally it is exactly the lineage of
+this chapter: an autoencoder transform, a hyperprior, and a (parallel) context
+entropy model — productized, made interoperable, and made royalty-free. On
+standard tests its strongest configuration reports up to roughly *$28.5%$ rate
+savings over VVC intra* (the all-intra mode of H.266, the newest video-grade
+still-image bar from Chapter 53), with lighter operating points that trade some of
+that gain for far faster decoding. Crucially, JPEG AI was designed to serve *two*
+audiences at once: human viewers _and_ machines. Because the compressed file is a
+neural latent, a computer-vision task — object detection, classification — can
+sometimes run _directly on the latent_, without ever fully decoding to pixels.
+The codec and the perception merge.
+
+#history[
+  The naming can confuse. *JPEG AI* (this chapter's learned codec) is a different
+  beast from *JPEG XL* (Chapter 45), which is a superb but _classically_ designed
+  codec — hand-built transforms and the ANS entropy coder of Chapter 27, not a
+  neural network. Both came from the JPEG committee in the 2020s; only JPEG AI is
+  a learned, end-to-end-trained codec of the kind this chapter describes.
+]
+
+So where do learned image codecs actually stand in 2026? The verdict is genuinely
+mixed, and a good engineer holds both halves at once.
+
+*Where they win.* On _perceptual quality at low bitrate_, learned codecs are
+decisively ahead — a gap we will widen in Chapter 58, where generative decoders
+hallucinate plausible texture instead of blurring. On standard metrics, the best
+learned codecs now match or exceed VVC for still images. And they are _flexible_:
+one architecture retargets to medical scans, satellite imagery, or screen content
+by retraining on that data, no committee required.
+
+*Where they lose.* _Speed and hardware_, still. Even with parallel context
+models, neural decoders lean on a GPU or NPU that most decoding devices — a cheap
+phone, a TV, a doorbell camera — simply do not have, and they burn more energy
+than a fixed-function classical decoder etched in silicon. They lack the brutal
+encode/decode asymmetry (encode-once, decode-everywhere-cheaply) that makes
+streaming economical. And _bit-exact reproducibility_ is a genuine headache: the
+encoder and decoder must perform _identical_ floating-point arithmetic, or the
+entropy coder desynchronizes and the image corrupts — and floating-point results
+differ subtly across chips and libraries. The standards solve this with carefully
+specified integer arithmetic, but it is real engineering pain, not a footnote.
+
+#misconception[Learned codecs have already won and classical codecs are obsolete.][Not in deployment. As of 2026, the overwhelming majority of images on the web are
+still JPEG, with WebP/AVIF/JPEG XL growing; learned neural codecs remain rare in
+the wild outside research and early JPEG AI rollouts, gated by decode cost,
+hardware, and energy. They have won the _research_ rate–distortion race and are
+beginning the long, slow march into silicon and browsers. Winning the benchmark
+and winning the world are different victories, often a decade apart — recall how
+long JPEG 2000 (Chapter 43) was "better" yet never displaced JPEG.]
+
+#takeaways((
+  [A learned image codec keeps JPEG's *transform → quantize → entropy-code* skeleton but makes every stage a neural network, trained _jointly, end to end_ to minimize the rate–distortion loss $L = R + lambda D$.],
+  [The *rate* term is a differentiable estimate of bits, $R = EE[-log_2 p(hat(y))]$, computed from a _learned_ probability model $p$; the whole field's progress is the search for a better $p$.],
+  [Rounding has zero gradient and would sever training; the *additive-uniform-noise* surrogate keeps the same quantization statistics but a slope of $1$, restoring gradient flow. (At test time, round honestly.)],
+  [Ballé's transform uses *convolutions* and *GDN*, a biologically-inspired divisive normalization that equalizes the signal so it compresses better than ReLU allows.],
+  [The *hyperprior* is a small second autoencoder that transmits side information describing the main latent's local Gaussian statistics ($mu$, $sigma$ per element) — paying a few bits to describe the model in order to save many bits using it.],
+  [A *context (autoregressive) model* predicts each latent from its decoded neighbours for still-tighter coding, but its strict serial dependency made decoding brutally slow; *channel-wise* and *checkerboard* schemes (2020–21) recovered most of the gain in a few parallel passes.],
+  [Because coding under any model costs at least the true entropy ($H(q,p) >= H(q)$), the learned rate is honest: minimizing it _is_ matching the true latent distribution — Chapter 23's "compression = prediction," made mechanical.],
+  [*JPEG AI* (International Standard, 2025) is the first learned image standard — hyperprior + parallel context, royalty-free, \~28.5% over VVC-intra, serving both human and machine vision — while classical codecs still rule deployment, gated by neural decode cost, hardware, and energy.],
+))
+
+== Exercises
+
+#exercise("57.1", 1)[
+  In your own words, explain why a learned codec replaces the rounding step with
+  "add uniform noise" _only during training_, and what it does at test time
+  instead. What would go wrong if it used noise at test time too?
+]
+#solution("57.1")[
+  During training the network learns by gradient descent, which needs a non-zero
+  slope to send a learning signal back through every step. Rounding has zero slope
+  almost everywhere, so it blocks the signal and the encoder cannot learn. Adding
+  uniform $(-1/2,1/2)$ noise reproduces the same statistical jitter quantization
+  would cause but has a clean slope of $1$, so gradients flow. At test time the
+  codec rounds honestly to integers and entropy-codes them — there is no learning
+  happening, so no gradient is needed, and exact integers are required for the
+  entropy coder to be reversible. Using random noise at test time would make the
+  output non-deterministic and the values non-integer, so encoder and decoder
+  could not agree and the file could not be decoded correctly.
+]
+
+#exercise("57.2", 1)[
+  A latent region is coded under a Gaussian model. Using the rule "bits $approx
+  log_2 sigma + 2.05$," how many bits per value does a scale of $sigma = 16$ cost?
+  Of $sigma = 4$? If a hyperprior can shrink the effective scale from $16$ to $4$
+  by spending $0.3$ side bits per value, what is the net saving per value?
+]
+#solution("57.2")[
+  At $sigma = 16$: $log_2 16 + 2.05 = 4 + 2.05 = 6.05$ bits. At $sigma = 4$:
+  $log_2 4 + 2.05 = 2 + 2.05 = 4.05$ bits. The main saving is $6.05 - 4.05 = 2.0$
+  bits per value. Subtract the $0.3$ side bits: net saving
+  $2.0 - 0.3 = 1.7$ bits per value. (Note the saving is just $log_2(16/4) = 2$
+  bits — halving the scale twice saves two bits, before paying for the side info.)
+]
+
+#exercise("57.3", 2)[
+  Explain, using the language of Chapters 18 and 23, why the rate term
+  $-log_2 p(hat(y))$ being small is _the same thing_ as the model $p$ predicting
+  the latent well. Then state what quantity the loss is implicitly minimizing
+  between $p$ and the true latent distribution $q$, and what its smallest possible
+  value is.
+]
+#solution("57.3")[
+  By Chapter 18, $-log_2 p(s)$ is the surprisal: the bits an ideal coder spends on
+  symbol $s$ under model $p$. It is small exactly when $p(s)$ is large — when the
+  model _expected_ that symbol, i.e. predicted it well. Averaging over the latent
+  gives the cross-entropy $H(q,p)$. By the theorem in this chapter,
+  $H(q,p) = H(q) + D_("KL")(q parallel p)$, so minimizing the rate (with the
+  fixed true entropy $H(q)$ as a floor) minimizes the KL-divergence
+  $D_("KL")(q parallel p)$ between the model and the true distribution. Its
+  smallest possible value is $0$, attained exactly when $p = q$ — a perfect
+  predictor, the cheapest possible code. This is Chapter 23's thesis made literal:
+  better prediction _is_ fewer bits.
+]
+
+#exercise("57.4", 2)[
+  An autoregressive context model and a channel-wise context model both improve
+  compression by conditioning each latent on others. Describe the key difference
+  in _what each conditions on_, and explain why the channel-wise model can decode
+  in a few parallel passes while the spatial autoregressive model cannot.
+]
+#solution("57.4")[
+  The spatial autoregressive model conditions each latent _position_ on its
+  already-decoded spatial neighbours (above and to the left). Because position $n$
+  needs position $n-1$, decoding is strictly serial — hundreds of thousands of
+  sequential steps for one image. The channel-wise model instead splits the
+  latent's _channels_ into a few groups and conditions each group on the
+  previously-decoded groups, not on spatial neighbours. Within a group, every
+  spatial position is conditionally independent, so they all decode _in parallel_;
+  only the small number of groups (a handful) must run in sequence. You trade a
+  little compression for a colossal speed-up: a few parallel passes instead of a
+  per-element serial crawl.
+]
+
+#exercise("57.5", 2)[
+  The text says the hyperprior "does not compress the image a second time." If not
+  the image, what exactly does the hyperprior's bitstream encode, and why is it so
+  much smaller than the main bitstream? Give a one-sentence analogy to a paper map
+  with a legend.
+]
+#solution("57.5")[
+  The hyperprior encodes a compressed _description of the main latent's local
+  statistics_ — for each region (or element) the parameters of its Gaussian, the
+  scale $sigma$ and often the mean $mu$ — not any image content. It is small
+  because there are far fewer statistics to describe than there are latent values
+  to code (one scale can govern a whole neighbourhood), and the statistics are
+  themselves smooth and predictable. Analogy: the main latent is the dense detail
+  drawn all over a map; the hyperprior is the tiny _legend_ in the corner that
+  tells you how to read the symbols — short, but it makes the whole map cheaper to
+  interpret.
+]
+
+#exercise("57.6", 3)[
+  Modify the `rate_bits` idea from the Python box to compute the _total_ loss
+  $L = R + lambda D$ for a toy "codec." You are given the original latents, the
+  reconstructed (rounded) latents, the per-element predicted `mu`/`sigma`, and a
+  value `lam`. Write a function that returns the loss, using MSE for $D$ and the
+  Gaussian rate for $R$. Then describe, in words, what happens to the chosen
+  reconstruction as `lam` grows very large versus very small.
+]
+#solution("57.6")[
+  ```python
+  import math
+  def gauss_pmf(value, mu, sigma):
+      sigma = max(sigma, 1e-6); z = (value - mu) / sigma
+      h = math.exp(-0.5*z*z) / (sigma*math.sqrt(2*math.pi))
+      return min(max(h, 1e-12), 1.0)
+
+  def total_loss(orig, recon, mus, sigmas, lam):
+      n = len(orig)
+      D = sum((o - r)**2 for o, r in zip(orig, recon)) / n      # MSE
+      R = sum(-math.log2(gauss_pmf(r, mu, sg))
+              for r, mu, sg in zip(recon, mus, sigmas))         # bits
+      return R + lam * D
+  ```
+  As `lam` grows large, the distortion term dominates: the optimizer prefers
+  reconstructions that minimize MSE no matter the bit cost — high quality, large
+  files (the high end of the rate–distortion curve). As `lam` shrinks toward
+  zero, bits dominate: it prefers cheap latents even if the picture suffers —
+  small files, lower quality. Sweeping `lam` traces out the rate–distortion curve,
+  and in a real learned codec each `lam` trains a _different_ network living at a
+  different point on that curve.
+]
+
+#exercise("57.7", 3)[
+  A skeptic says: "The learned codec measures its own rate with its own model
+  $p$, so of course it can claim a low rate — it is grading its own homework."
+  Refute this rigorously using the theorem in this chapter, and explain why a low
+  _reported_ rate forces a low _real_ bitstream length, not just an optimistic
+  number.
+]
+#solution("57.7")[
+  The refutation rests on $H(q,p) >= H(q)$, with equality iff $p = q$ (proved via
+  $D_("KL") >= 0$). The reported rate is the cross-entropy $H(q,p)$ of the true
+  latent distribution $q$ under the model $p$ — and the _real_ entropy coder also
+  uses $p$, so it spends exactly those bits (up to coder overhead). The model
+  cannot make $H(q,p)$ small while the real cost stays large, because they are the
+  same quantity. Nor can the model fake a rate below $H(q)$: cross-entropy is
+  bounded below by the true entropy, so the only way to drive the reported (hence
+  real) rate down is to make $p$ genuinely closer to $q$ — to predict the latent
+  better. "Grading its own homework" would be a problem only if minimizing the
+  reported rate did _not_ minimize the real bits; the theorem proves it does. The
+  one honest caveat is the train/test gap: $q$ at test time may differ slightly
+  from the training distribution, so the model is honest but not omniscient.
+]
+
+== Further reading
+
+- Ballé, J., Laparra, V. & Simoncelli, E. (2017). #emph[End-to-End Optimized Image Compression]. ICLR 2017. #link("https://arxiv.org/abs/1611.01704")[arXiv:1611.01704] — the foundation: GDN and the noise-quantization trick.
+- Ballé, J. et al. (2018). #emph[Variational Image Compression with a Scale Hyperprior]. ICLR 2018. #link("https://arxiv.org/abs/1802.01436")[arXiv:1802.01436] — the hyperprior, the chapter's centerpiece.
+- Minnen, D., Ballé, J. & Toderici, G. (2018). #emph[Joint Autoregressive and Hierarchical Priors for Learned Image Compression]. NeurIPS 2018. #link("https://arxiv.org/abs/1809.02736")[arXiv:1809.02736] — first learned codec to beat BPG.
+- Cheng, Z., Sun, H., Takeuchi, M. & Katto, J. (2020). #emph[Learned Image Compression with Discretized Gaussian Mixture Likelihoods and Attention Modules]. CVPR 2020. #link("https://arxiv.org/abs/2001.01568")[arXiv:2001.01568] — first learned codec level with VVC on PSNR.
+- Minnen, D. & Singh, S. (2020). #emph[Channel-wise Autoregressive Entropy Models for Learned Image Compression]. ICIP 2020. #link("https://arxiv.org/abs/2007.08739")[arXiv:2007.08739] — parallel context that restored speed.
+- Ascenso, J. et al. (2024). #emph[The JPEG AI Learning-Based Image Coding Standard]. #link("https://jpeg.org/jpegai/")[jpeg.org/jpegai] — the first learned image-coding international standard.
+
+#bridge[
+  We have built a codec that minimizes _mean squared error_ — and that very choice
+  hides a flaw. At low bitrates, minimizing average squared error pushes the
+  decoder toward the _blurry average_ of all plausible pictures, because blur is
+  safe and detail is risky. But blur is exactly what the human eye hates most.
+  *Chapter 58* confronts this head-on with the *rate–distortion–perception*
+  trade-off: instead of asking for the reconstruction closest to the original, we
+  ask for one that merely _looks like a real photograph_ — and let a generative
+  model (a GAN, then a diffusion model) _hallucinate_ convincing texture from a
+  tiny code. The pictures get gorgeous at bitrates this chapter's codecs would
+  smear to mush. The catch — invented detail that was never there — will force us
+  to ask a hard question: when is a "reconstruction" no longer the truth?
+]

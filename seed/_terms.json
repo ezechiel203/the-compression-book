@@ -1,0 +1,578 @@
+[
+ {
+  "term": "Entropy H(X)",
+  "definition": "The average surprisal of a source's symbols, equal to the minimum average number of bits per symbol needed to encode it losslessly."
+ },
+ {
+  "term": "Self-information / surprisal",
+  "definition": "The information content of a single outcome x, equal to -log2 p(x) bits; rare events carry more bits."
+ },
+ {
+  "term": "Source coding theorem",
+  "definition": "Shannon's result that average lossless code length cannot fall below the entropy H(X) but can approach it arbitrarily closely."
+ },
+ {
+  "term": "Redundancy",
+  "definition": "The gap between how many bits a representation actually uses and the entropy floor; what compression removes."
+ },
+ {
+  "term": "Lossless compression",
+  "definition": "Encoding that allows bit-for-bit exact reconstruction of the original input."
+ },
+ {
+  "term": "Lossy compression",
+  "definition": "Encoding that discards information to return an approximation, governed by rate-distortion theory rather than entropy."
+ },
+ {
+  "term": "Rate-distortion theory",
+  "definition": "Shannon's theory giving the minimum bit rate R(D) needed to represent a source within a tolerated distortion D."
+ },
+ {
+  "term": "Kullback-Leibler divergence",
+  "definition": "The extra bits per symbol incurred by coding with a wrong model q instead of the true distribution p."
+ },
+ {
+  "term": "Kolmogorov complexity K(x)",
+  "definition": "The length of the shortest program that outputs a specific string x; the absolute, uncomputable notion of its compressed size."
+ },
+ {
+  "term": "Algorithmic information theory",
+  "definition": "The 1960s framework (Solomonoff, Kolmogorov, Chaitin) defining information content of individual objects via shortest-program length."
+ },
+ {
+  "term": "Invariance theorem",
+  "definition": "Kolmogorov complexity depends on the choice of universal machine only up to an additive constant, making it well-defined asymptotically."
+ },
+ {
+  "term": "Arithmetic coding",
+  "definition": "An entropy coder that turns next-symbol probabilities directly into a near-optimal bitstream of length about -log2 q(x)."
+ },
+ {
+  "term": "Compression = prediction",
+  "definition": "The exact equivalence by which any next-symbol predictor yields a compressor and any compressor implicitly defines a predictor."
+ },
+ {
+  "term": "Entropy coder",
+  "definition": "The component that converts a probability model's estimate P(symbol) into bits, aiming to spend about -log2 P(symbol) bits per symbol."
+ },
+ {
+  "term": "Model/coder split",
+  "definition": "The standard architecture separating the probability model (which predicts P over symbols) from the coder (which writes bits), so each can be improved independently."
+ },
+ {
+  "term": "Prefix-free (instantaneous) code",
+  "definition": "A code in which no codeword is a prefix of another, letting a decoder parse symbols unambiguously left-to-right."
+ },
+ {
+  "term": "Huffman coding",
+  "definition": "A 1952 greedy tree-building algorithm producing the optimal prefix code, limited by forcing a whole number of bits per symbol."
+ },
+ {
+  "term": "Integer-bits weakness",
+  "definition": "The inability of any prefix code to spend fractional bits, causing overpayment when symbol probabilities are not powers of 1/2."
+ },
+ {
+  "term": "Arithmetic coding",
+  "definition": "A method that encodes an entire message as a single subinterval of [0,1), reaching the entropy limit with no per-symbol rounding."
+ },
+ {
+  "term": "Renormalization",
+  "definition": "Rescaling the current interval (or state) and emitting settled bits as coding proceeds, allowing finite-precision operation in bounded memory."
+ },
+ {
+  "term": "Range coding",
+  "definition": "An arithmetic-coding variant operating on an integer range in an arbitrary base (often byte-wise), historically valued for sidestepping IBM's patents."
+ },
+ {
+  "term": "QM-coder",
+  "definition": "IBM's binary arithmetic coder (Q-coder) refined with Mitsubishi, patented and specified in JPEG/JBIG, whose licensing uncertainty deterred adoption."
+ },
+ {
+  "term": "Asymmetric Numeral Systems (ANS)",
+  "definition": "Duda's 2009 entropy coder that encodes a message into a single growing integer state, achieving arithmetic-coding ratios at Huffman-like speed."
+ },
+ {
+  "term": "tANS / rANS",
+  "definition": "The table-based (finite-state-machine) and range variants of ANS; tANS needs no per-symbol multiply, rANS handles adaptive probabilities."
+ },
+ {
+  "term": "Dictionary coding",
+  "definition": "Compression by replacing repeated data with short references back to an earlier occurrence, rather than re-emitting the data itself."
+ },
+ {
+  "term": "LZ77 / sliding window",
+  "definition": "Lempel & Ziv's 1977 scheme that encodes data as (distance, length, literal) back-references into a window of recently seen bytes."
+ },
+ {
+  "term": "LZ78",
+  "definition": "Lempel & Ziv's 1978 scheme that builds an explicit numbered dictionary of phrases and emits (index, next-symbol) pairs."
+ },
+ {
+  "term": "Back-reference (match)",
+  "definition": "A (distance, length) pointer telling the decoder to copy a run of bytes it has already reconstructed."
+ },
+ {
+  "term": "LZW",
+  "definition": "Welch's 1984 LZ78 variant emitting only dictionary indices; used in GIF and Unix compress, and at the center of the Unisys patent dispute."
+ },
+ {
+  "term": "DEFLATE",
+  "definition": "Phil Katz's LZ77 + Huffman combination (RFC 1951, 1996) that underlies zlib, gzip, PNG, ZIP, and HTTP gzip encoding."
+ },
+ {
+  "term": "Range coder",
+  "definition": "An arithmetic-style entropy coder using context models, used by LZMA to beat Huffman's integer-bit overhead."
+ },
+ {
+  "term": "Burrows-Wheeler Transform (BWT)",
+  "definition": "A reversible permutation (used by bzip2) that clusters similar contexts together so a following entropy coder compresses better."
+ },
+ {
+  "term": "FSE / ANS",
+  "definition": "Finite State Entropy, Yann Collet's implementation of Asymmetric Numeral Systems (Duda, 2009), giving arithmetic-coding optimality at table-lookup speed; the entropy stage of zstd."
+ },
+ {
+  "term": "Trained dictionary",
+  "definition": "A custom dictionary built from sample records so a codec like zstd can effectively compress many small, similar payloads."
+ },
+ {
+  "term": "PPM (Prediction by Partial Matching)",
+  "definition": "A statistical compressor that predicts the next symbol from the longest matching recent context, emitting an escape symbol to back off to shorter contexts when a symbol is unseen."
+ },
+ {
+  "term": "Escape / zero-frequency problem",
+  "definition": "The question of how much probability to reserve for never-yet-seen symbols in a context; PPM variants A/B/C/D differ chiefly in how they answer it."
+ },
+ {
+  "term": "Context mixing (CM)",
+  "definition": "Running many predictive models in parallel and combining all their probability estimates into one prediction per bit, rather than choosing a single context as PPM does."
+ },
+ {
+  "term": "Logistic mixing",
+  "definition": "Combining models in the log-odds (stretch) domain with a weighted sum and a logistic squash, equivalent to a single-layer neural network trained online to minimize coding cost."
+ },
+ {
+  "term": "SSE / APM (Secondary Symbol Estimation)",
+  "definition": "A learned calibration table that refines a mixed probability to correct the mixer's systematic over- or under-confidence."
+ },
+ {
+  "term": "PAQ",
+  "definition": "Matt Mahoney's open context-mixing compressor family (PAQ1, 2002 onward) that pioneered neural/logistic mixing and dominated text-compression ratio benchmarks."
+ },
+ {
+  "term": "ZPAQ",
+  "definition": "Mahoney's archival format (2009-2015) that embeds the decompression model as bytecode in the archive, so one fixed program can decode files from future, smarter compressors."
+ },
+ {
+  "term": "cmix",
+  "definition": "Byron Knoll's context-mixing compressor (begun ~2014) with a very large model ensemble including an LSTM; basis of the current Hutter Prize record."
+ },
+ {
+  "term": "enwik8 / enwik9",
+  "definition": "The first 100 MB and 1 GB of an English Wikipedia dump, used as the standard text-compression benchmark files."
+ },
+ {
+  "term": "Hutter Prize",
+  "definition": "Marcus Hutter's contest (2006; 500k euro from 2020) paying for record-setting lossless compression of enwik9 under tight single-core, no-GPU, 10 GB RAM limits."
+ },
+ {
+  "term": "Kolmogorov complexity",
+  "definition": "The length of the shortest program that outputs a given string; the uncomputable theoretical limit of compression."
+ },
+ {
+  "term": "Solomonoff induction / AIXI",
+  "definition": "Solomonoff's optimal universal predictor weights hypotheses by 2^(-program length); AIXI is Hutter's formal model of optimal agency built on it, grounding the claim that compression equals prediction equals intelligence."
+ },
+ {
+  "term": "Reversible transform",
+  "definition": "A bijective rearrangement of data that preserves information content but reshapes the symbol stream so a downstream entropy coder compresses it better."
+ },
+ {
+  "term": "Run-length encoding (RLE)",
+  "definition": "Replacing a maximal run of one repeated symbol with a (symbol, count) pair, cheap to compute and most effective as the final stage after a transform has manufactured long runs."
+ },
+ {
+  "term": "Burrows-Wheeler Transform (BWT)",
+  "definition": "A reversible permutation of a block obtained by sorting all its cyclic rotations and emitting the last column, which clusters together characters that share a common following context."
+ },
+ {
+  "term": "Suffix array",
+  "definition": "A sorted array of the starting positions of all suffixes of a string; computing it (in O(n) time/space) is how the BWT is built efficiently instead of forming the full rotation matrix."
+ },
+ {
+  "term": "LF-mapping",
+  "definition": "The property that the i-th occurrence of a symbol in the BWT's last column matches the i-th occurrence in the first column, enabling linear-time inversion and FM-index search."
+ },
+ {
+  "term": "Move-To-Front (MTF)",
+  "definition": "A transform keeping a symbol list and outputting each symbol's current position then moving it to the front, mapping local repetition into small integers and long runs of zeros."
+ },
+ {
+  "term": "FM-index",
+  "definition": "A self-index (Ferragina & Manzini, 2000) storing the BWT plus small tables that counts and locates pattern occurrences in time proportional to pattern length, on near-compressed-size space."
+ },
+ {
+  "term": "r-index",
+  "definition": "A BWT-based full-text index using O(r) space where r is the number of BWT runs, designed for highly repetitive collections like pangenomes."
+ },
+ {
+  "term": "Rate-distortion function R(D)",
+  "definition": "Shannon's information-theoretic minimum bit-rate needed to represent a source within average distortion D, equal to the minimum mutual information I(X;X̂) over reconstructions meeting the distortion constraint."
+ },
+ {
+  "term": "Distortion measure",
+  "definition": "A function d(x,x̂) quantifying how bad it is to reproduce source value x as x̂; its choice (squared error vs. perceptual) determines what the codec optimizes."
+ },
+ {
+  "term": "Transform–quantize–entropy-code pipeline",
+  "definition": "The three-stage skeleton of nearly all lossy codecs: change coordinates, round coefficients (the lossy step), then losslessly pack the result."
+ },
+ {
+  "term": "Energy compaction / decorrelation",
+  "definition": "Properties of a good transform: concentrating signal energy into a few coefficients and making coefficients statistically independent so each can be quantized cheaply and independently."
+ },
+ {
+  "term": "Karhunen–Loève Transform (KLT)",
+  "definition": "The optimal but signal-dependent transform (eigenbasis of the covariance matrix / PCA) that perfectly decorrelates a stationary Gaussian source."
+ },
+ {
+  "term": "Discrete Cosine Transform (DCT)",
+  "definition": "A fixed, fast, signal-independent transform (Ahmed-Natarajan-Rao, 1974) that closely approximates the KLT for correlated natural signals and underlies JPEG and video codecs."
+ },
+ {
+  "term": "Quantization",
+  "definition": "Mapping a fine-grained value to one of a finite set of levels (e.g., divide by a step and round); the only irreversible, lossy step in the pipeline."
+ },
+ {
+  "term": "Perceptual coding",
+  "definition": "Designing the codec to minimize distortion humans actually perceive, exploiting models of vision and hearing rather than mathematical error."
+ },
+ {
+  "term": "Masking / psychoacoustic model",
+  "definition": "The auditory phenomenon where a loud sound renders nearby quieter sounds inaudible; a psychoacoustic model computes the masking threshold below which quantization noise is imperceptible."
+ },
+ {
+  "term": "Perceptual entropy",
+  "definition": "Johnston's measure of the number of bits of perceptually relevant information in an audio signal, accounting for masking."
+ },
+ {
+  "term": "Modified Discrete Cosine Transform (MDCT)",
+  "definition": "A critically-sampled transform using 50%-overlapping windows whose time-domain aliasing cancels exactly (TDAC), giving artifact-free block transitions; used in MP3, AAC, AC-3, Opus."
+ },
+ {
+  "term": "Time-domain aliasing cancellation (TDAC)",
+  "definition": "The principle (Princen-Bradley, 1986) by which deliberately introduced aliasing in overlapping MDCT blocks cancels on reconstruction, enabling overlap without redundancy."
+ },
+ {
+  "term": "Nonlinear transform coding",
+  "definition": "Learned compression replacing the fixed transform with a trained autoencoder optimized jointly for rate + λ·distortion, a gradient-descent relaxation of R(D)."
+ },
+ {
+  "term": "Rate-distortion-perception trade-off",
+  "definition": "Blau-Michaeli's result that low distortion and high perceptual realism are distinct conflicting goals, so allowing imperceptible distortion enables better-looking low-rate reconstructions."
+ },
+ {
+  "term": "Discrete Cosine Transform (DCT)",
+  "definition": "A linear transform expressing an 8×8 pixel block as a weighted sum of fixed cosine patterns, concentrating most energy into a few low-frequency coefficients so the rest can be discarded."
+ },
+ {
+  "term": "Quantization (lossy step)",
+  "definition": "Dividing transform coefficients by a quantization-table value and rounding to integers; the irreversible step that discards perceptually unimportant (mostly high-frequency) information."
+ },
+ {
+  "term": "Entropy coder",
+  "definition": "The lossless final stage (Huffman, arithmetic, or ANS) that packs the quantized integers into the fewest bits given their statistics."
+ },
+ {
+  "term": "Blocking artifact",
+  "definition": "Visible tile edges at low JPEG quality caused by quantizing each 8×8 block independently so neighbors no longer match at shared borders."
+ },
+ {
+  "term": "Ringing artifact",
+  "definition": "Gibbs-like oscillations near sharp edges, because reconstructing a discontinuity needs high-frequency coefficients that quantization has removed."
+ },
+ {
+  "term": "Chroma subsampling (YCbCr 4:2:0)",
+  "definition": "Storing color (chroma) at lower spatial resolution than brightness (luma), exploiting the eye's weaker color acuity to discard ~75% of color data."
+ },
+ {
+  "term": "Discrete Wavelet Transform (DWT)",
+  "definition": "A whole-image transform into nested resolution bands localized in space and frequency, used by JPEG 2000 to avoid blocking and enable progressive decoding."
+ },
+ {
+  "term": "Residual (prediction error)",
+  "definition": "The difference between a pixel and its prediction from neighbors; storing small residuals instead of raw values (as PNG does) decorrelates smooth regions."
+ },
+ {
+  "term": "DEFLATE",
+  "definition": "The LZ77-plus-Huffman lossless algorithm shared by zip, gzip, and PNG."
+ },
+ {
+  "term": "Asymmetric Numeral Systems (ANS)",
+  "definition": "An entropy coder (Jarek Duda, 2007) matching arithmetic-coding ratios at near-Huffman decode speed, used by JPEG XL and Zstandard."
+ },
+ {
+  "term": "Lossless JPEG transcoding",
+  "definition": "JPEG XL's ability to re-encode an existing JPEG ~20% smaller and reverse it bit-exactly, since both keep DCT coefficients and differ only in the entropy stage."
+ },
+ {
+  "term": "Intra-frame image codec",
+  "definition": "An image format built from a single still frame of a video codec (WebP from VP8, HEIC from HEVC, AVIF from AV1)."
+ },
+ {
+  "term": "Psychoacoustic model",
+  "definition": "An encoder component that computes, per frequency band, the masking threshold below which quantization noise is inaudible, so bits can be allocated to keep error just under perceptibility."
+ },
+ {
+  "term": "Absolute threshold of hearing (ATH)",
+  "definition": "The frequency-dependent sound level below which a tone cannot be heard at all; lowest around 2-4 kHz, so sub-threshold spectral energy can be discarded."
+ },
+ {
+  "term": "Frequency (simultaneous) masking",
+  "definition": "A loud tone raises the audibility threshold of nearby frequencies, hiding faint components within the same critical band so they can be coarsely quantized or dropped."
+ },
+ {
+  "term": "Temporal masking",
+  "definition": "A loud transient hides quiet sounds for a few ms before and tens-to-hundreds of ms after it, allowing coarse quantization around loud onsets."
+ },
+ {
+  "term": "Critical band / Bark scale",
+  "definition": "Frequency groups within which the cochlea integrates energy; masking and bit allocation are organized along this perceptual scale rather than uniform Hz."
+ },
+ {
+  "term": "MDCT (Modified Discrete Cosine Transform)",
+  "definition": "A lapped, critically-sampled transform with 50% block overlap and time-domain aliasing cancellation, giving perfect reconstruction while suppressing block-boundary artifacts; the core transform of MP3, AAC, Vorbis and Opus."
+ },
+ {
+  "term": "Residual (prediction error)",
+  "definition": "The difference between an actual sample and a predictor's estimate of it; small residuals are cheap to entropy-code, which is the basis of lossless prediction-based coders like FLAC."
+ },
+ {
+  "term": "Rice/Golomb coding",
+  "definition": "A parameterized entropy code that is near-optimal for geometric/Laplacian-distributed residuals, needing only one tunable parameter per partition; used by FLAC."
+ },
+ {
+  "term": "Linear prediction",
+  "definition": "Estimating each sample as a weighted combination of previous samples, leaving a small residual to encode; underpins FLAC and the SILK layer of Opus."
+ },
+ {
+  "term": "SILK + CELT (Opus hybrid)",
+  "definition": "Opus fuses Skype's linear-predictive speech coder (SILK) with Xiph's low-delay MDCT music coder (CELT), switching among speech-only, music-only and hybrid modes."
+ },
+ {
+  "term": "DRED (Deep REDundancy)",
+  "definition": "An Opus 1.5 neural feature embedding ~1 second of recovery data in packet padding to reconstruct audio through prolonged burst packet loss."
+ },
+ {
+  "term": "Motion compensation",
+  "definition": "Predicting a block in the current frame by copying a displaced block from a previously decoded reference frame, encoding only a motion vector plus the residual."
+ },
+ {
+  "term": "Motion vector",
+  "definition": "A small (Δx, Δy) offset telling the decoder where in the reference frame to copy the prediction block from."
+ },
+ {
+  "term": "Prediction residual",
+  "definition": "The difference between the true block and its motion-compensated (or intra) prediction, which is then transformed, quantized, and entropy-coded."
+ },
+ {
+  "term": "I/P/B frames",
+  "definition": "Intra frames coded alone, P-frames predicted from past frames, and B-frames predicted bidirectionally from both past and future references (the cheapest)."
+ },
+ {
+  "term": "Group of Pictures (GOP)",
+  "definition": "A repeating I-P-B... frame pattern; longer GOPs compress better but hurt seeking and error recovery."
+ },
+ {
+  "term": "Rate-distortion optimization (RDO)",
+  "definition": "The encoder choosing each coding option to minimize J = D + λ·R, trading reconstruction distortion D against bitrate R."
+ },
+ {
+  "term": "Encoder/decoder asymmetry",
+  "definition": "Standards define only the bitstream and decoder, so encoders vary widely in quality and are far more expensive than decoders (especially due to motion search)."
+ },
+ {
+  "term": "Patent pool",
+  "definition": "A consortium licensing a bundle of essential patents for a codec; fragmented, overlapping pools and unaffiliated holders crippled HEVC/VVC adoption."
+ },
+ {
+  "term": "AOMedia",
+  "definition": "The Alliance for Open Media (formed 2015), an industry consortium producing royalty-free codecs AV1 and AV2."
+ },
+ {
+  "term": "Hardware decode",
+  "definition": "Fixed-function decoder silicon in devices; without it, software decode drains battery, which is the structural deployment lag for AV1/AV2."
+ },
+ {
+  "term": "Cross-entropy as code length",
+  "definition": "Using model Q on a source P costs H(P,Q) = H(P) + D_KL(P||Q) bits per symbol; the wasted bits above the entropy floor equal the KL divergence, i.e. the modeling error itself."
+ },
+ {
+  "term": "Log loss / cross-entropy loss",
+  "definition": "The training objective -log Q(x) for the next symbol, which is literally the number of bits needed to encode that symbol with the model, fusing learning and compression into one objective."
+ },
+ {
+  "term": "Universal coding",
+  "definition": "Building a single adaptive code that performs nearly as well as the best code in a class for any source in that class, paying only a vanishing per-symbol redundancy that shrinks with message length."
+ },
+ {
+  "term": "Redundancy",
+  "definition": "The excess bits a universal/adaptive coder spends over the ideal code for the true source; it provably decays as more data is seen."
+ },
+ {
+  "term": "Krichevsky-Trofimov estimator",
+  "definition": "A smoothed-count (add-1/2) probability estimator for unknown discrete sources whose universal cost is about (1/2)log2(n) extra bits per parameter — the price of learning one parameter from data."
+ },
+ {
+  "term": "Minimum Description Length (MDL)",
+  "definition": "Rissanen's 1978 principle: pick the model minimizing L(model)+L(data|model), the total bits to transmit hypothesis plus residual — a quantitative, self-regularizing Occam's razor."
+ },
+ {
+  "term": "Two-part code",
+  "definition": "An encoding that first transmits the model and then the data given the model; the simplest concrete instance of MDL, recovering the (1/2)log n per-parameter complexity penalty."
+ },
+ {
+  "term": "Algorithmic probability",
+  "definition": "Solomonoff's universal prior (1960-64) assigning a string probability summed over all programs that output it, each weighted 2^(-program length), so short programs dominate."
+ },
+ {
+  "term": "Kolmogorov complexity K(x)",
+  "definition": "The length of the shortest program that outputs x on a universal Turing machine — the ultimate model-free compressed size of an object; provably uncomputable."
+ },
+ {
+  "term": "Solomonoff induction",
+  "definition": "The theoretically optimal universal predictor that Bayes-mixes over all programs; its cumulative error is bounded by the data source's Kolmogorov complexity, but it is uncomputable and serves as an ideal limit."
+ },
+ {
+  "term": "End-to-end learned compression",
+  "definition": "A codec where the transform, quantization surrogate, and entropy model are all neural networks trained jointly by gradient descent on a rate-distortion loss, rather than hand-designed."
+ },
+ {
+  "term": "Rate-distortion loss",
+  "definition": "The training objective R + λD, where R is the expected codelength under a learned probability model and D is distortion (often MSE); λ slides the codec along the rate-distortion curve."
+ },
+ {
+  "term": "Quantization-as-noise",
+  "definition": "A training trick that replaces non-differentiable rounding with adding uniform noise to the latent, providing a smooth surrogate so backpropagation can flow through the quantization step."
+ },
+ {
+  "term": "Hyperprior",
+  "definition": "A small second autoencoder that transmits side information describing the local statistics (e.g. Gaussian scale) of the main latents, letting the entropy model adapt spatially across the image."
+ },
+ {
+  "term": "Autoregressive context model",
+  "definition": "An entropy model that predicts each latent element from already-decoded neighbors, improving compression but forcing slow serial decoding."
+ },
+ {
+  "term": "Generative/perceptual codec",
+  "definition": "A codec trained with a GAN or diffusion loss to make reconstructions match the distribution of natural images (realism), hallucinating plausible texture instead of minimizing pixel error."
+ },
+ {
+  "term": "Rate-distortion-perception tradeoff",
+  "definition": "Blau and Michaeli's 2019 result that perceptual realism is a third axis in tension with low distortion and low rate, explaining why MSE codecs look blurry at low bitrate."
+ },
+ {
+  "term": "Implicit neural representation (INR)",
+  "definition": "Storing a signal as the weights of a small network overfit to it (e.g. an MLP mapping pixel coordinates to colors), as in COIN; decoding evaluates the network at each coordinate."
+ },
+ {
+  "term": "Conditional coding",
+  "definition": "The DCVC approach to neural video that uses temporal context as a condition on the entropy model rather than computing an explicit predicted-frame residual."
+ },
+ {
+  "term": "Arithmetic coding (as LLM backend)",
+  "definition": "An entropy coder that encodes each symbol in essentially -log2 p bits given a probability p; pairing it with an LLM's next-token distribution turns the model's prediction error into compressed output."
+ },
+ {
+  "term": "Log-loss = code length identity",
+  "definition": "An LLM's cross-entropy training objective, Σ -log p(x_t|context), equals (up to log 2) the arithmetic-coded file length, making minimizing training loss and minimizing file size the same operation."
+ },
+ {
+  "term": "Residual surprise",
+  "definition": "The -log p cost an arithmetic coder pays per token; near zero when the model confidently predicts the true token, large when the model is wrong."
+ },
+ {
+  "term": "nncp",
+  "definition": "Fabrice Bellard's online neural compressor that trains a Transformer on the file as it compresses, so no model needs to be shipped with the data."
+ },
+ {
+  "term": "ts_zip",
+  "definition": "Bellard's pretrained LLM text compressor using a frozen, 8-bit-quantized RWKV-169M model evaluated deterministically so the file can be decompressed on different hardware."
+ },
+ {
+  "term": "Model-size accounting",
+  "definition": "The honest measure of an LLM compressor's cost: compressed file bits plus the bits needed to store the model itself, which for huge models can dwarf the payload."
+ },
+ {
+  "term": "Compression-intelligence linearity",
+  "definition": "The empirical finding that a model's bits-per-character on held-out text correlates near-linearly (r about -0.95) with its benchmark capability scores."
+ },
+ {
+  "term": "Reference-based compression",
+  "definition": "Storing only the differences (position + mismatches) between data and a shared reference, rather than the data itself; the basis of the CRAM genomic format."
+ },
+ {
+  "term": "Quality scores",
+  "definition": "Per-base confidence estimates attached to sequencing reads; noisy, dominate genomic file size, and are usually compressed lossily."
+ },
+ {
+  "term": "Error-bounded lossy compression",
+  "definition": "Lossy compression that guarantees every reconstructed value lies within a user-set absolute or relative tolerance; used for HPC floating-point arrays."
+ },
+ {
+  "term": "zfp",
+  "definition": "Lindstrom's 2014 block-transform floating-point compressor that decorrelates 4^d blocks and bit-plane-codes coefficients, supporting random access into compressed arrays."
+ },
+ {
+  "term": "SZ",
+  "definition": "Di and Cappello's 2016 prediction-based error-bounded compressor that predicts each value from neighbors, quantizes the residual, and entropy-codes."
+ },
+ {
+  "term": "Dictionary encoding",
+  "definition": "Replacing repeated values (e.g. strings) with small integer IDs from a per-column dictionary; a core Parquet/ORC technique."
+ },
+ {
+  "term": "Run-length encoding (RLE)",
+  "definition": "Encoding consecutive repeated values as a single value plus a repeat count."
+ },
+ {
+  "term": "Bit-packing",
+  "definition": "Storing integers using only as many bits as their range requires instead of a full machine word."
+ },
+ {
+  "term": "Delta-of-delta encoding",
+  "definition": "Encoding the difference between successive differences; makes regularly-spaced timestamps nearly free, central to Gorilla time-series compression."
+ },
+ {
+  "term": "Knowledge distillation",
+  "definition": "Hinton et al. (2015) technique training a small student model to mimic a large teacher's soft output distribution, transferring information beyond hard labels."
+ },
+ {
+  "term": "Magnitude pruning",
+  "definition": "Removing weights with small absolute value to produce a sparse, lower-description-length network (Han et al., Deep Compression, 2015)."
+ },
+ {
+  "term": "GPTQ",
+  "definition": "A 2022 one-shot post-training weight quantization method that quantizes column-by-column using Hessian information to compensate each rounding error in remaining weights."
+ },
+ {
+  "term": "AWQ (Activation-aware Weight Quantization)",
+  "definition": "A 2024 method that protects salient weights identified by activation magnitude via rescaling, enabling accurate 4-bit LLM quantization."
+ },
+ {
+  "term": "KV-cache",
+  "definition": "The stored key/value vectors for all past tokens in an LLM; grows with context length and dominates inference memory, making it a prime compression target."
+ },
+ {
+  "term": "Multi-head Latent Attention (MLA)",
+  "definition": "DeepSeek-V2/V3 attention variant that jointly projects keys and values into a small cached latent, cutting KV memory ~93% while matching full-attention quality."
+ },
+ {
+  "term": "Product quantization (PQ)",
+  "definition": "Jegou et al. (2011) vector-compression method splitting a vector into sub-vectors, each replaced by the nearest of a small set of learned centroids, enabling fast table-lookup distance search."
+ },
+ {
+  "term": "Binary quantization",
+  "definition": "Compressing embeddings to 1 bit per dimension with Hamming-distance search, giving ~32x compression at ~80-95% retrieval recall."
+ }
+]
