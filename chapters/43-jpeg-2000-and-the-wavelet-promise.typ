@@ -5,28 +5,28 @@
 
 #epigraph[The best is the enemy of the good.][Voltaire, _Dictionnaire philosophique_, 1770]
 
-Imagine you are designing the image codec that will replace JPEG. You have a decade of research behind you, a bigger wavelet theory instead of block DCT, a richer bitstream that delivers any quality or resolution from the same file, a lossless option that is genuinely lossless, and a compression ratio that measurably beats JPEG at the same visual quality. You publish the standard in the year 2000, you name it JPEG 2000, and then — almost nothing happens on the web. Browsers ignore it for years. JPEG shuffles along unthreatened. Yet simultaneously, every commercial cinema projector on Earth encodes its footage in your format, every hospital stores its MRI scans and CT slices in your format, and the archivists at national libraries depend on your format to preserve priceless cultural heritage.
+Imagine you are designing the image codec that will replace JPEG. You have a decade of research behind you, a bigger wavelet theory instead of block DCT, a richer bitstream that delivers any quality or resolution from the same file, a lossless option that is genuinely lossless, and a compression ratio that measurably beats JPEG at the same visual quality. You publish the standard in the year 2000, you name it JPEG 2000, and then almost nothing happens on the web. Browsers ignore it for years. JPEG shuffles along unthreatened. Yet simultaneously, every commercial cinema projector on Earth encodes its footage in your format, every hospital stores its MRI scans and CT slices in your format, and the archivists at national libraries depend on your format to preserve priceless cultural heritage.
 
 How does the technically superior codec become the quiet champion of professional niches while losing the consumer market almost entirely? That story is Chapter 43. By the end, you will understand the wavelet machinery at JPEG 2000's core, the cleverness of its embedded bit-plane coder, and why "better" is never enough on its own.
 
 #recap[
-In Chapter 38 we built the mathematics of wavelets from scratch: filter banks, multi-resolution analysis, and the DWT. In Chapter 39 we met quantization — the lossy step where precision is traded for bits. In Chapter 42 we just finished dissecting JPEG itself: 8×8 block DCT, quantization tables, zig-zag scan, run-length coding, Huffman entropy. JPEG 2000 keeps quantization and entropy coding but replaces everything else: the block DCT becomes a full-image DWT, and the entropy coder becomes the MQ arithmetic coder feeding an embedded bit-plane engine called EBCOT. All the moving parts in this chapter connect directly to what you already know.
+In Chapter 38 we built the mathematics of wavelets from scratch: filter banks, multi-resolution analysis, and the DWT. In Chapter 39 we met quantization (the lossy step where precision is traded for bits). In Chapter 42 we just finished dissecting JPEG itself: 8×8 block DCT, quantization tables, zig-zag scan, run-length coding, Huffman entropy. JPEG 2000 keeps quantization and entropy coding but replaces everything else: the block DCT becomes a full-image DWT, and the entropy coder becomes the MQ arithmetic coder feeding an embedded bit-plane engine called EBCOT. All the moving parts in this chapter connect directly to what you already know.
 ]
 
 #objectives((
   [Explain why the Discrete Wavelet Transform avoids blocking artifacts that plague JPEG.],
   [Describe the EBCOT algorithm: code-blocks, bit-plane passes, and truncation.],
   [Explain the role of the MQ arithmetic coder and how it differs from JPEG's Huffman tables.],
-  [Define scalability — resolution scalability and quality/SNR scalability — and give a concrete example of each.],
+  [Define scalability (resolution scalability and quality/SNR scalability) and give a concrete example of each.],
   [Name the three domains where JPEG 2000 genuinely dominates and explain why.],
   [Describe HTJ2K (Part 15) and explain the throughput–efficiency trade-off it makes.],
 ))
 
 == Why JPEG's Blocks Break Down
 
-Before we dive into JPEG 2000, it is worth spending a moment on the exact problem it was designed to solve. JPEG breaks an image into a grid of independent 8×8 pixel blocks, transforms each block separately with the DCT, quantizes the resulting coefficients, and encodes them. That independence is both JPEG's strength (the blocks are easy to compute in parallel) and its weakness.
+Before getting into JPEG 2000, it is worth spending a moment on the exact problem it was designed to solve. JPEG breaks an image into a grid of independent 8×8 pixel blocks, transforms each block separately with the DCT, quantizes the resulting coefficients, and encodes them. That independence is both JPEG's strength (the blocks are easy to compute in parallel) and its weakness.
 
-When you push a JPEG file to a very low bitrate — saving aggressively to squeeze a photograph into a small file — the quantization step rounds almost all the high-frequency DCT coefficients to zero. That is fine _within_ a block: the block's internal detail is blurred. The problem is what happens _between_ blocks. Two adjacent blocks are quantized independently, so their reconstructed edges no longer match. You see a grid of rectangular tiles — the blocking artifact. You also see _ringing_: because a sharp edge in the image requires high-frequency cosine terms that have been discarded, the reconstruction oscillates near the edge in a pattern called Gibbs overshoot.
+When you push a JPEG file to a very low bitrate (saving aggressively to squeeze a photograph into a small file), the quantization step rounds almost all the high-frequency DCT coefficients to zero. That is fine _within_ a block: the block's internal detail is blurred. The problem is what happens _between_ blocks. Two adjacent blocks are quantized independently, so their reconstructed edges no longer match. You see a grid of rectangular tiles: the blocking artifact. You also see _ringing_: because a sharp edge in the image requires high-frequency cosine terms that have been discarded, the reconstruction oscillates near the edge in a pattern called Gibbs overshoot.
 
 #keyidea[
 JPEG's artifacts come from independent block processing. JPEG 2000 eliminates blocking by applying its transform to the _whole image_ at once. Ringing is not eliminated (it is fundamental to any lossy transform-coder), but it spreads smoothly rather than landing on tile boundaries.
@@ -51,40 +51,40 @@ cetz.canvas({
 
   // Level 5 (top left corner, smallest)
   rect((0,6),(2,8), fill: rgb("#0b5394").lighten(40%), stroke: 0.7pt + rgb("#0b5394"))
-  content((1,7))[#text(size:7pt)[LL5]]
+  content((1,7), box(width: 1.6cm, inset: 1pt, align(center, text(size:7pt)[LL5])))
 
   rect((2,6),(4,8), fill: rgb("#1f5066").lighten(60%), stroke: 0.7pt)
-  content((3,7))[#text(size:7pt)[LH5]]
+  content((3,7), box(width: 1.6cm, inset: 1pt, align(center, text(size:7pt)[LH5])))
 
   rect((0,4),(2,6), fill: rgb("#1f5066").lighten(60%), stroke: 0.7pt)
-  content((1,5))[#text(size:7pt)[HL5]]
+  content((1,5), box(width: 1.6cm, inset: 1pt, align(center, text(size:7pt)[HL5])))
 
   rect((2,4),(4,6), fill: rgb("#1f5066").lighten(70%), stroke: 0.7pt)
-  content((3,5))[#text(size:7pt)[HH5]]
+  content((3,5), box(width: 1.6cm, inset: 1pt, align(center, text(size:7pt)[HH5])))
 
   // Level 4
   rect((4,4),(8,8), fill: rgb("#1f5066").lighten(70%), stroke: 0.7pt)
-  content((6,6))[#text(size:7pt)[Level 4 subbands]]
+  content((6,6), box(width: 3.6cm, inset: 2pt, align(center, text(size:7pt)[Level 4 subbands])))
 
   // Level 3
   rect((0,0),(4,4), fill: rgb("#1f5066").lighten(75%), stroke: 0.7pt)
-  content((2,2))[#text(size:7pt)[Level 3 subbands]]
+  content((2,2), box(width: 3.6cm, inset: 2pt, align(center, text(size:7pt)[Level 3 subbands])))
 
   // Level 2/1 (right half lower)
   rect((4,0),(8,4), fill: rgb("#1f5066").lighten(80%), stroke: 0.7pt)
-  content((6,2))[#text(size:7pt)[Levels 1-2 subbands]]
+  content((6,2), box(width: 3.6cm, inset: 2pt, align(center, text(size:7pt)[Levels 1--2 subbands])))
 
   // Label
-  content((4,-0.5))[#text(size:8pt, fill: rgb("#0b5394"))[512 pixels wide]]
+  content((4,-0.5), box(width: 4cm, inset: 1pt, align(center, text(size:8pt, fill: rgb("#0b5394"))[512 pixels wide])))
   line((0,-0.3),(8,-0.3), stroke: 0.5pt + rgb("#0b5394"), mark: (end: ">", start: "<"))
 }))
 
-The crucial point: the high-frequency subbands (LH, HL, HH) capture edges and textures. Because these subbands cover the _whole image_, a vertical edge in the image spreads its energy coherently across the HL subband at multiple levels. When you aggressively quantize those coefficients, the artifact blurs smoothly across the neighbourhood of the edge — it never snaps to an 8×8 grid boundary, because there is no grid.
+The key point: the high-frequency subbands (LH, HL, HH) capture edges and textures. Because these subbands cover the _whole image_, a vertical edge spreads its energy coherently across the HL subband at multiple levels. When you aggressively quantize those coefficients, the artifact blurs smoothly across the neighbourhood of the edge. It never snaps to an 8×8 grid boundary, because there is no grid.
 
 #aside[
-The CDF 9/7 filter has 9 taps in the analysis lowpass and 7 taps in the synthesis (reconstruction) filter. The CDF 5/3 has 5 and 3 respectively. Why two different filters? The 9/7 gives better compression (more energy compaction) but uses floating-point arithmetic, which does not round-trip exactly. For lossless compression you _need_ exact round-trip behaviour — so JPEG 2000 switches to the integer 5/3 filter for its lossless mode.
+The CDF 9/7 filter has 9 taps in the analysis lowpass and 7 taps in the synthesis (reconstruction) filter. The CDF 5/3 has 5 and 3 respectively. Why two different filters? The 9/7 gives better compression (more energy compaction) but uses floating-point arithmetic, which does not round-trip exactly. For lossless compression you _need_ exact round-trip behaviour, so JPEG 2000 switches to the integer 5/3 filter for its lossless mode.
 
-How does the 5/3 filter manage to be _exactly_ reversible using only whole numbers? The trick is the *lifting scheme*: instead of computing the wavelet as a single sum of products (which would need fractions), you build it from a short sequence of simple steps, each of which adds to one sample a rounded combination of its neighbours. For the 5/3 filter the two steps are, in essence, "predict each odd-indexed sample from the average of its two even neighbours, then update each even sample using the corrected odd ones," with every intermediate result rounded to an integer. Because each step is _individually_ invertible — you simply subtract back exactly what you added — the whole transform inverts perfectly, integer in and integer out, with no rounding error to accumulate. (Lifting also happens to be faster and to need less memory; modern wavelet codecs use it even for the floating-point 9/7 filter.)
+How does the 5/3 filter manage to be _exactly_ reversible using only whole numbers? The trick is the *lifting scheme*: instead of computing the wavelet as a single sum of products (which would need fractions), you build it from a short sequence of simple steps, each of which adds to one sample a rounded combination of its neighbours. For the 5/3 filter the two steps are, in essence, "predict each odd-indexed sample from the average of its two even neighbours, then update each even sample using the corrected odd ones," with every intermediate result rounded to an integer. Because each step is _individually_ invertible (you simply subtract back exactly what you added), the whole transform inverts perfectly, integer in and integer out, with no rounding error to accumulate. Lifting also happens to be faster and to need less memory; modern wavelet codecs use it even for the floating-point 9/7 filter.
 ]
 
 === Colour Transformation
@@ -93,7 +93,7 @@ Like JPEG, JPEG 2000 works in a colour space other than RGB. For lossy compressi
 
 == Tiling
 
-JPEG 2000 does support optional _tiles_ — rectangular regions processed independently — but these tiles are typically much larger than JPEG's 8×8 blocks (common sizes are 256×256, 1024×1024, or "one tile for the whole image"). For typical still-image compression the standard is one tile. Tiling is used primarily for very large images (satellite data, gigapixel scans) where you need random access to different spatial regions.
+JPEG 2000 does support optional _tiles_ (rectangular regions processed independently), but these tiles are typically much larger than JPEG's 8×8 blocks: common sizes are 256×256, 1024×1024, or one tile for the whole image. For typical still-image compression the standard is one tile. Tiling is used primarily for very large images (satellite data, gigapixel scans) where you need random access to different spatial regions.
 
 This is an important nuance: JPEG 2000 is not "just like JPEG with bigger blocks." When you use one tile (the most common case), the DWT spans the entire image, and there are no tile-boundary artifacts at all.
 
@@ -115,7 +115,7 @@ Concrete example: $c = 13.4$, $Delta = 5$. Then $q = floor(13.4 / 5) = floor(2.6
 
 == EBCOT: Embedded Block Coding with Optimised Truncation
 
-The quantized coefficients in each subband now need to be entropy-coded. This is where JPEG 2000 does something genuinely clever — something that goes far beyond JPEG's zig-zag + run-length + Huffman. The algorithm is called *EBCOT* (Embedded Block Coding with Optimised Truncation), proposed by David Taubman in his 2000 paper "High performance scalable image compression with EBCOT." It is the heart of what makes JPEG 2000 progressively decodable at _any_ quality.
+The quantized coefficients in each subband now need to be entropy-coded. This is where JPEG 2000 does something genuinely clever, going well beyond JPEG's zig-zag + run-length + Huffman. The algorithm is called *EBCOT* (Embedded Block Coding with Optimised Truncation), proposed by David Taubman in his 2000 paper "High performance scalable image compression with EBCOT." It is what makes JPEG 2000 progressively decodable at _any_ quality.
 
 === Code-Blocks
 
@@ -127,7 +127,7 @@ For each code-block, EBCOT codes the quantized coefficients _one bit-plane at a 
 
 Within each bit-plane, EBCOT makes three _passes_ in a fixed scan order across the code-block:
 
-+ *Significance propagation pass.* A coefficient is called _significant_ once its MSB has been seen (i.e., it is non-zero in the bit-planes coded so far). In this pass, only coefficients that are _not yet significant_ but have at least one significant neighbour are coded — because context from neighbours makes their bits more predictable.
++ *Significance propagation pass.* A coefficient is called _significant_ once its MSB has been seen (i.e., it is non-zero in the bit-planes coded so far). In this pass, only coefficients that are _not yet significant_ but have at least one significant neighbour are coded, because context from neighbours makes their bits more predictable.
 
 + *Magnitude refinement pass.* Coefficients that _are already_ significant get their next bit coded. These bits carry precise magnitude information and are relatively independent of context.
 
@@ -136,7 +136,7 @@ Within each bit-plane, EBCOT makes three _passes_ in a fixed scan order across t
 Each pass produces a small chunk of compressed data (a "compressed bit-plane segment"). These segments are the _granularity_ of JPEG 2000's quality scalability: by including more or fewer segments in the final bitstream, the decoder gets a coarser or finer rendering of each code-block.
 
 #keyidea[
-Bit-plane coding means the coder always works from the most important bits toward the least important bits. At any point you can stop and you have the best possible image for the bits you have spent so far. This is _embeddedness_ — the same bitstream decodes at any quality level you want.
+Bit-plane coding means the coder always works from the most important bits toward the least important bits. At any point you can stop and you have the best possible image for the bits spent so far. That property is called _embeddedness_: the same bitstream decodes at any quality level you choose.
 ]
 
 === The MQ Arithmetic Coder
@@ -164,24 +164,24 @@ Let us trace EBCOT on a tiny 4×1 block of already-quantized DWT coefficients:
 
 #figure(
   table(
-    columns: (auto, auto, auto, auto, auto),
-    inset: 7pt,
+    columns: (4cm, auto, auto, auto, auto),
+    inset: 6pt,
     align: center,
     table.header([*Position*], [*A*], [*B*], [*C*], [*D*]),
     [Quantized value], [5], [-3], [0], [7],
     [3-bit magnitude], [101], [011], [000], [111],
-    [Sign (0=pos)], [0], [1], [–], [0],
+    [Sign (0=pos)], [0], [1], [--], [0],
   ),
   caption: [Four quantized DWT coefficients and their binary representations (magnitudes).]
 )
 
-Bit-plane 2 (the MSB): the significance propagation pass codes coefficients whose neighbours are already significant — none are, so nothing is coded here. The cleanup pass codes _all_ coefficients: the MSBs are 1, 0, 0, 1. Now A and D are _significant_; B and C are not.
+Bit-plane 2 (the MSB): the significance propagation pass codes coefficients whose neighbours are already significant. None are, so nothing is coded here. The cleanup pass codes _all_ coefficients: the MSBs are 1, 0, 0, 1. Now A and D are _significant_; B and C are not.
 
-Bit-plane 1: the significance propagation pass sees that B (neighbour of A, which is significant) and C (neighbour of D) are not yet significant — their bit-plane-1 bits are coded here: B=1, C=0. B is now significant. The magnitude-refinement pass codes the bit-plane-1 bits of A (0) and D (1) since they were already significant.
+Bit-plane 1: the significance propagation pass sees that B (neighbour of A, which is significant) and C (neighbour of D) are not yet significant, so their bit-plane-1 bits are coded here: B=1, C=0. B is now significant. The magnitude-refinement pass codes the bit-plane-1 bits of A (0) and D (1) since they were already significant.
 
 Bit-plane 0: all four are now significant, so the magnitude-refinement pass codes their LSBs: A=1, B=1, C=0, D=1.
 
-After all three bit-planes, the decoder has perfect reconstructions: A=5, B=3 (with sign=-1 → −3), C=0, D=7. If the bitstream were truncated after bit-plane 2, the decoder would reconstruct A≈6, B=0, C=0, D≈6 — a coarser but sensible approximation.
+After all three bit-planes, the decoder has perfect reconstructions: A=5, B=3 (with sign=-1 → −3), C=0, D=7. If the bitstream were truncated after bit-plane 2, the decoder would reconstruct A≈6, B=0, C=0, D≈6: a coarser but sensible approximation.
 
 #checkpoint[After the significance-propagation pass for bit-plane 2 in our example, how many coefficients are significant?][Two: A (value 5, MSB=1) and D (value 7, MSB=1). B (MSB=0) and C (MSB=0) are not yet significant.]
 
@@ -196,7 +196,7 @@ This layered bitstream is a remarkable engineering achievement. A single JPEG 20
 - Decode at _half the linear resolution_ (quarter the pixel count) by stopping at the LL3 subband.
 - Decode a _region of interest_ by reading only the code-blocks overlapping that region.
 
-These four properties — quality scalability, resolution scalability, and spatial random access — are built into the bitstream structure without any extra work from the decoder. It genuinely does not exist in JPEG, which requires separate low-resolution JPEG files or multi-res image pyramids.
+These properties (quality scalability, resolution scalability, and spatial random access) are built into the bitstream structure without any extra work from the decoder. Nothing comparable exists in JPEG, which requires separate low-resolution JPEG files or multi-res image pyramids.
 
 #gomaths("Scalability: SNR vs resolution")[
 _SNR scalability_ means you can trade quality for bitrate smoothly: each additional layer improves the signal-to-noise ratio of every pixel. In information terms, you are adding refinement bits that reduce quantization error.
@@ -220,23 +220,23 @@ How well does JPEG 2000 actually compress? On photographic images (the Kodak ima
   weaknesses: "Complex implementation; slow encoder/decoder (MQ coder); never gained web browser support; patent uncertainty chilled early adoption.",
   superseded: "HTJ2K (Part 15) for throughput; AVIF/JPEG XL for consumer web use; still dominant in cinema, medical, and archival.",
 )[
-The standard has 17 parts. Part 1 (ISO/IEC 15444-1, first edition 2000, latest 2019) is the core — free of known royalties. Part 2 adds extensions (arbitrary wavelet filters, ROI coding, etc.). Part 3 defines Motion JPEG 2000 (MJP2) for digital cinema. Part 6 covers compound documents.
+The standard has 17 parts. Part 1 (ISO/IEC 15444-1, first edition 2000, latest 2019) is the core, and is free of known royalties. Part 2 adds extensions (arbitrary wavelet filters, ROI coding, etc.). Part 3 defines Motion JPEG 2000 (MJP2) for digital cinema. Part 6 covers compound documents.
 ]
 
 == The MQ Coder in Detail
 
-The MQ coder is worth a closer look because it shows a neat design philosophy. (The name carries no grand meaning: the "Q" comes from IBM's earlier _Q-coder_ and _QM-coder_ lineage used in the original JPEG and JBIG standards, and the "M" marks the Mitsubishi-submitted variant the committee adopted in 1999. It is _not_ short for "multi-resolution," a common myth.) It is a _binary_ arithmetic coder — it only codes one bit at a time. This simplifies the implementation enormously compared to multi-symbol arithmetic coders.
+The MQ coder is worth a closer look because it shows a neat design philosophy. The name carries no grand meaning: the "Q" comes from IBM's earlier _Q-coder_ and _QM-coder_ lineage used in the original JPEG and JBIG standards, and the "M" marks the Mitsubishi-submitted variant the committee adopted in 1999. It is _not_ short for "multi-resolution," a common myth. It is a _binary_ arithmetic coder, coding only one bit at a time. That restriction simplifies the implementation considerably compared to multi-symbol arithmetic coders.
 
-Each bit has a _context label_ (a small integer 0–18), computed from the spatial neighbourhood. The MQ coder maintains a probability estimate for each context: the probability that the next bit in this context is a "0" (the _more probable symbol_, or MPS, for that context). When it codes a "0" it updates the MPS count; when it codes a "1" it updates the _less probable symbol_ (LPS) count. The coder adapts its estimates via a finite-state probability table — 47 states of (probability estimate, switching direction) — rather than exact counting, which keeps the memory and logic small.
+Each bit has a _context label_ (a small integer 0–18), computed from the spatial neighbourhood. The MQ coder maintains a probability estimate for each context: the probability that the next bit in this context is a "0" (the _more probable symbol_, or MPS, for that context). When it codes a "0" it updates the MPS count; when it codes a "1" it updates the _less probable symbol_ (LPS) count. The coder adapts its estimates via a finite-state probability table with 47 states, each encoding a probability estimate and a switching direction, rather than doing exact counting. This keeps the memory and logic small.
 
 The arithmetic itself follows the same interval-subdivision logic you learned in Chapter 26: the current code interval is split according to the probability of the MPS, and the new interval is renormalized to keep the precision register from underflowing.
 
 #gopython("Binary arithmetic coding: the MQ coder idea")[
-Here is a simplified sketch of how a context-adaptive binary coder works — not the full MQ coder, but the essential idea. Each context maintains a running estimate of P(bit=0). The arithmetic coder uses that probability to encode each bit.
+Here is a simplified sketch of how a context-adaptive binary coder works (not the full MQ coder, but the essential idea). Each context maintains a running estimate of P(bit=0). The arithmetic coder uses that probability to encode each bit.
 
 ```python
 # Very simplified context-adaptive binary encoder sketch.
-# This is NOT the full MQ coder — just the probability-adaptation idea.
+# This is NOT the full MQ coder - just the probability-adaptation idea.
 
 class ContextModel:
     """Tracks the probability of bit=0 for one context."""
@@ -269,28 +269,28 @@ example_contexts = [0, 0, 1, 2, 1, 0, 2, 1]
 encode_bits_with_context(example_bits, example_contexts, n_contexts=3)
 ```
 
-Each context learns independently. If context 0 consistently sees 0-bits (significance propagation in a smooth region), its `prob_zero` rises toward 1, and the arithmetic coder assigns very few bits per 0-bit — perfect compression for that context.
+Each context learns independently. If context 0 consistently sees 0-bits (significance propagation in a smooth region), its `prob_zero` rises toward 1, and the arithmetic coder assigns very few bits per 0-bit. That is nearly optimal compression for that context.
 ]
 
 == JPEG 2000 in the Real World: Where It Actually Won
 
-For a format often described as a "failure," JPEG 2000 has an impressive installed base — just not where you look with a web browser.
+For a format often described as a "failure," JPEG 2000 has an impressive installed base, just not where you look with a web browser.
 
 === Digital Cinema
 
-In 2005, *Digital Cinema Initiatives (DCI)* — the consortium of major Hollywood studios — selected JPEG 2000 as the mandatory compression standard for *Digital Cinema Packages (DCPs)*. Every digital projector you sit in front of in a commercial cinema plays back JPEG 2000. The DCI specification (version 1.4.2, June 2022) mandates JPEG 2000 Part 3 (Motion JPEG 2000) at up to 250 megabits per second for 4K content.
+In 2005, *Digital Cinema Initiatives (DCI)* (the consortium of major Hollywood studios) selected JPEG 2000 as the mandatory compression standard for *Digital Cinema Packages (DCPs)*. Every digital projector you sit in front of in a commercial cinema plays back JPEG 2000. The DCI specification (version 1.4.2, June 2022) mandates JPEG 2000 Part 3 (Motion JPEG 2000) at up to 250 megabits per second for 4K content.
 
 Why JPEG 2000 for cinema? The professional requirements fit its strengths exactly:
 - *Lossless or very high quality* is required; blocking artifacts are unacceptable.
 - *Large frames* (4096×2160 for 4K) benefit from the DWT's whole-image transform.
 - *Random access* to individual frames matters for studio post-production workflows.
-- *Bitrate doesn't matter much* at 250 Mbps — the bottleneck is disk throughput, not compression ratio.
+- *Bitrate doesn't matter much* at 250 Mbps: the bottleneck is disk throughput, not compression ratio.
 
 === Medical Imaging
 
 The *DICOM* (Digital Imaging and Communications in Medicine) standard, which governs how hospitals exchange CT scans, MRI images, X-rays, pathology slides, and ultrasound images, adopted JPEG 2000 by 2008 as a transfer syntax. Radiology and digital pathology are heavy users, especially for _lossless_ JPEG 2000 (using the integer CDF 5/3 wavelet) where diagnostic certainty is paramount.
 
-The appeal is again the scalability: a 2-gigapixel whole-slide image from a digital pathology scanner can be stored as one JPEG 2000 file, then zoomed and panned in a viewer that reads only the resolution level and spatial tile it needs at any given moment — without decompressing the whole file.
+The scalability is again the draw: a 2-gigapixel whole-slide image from a digital pathology scanner can be stored as one JPEG 2000 file, then zoomed and panned in a viewer that reads only the resolution level and spatial tile it needs at any given moment, without decompressing the whole file.
 
 === Archiving and Preservation
 
@@ -308,15 +308,15 @@ The reasons the web never embraced JPEG 2000 combine business, politics, and pra
 
 *No dominant open-source implementation.* OpenJPEG, the main open-source library, was slower and less reliable than the mature `libjpeg` ecosystem for a long time. (This situation improved substantially from 2015 onward.)
 
-*Apple's half-measure.* Safari shipped JPEG 2000 support for a time — it still appears in some iOS documentation — but without wide browser support, web publishers had no incentive to produce JPEG 2000 content.
+*Apple's half-measure.* Safari shipped JPEG 2000 support for a time (it still appears in some iOS documentation), but without wide browser support, web publishers had no incentive to produce JPEG 2000 content.
 
-#misconception[JPEG 2000 was a commercial failure.][It depends entirely on your market. JPEG 2000 dominates digital cinema, is widespread in medical imaging, and underpins archival workflows at major cultural institutions. It "failed" only on the consumer web — a market where it faced insurmountable momentum advantages for a less capable incumbent.]
+#misconception[JPEG 2000 was a commercial failure.][It depends entirely on your market. JPEG 2000 dominates digital cinema, is widespread in medical imaging, and runs archival workflows at major cultural institutions. It "failed" only on the consumer web, a market where it faced insurmountable momentum advantages for a less capable incumbent.]
 
 == Regions of Interest
 
 One capability unique to JPEG 2000 (and absent from JPEG or most other still-image formats) is *Region of Interest (ROI) coding*. The encoder can designate a rectangular or arbitrary-shaped region of the image as "important" and arrange the bitstream so that region's bits come first. A decoder that stops early (at a low bitrate) gets a sharp ROI surrounded by a blurry background, rather than a uniformly blurry image.
 
-The simplest method (the "maxshift" method in Part 1) works by shifting the bit-planes of the ROI coefficients up by a fixed number $s$. Since bit-planes are coded from the MSB down, the ROI's bits appear first in the stream. The shift $s$ must be large enough that even the ROI's least significant bit outranks all background bits — which means $s >= ceil(log_2(K))$ where $K$ is the maximum quantized magnitude in the background, and $ceil(dot)$ is the _ceiling_ function (round _up_ to the nearest whole number, the partner of the floor function from Chapter 7: $ceil(2.1) = 3$, $ceil(4) = 4$).
+The simplest method (the "maxshift" method in Part 1) works by shifting the bit-planes of the ROI coefficients up by a fixed number $s$. Since bit-planes are coded from the MSB down, the ROI's bits appear first in the stream. The shift $s$ must be large enough that even the ROI's least significant bit outranks all background bits, which requires $s >= ceil(log_2(K))$ where $K$ is the maximum quantized magnitude in the background, and $ceil(dot)$ is the _ceiling_ function (round _up_ to the nearest whole number, the partner of the floor function from Chapter 7: $ceil(2.1) = 3$, $ceil(4) = 4$).
 
 Medical imaging makes obvious use of this: a radiologist's region of interest (say, a lesion or a joint) is coded at high quality while surrounding tissue degrades gracefully.
 
@@ -324,14 +324,14 @@ Medical imaging makes obvious use of this: a radiologist's region of interest (s
 
 The slow MQ coder has always been the primary complaint against JPEG 2000. An image codec operating at 2–3 frames per second on 2000-era hardware was fine for archival and cinema (which have lots of time and money) but useless for real-time applications.
 
-In 2019, ISO/IEC 15444-15 — informally *HTJ2K* or *High-Throughput JPEG 2000* — was standardised. HTJ2K keeps everything about JPEG 2000 (the DWT, the code-block structure, the layer/tier architecture) but replaces the MQ coder with a completely new *HT Block Coder* designed for vectorised (SIMD) hardware. The HT block coder:
+In 2019, ISO/IEC 15444-15, informally known as *HTJ2K* or *High-Throughput JPEG 2000*, was standardised. HTJ2K keeps everything about JPEG 2000 (the DWT, the code-block structure, the layer/tier architecture) but replaces the MQ coder with a completely new *HT Block Coder* designed for vectorised (SIMD) hardware. The HT block coder:
 
 - Uses much simpler context modelling than MQ (fewer passes, simpler states).
 - Operates on groups of four (or more) samples simultaneously, exploiting hardware SIMD.
 - Sacrifices roughly *5–10% compression efficiency* compared to MQ-coded JPEG 2000.
-- In exchange, gains *10–30× throughput* — a code block that took 1 ms with MQ takes 30–100 µs with HTJ2K.
+- In exchange, gains *10–30× throughput*: a code block that took 1 ms with MQ takes 30–100 µs with HTJ2K.
 
-*OpenJPEG 2.5* (released May 2022) added HTJ2K decoding support. The open-source *OpenJPH* library specialises in HTJ2K and is used in several broadcast and medical imaging workflows. Code4Lib and digital library communities have evaluated HTJ2K as a "drop-in replacement for JPEG 2000 with IIIF" — the International Image Interoperability Framework used by museums and archives — and found the quality-throughput trade-off very favourable.
+*OpenJPEG 2.5* (released May 2022) added HTJ2K decoding support. The open-source *OpenJPH* library specialises in HTJ2K and is used in several broadcast and medical imaging workflows. Code4Lib and digital library communities have evaluated HTJ2K as a "drop-in replacement for JPEG 2000 with IIIF" (the International Image Interoperability Framework used by museums and archives) and found the quality-throughput trade-off very favourable.
 
 #algo(
   name: "HTJ2K (High-Throughput JPEG 2000, Part 15)",
@@ -341,12 +341,12 @@ In 2019, ISO/IEC 15444-15 — informally *HTJ2K* or *High-Throughput JPEG 2000* 
   complexity: "O(N) per frame; SIMD-parallelisable within each code-block.",
   strengths: "All JPEG 2000 scalability and quality features preserved; dramatic speed increase; drop-in bitstream compatibility with existing infrastructure.",
   weaknesses: "Slightly worse compression than classical JPEG 2000; still not widely deployed outside specialist domains.",
-  superseded: "N/A — HTJ2K is the current high-performance branch of the JPEG 2000 family.",
+  superseded: "N/A: HTJ2K is the current high-performance branch of the JPEG 2000 family.",
 )[]
 
 == Illustrative Python: Wavelet-Based Compression
 
-There is no assigned tinyzip step for Chapter 43 (that step belongs to Chapter 38, where the DCT/DWT modules were built). However, let us write some illustrative code that uses the principles of JPEG 2000 — forward DWT, quantization, and an insight into bit-plane counting — to understand the quality trade-off.
+There is no assigned tinyzip step for Chapter 43 (that belongs to Chapter 38, where the DCT/DWT modules were built). Let us write some illustrative code that uses the principles of JPEG 2000 - forward DWT, quantization, and an insight into bit-plane counting - to understand the quality trade-off.
 
 #gopython("Nested lists and 2-D arrays in Python")[
 Python's built-in `list` can hold other lists, giving you a 2-D array. To access element at row `r`, column `c`, write `grid[r][c]`. For image processing, the NumPy library's `ndarray` is more efficient, but understanding list-of-lists first builds the right mental model.
@@ -365,12 +365,12 @@ print(grid[1][2])   # → 6  (row 1, column 2, zero-indexed)
 ```python
 """
 Illustrative sketch: how bit-plane depth relates to quality.
-This is NOT a full JPEG 2000 encoder — just the key idea that
+This is NOT a full JPEG 2000 encoder - just the key idea that
 more bit-planes = better quality, and you can stop anywhere.
 """
 
 def quantize(value: float, step: float) -> int:
-    """Dead-zone scalar quantizer — same rule JPEG 2000 uses."""
+    """Dead-zone scalar quantizer - same rule JPEG 2000 uses."""
     return int(value / step) if abs(value) >= step/2 else 0
 
 def bitplanes_needed(q: int) -> int:
@@ -411,7 +411,7 @@ for planes in range(1, max_planes + 1):
 
 #mathrecall[PSNR (Peak Signal-to-Noise Ratio) and MSE (Mean Squared Error) were defined in Chapter 42: $"MSE" = (1/N) sum (o_i - r_i)^2$ averaged over all samples, and $"PSNR" = 10 log_10("peak"^2 / "MSE")$ in decibels, where "peak" is the largest possible signal value. Higher PSNR means lower error. Chapter 42 used $"peak" = 255$ for 8-bit pixels; the toy example above uses the largest coefficient magnitude as the peak, since these are abstract DWT coefficients rather than 0–255 pixels.]
 
-Running this, you would see PSNR grow steadily as `planes` increases — exactly the SNR scalability EBCOT exploits. With 1 plane you get a coarse sketch; with `max_planes` planes you get perfect reconstruction (at the quantization step used).
+Running this, you would see PSNR grow steadily as `planes` increases, which is exactly the SNR scalability EBCOT exploits. With 1 plane you get a coarse sketch; with `max_planes` planes you get perfect reconstruction (at the quantization step used).
 
 == Comparing JPEG and JPEG 2000 Directly
 
@@ -463,16 +463,16 @@ What actually eroded JPEG's web dominance was not JPEG 2000 but a sequence of co
 
 JPEG 2000 Part 1 is the core, but the standard grew to 17 parts:
 
-- *Part 2*: Extensions — additional wavelet filters, arbitrary ROI shapes, non-rectangular tiling.
-- *Part 3*: Motion JPEG 2000 (MJP2) — per-frame JPEG 2000 in an MJ2 container. Used in cinema and some broadcast applications.
-- *Part 6*: Compound documents — mixing continuous-tone and binary content in one file (similar to JBIG2 for the binary parts).
-- *Part 9*: JPIP (JPEG 2000 Interactive Protocol) — a streaming protocol that lets a client request only the spatial region and quality layers it needs, over HTTP. Used in museum image viewers and geospatial platforms.
-- *Part 15*: HTJ2K — high-throughput block coder, described above.
+- *Part 2*: Extensions: additional wavelet filters, arbitrary ROI shapes, non-rectangular tiling.
+- *Part 3*: Motion JPEG 2000 (MJP2): per-frame JPEG 2000 in an MJ2 container. Used in cinema and some broadcast applications.
+- *Part 6*: Compound documents: mixing continuous-tone and binary content in one file (similar to JBIG2 for the binary parts).
+- *Part 9*: JPIP (JPEG 2000 Interactive Protocol): a streaming protocol that lets a client request only the spatial region and quality layers it needs, over HTTP. Used in museum image viewers and geospatial platforms.
+- *Part 15*: HTJ2K: high-throughput block coder, described above.
 
-The IIIF (International Image Interoperability Framework), used by libraries and museums worldwide to expose zoomable high-resolution images via REST APIs, was designed specifically around JPEG 2000 and JPIP. An IIIF viewer zooms into a manuscript page by fetching just the relevant tile and resolution level from a JPEG 2000 file — a use case that no other standard format supported at the time.
+The IIIF (International Image Interoperability Framework), used by libraries and museums worldwide to expose zoomable high-resolution images via REST APIs, was designed specifically around JPEG 2000 and JPIP. An IIIF viewer zooms into a manuscript page by fetching just the relevant tile and resolution level from a JPEG 2000 file, a use case that no other standard format supported at the time.
 
 #aside[
-JPEG 2000 has a small but passionate community that remains convinced it is the _right_ format for a large class of applications. They are not wrong — for archival, cinema, and medical imaging, no successor has fully displaced it. The HTJ2K extension breathed new life into the family in 2019, and ongoing work continues within the JPEG committee on JPEG 2000 profiles for specific domains.
+JPEG 2000 has a small but passionate community that remains convinced it is the _right_ format for a large class of applications. They are not wrong: for archival, cinema, and medical imaging, no successor has fully displaced it. The HTJ2K extension breathed new life into the family in 2019, and ongoing work continues within the JPEG committee on JPEG 2000 profiles for specific domains.
 ]
 
 == Summary: The JPEG 2000 Pipeline
@@ -501,31 +501,34 @@ Let us walk through the full encoder pipeline end to end:
 cetz.canvas({
   import cetz.draw: *
 
-  let box-w = 2.2
-  let box-h = 0.7
-  let gap = 0.4
+  let box-w = 1.5
+  let box-h = 0.85
+  let gap = 0.25
   let y = 0.0
 
   let stages = (
-    "Colour\nTransform",
-    "2-D DWT",
-    "Quantize",
-    "Code-blocks",
-    "EBCOT\nTier 1",
-    "RDO\nTier 2",
-    "Bitstream",
+    ("Colour", "Transform"),
+    ("2-D", "DWT"),
+    ("Quant-", "ize"),
+    ("Code-", "blocks"),
+    ("EBCOT", "Tier 1"),
+    ("RDO", "Tier 2"),
+    ("Bit-", "stream"),
   )
 
   let n = stages.len()
-  let total-w = n * box-w + (n - 1) * gap
 
-  for (i, label) in stages.enumerate() {
+  for (i, parts) in stages.enumerate() {
     let x = i * (box-w + gap)
+    let is-ebcot = i == 4
     rect((x, y), (x + box-w, y + box-h),
-      fill: rgb("#0b5394").lighten(if i == 4 { 30% } else { 70% }),
+      fill: rgb("#0b5394").lighten(if is-ebcot { 30% } else { 70% }),
       stroke: 0.8pt + rgb("#0b5394"),
       radius: 3pt)
-    content((x + box-w/2, y + box-h/2), text(size: 7pt, fill: if i == 4 { white } else { rgb("#1a1a1a") })[#label])
+    let lbl-col = if is-ebcot { white } else { rgb("#1a1a1a") }
+    content((x + box-w/2, y + box-h/2),
+      box(width: 1.3cm, inset: 1pt, align(center,
+        text(size: 7pt, fill: lbl-col)[#parts.at(0) \ #parts.at(1)])))
     if i < n - 1 {
       let ax = x + box-w
       let ay = y + box-h/2
@@ -537,7 +540,8 @@ cetz.canvas({
 
   // Highlight EBCOT
   content((4 * (box-w + gap) + box-w/2, y + box-h + 0.25),
-    text(size: 7pt, fill: rgb("#9a2617"))[← MQ coder])
+    box(width: 1.8cm, inset: 1pt, align(center,
+      text(size: 7pt, fill: rgb("#9a2617"))[MQ coder])))
 }))
 
 #takeaways((
@@ -546,7 +550,7 @@ cetz.canvas({
   [EBCOT codes each code-block's quantized DWT coefficients one bit-plane at a time in three passes (significance propagation, magnitude refinement, cleanup), using the MQ binary arithmetic coder.],
   [The bit-plane structure makes the bitstream _embedded_: truncating it at any point yields the best possible image for the bits spent. This provides both SNR (quality) scalability and resolution scalability.],
   [Rate–distortion optimisation (Tier 2) globally selects which code-block truncation points to include in each quality layer, minimising distortion at the target bitrate.],
-  [JPEG 2000 dominates digital cinema (DCI/DCP), medical imaging (DICOM), and cultural archiving, while never gaining mainstream web adoption — a lesson about the gap between technical merit and ecosystem momentum.],
+  [JPEG 2000 dominates digital cinema (DCI/DCP), medical imaging (DICOM), and cultural archiving, while never gaining mainstream web adoption. The contrast illustrates the gap between technical merit and ecosystem momentum.],
   [HTJ2K (Part 15, 2019) replaces the MQ coder with a vectorisable HT block coder, gaining 10–30× throughput at ~5–10% compression cost, enabling real-time use cases while preserving all JPEG 2000 scalability features.],
 ))
 
@@ -563,7 +567,7 @@ Each DWT level creates 4 subbands (LL, LH, HL, HH) by splitting the previous LL.
 Explain in plain words what _SNR scalability_ and _resolution scalability_ mean in the context of a JPEG 2000 file. Give one practical use case for each type of scalability.
 ]
 #solution("43.2")[
-_SNR scalability_: the same bitstream can be truncated to deliver any image quality — reading more bytes raises the PSNR monotonically. Use case: a museum's image viewer first sends a low-quality preview; as the user waits or pays for a higher-quality licence, more layers are streamed in. _Resolution scalability_: the decoder can stop at a coarser DWT level to reconstruct a lower-resolution version without decompressing the full image. Use case: a web thumbnail is generated from the first few KB of a 10 MB archival scan, without loading the whole file.
+_SNR scalability_: the same bitstream can be truncated to deliver any image quality. Reading more bytes raises the PSNR monotonically. Use case: a museum's image viewer first sends a low-quality preview; as the user waits or pays for a higher-quality licence, more layers are streamed in. _Resolution scalability_: the decoder can stop at a coarser DWT level to reconstruct a lower-resolution version without decompressing the full image. Use case: a web thumbnail is generated from the first few KB of a 10 MB archival scan, without loading the whole file.
 ]
 
 #exercise("43.3", 2)[
@@ -583,7 +587,7 @@ Bit-plane 1 (bit value 2), significance-propagation pass: only non-significant c
 JPEG 2000 Part 1 uses two different wavelet filters: CDF 9/7 for lossy compression and CDF 5/3 for lossless. Why can a floating-point wavelet filter _not_ be used for lossless compression? What property of the CDF 5/3 filter enables lossless coding?
 ]
 #solution("43.4")[
-Floating-point arithmetic is not exact: rounding errors in the filter coefficients mean that a forward-then-inverse transform does not reproduce the original integers. Even tiny rounding differences make lossless coding impossible. The CDF 5/3 filter uses integer arithmetic throughout: its analysis and synthesis filter coefficients are rational numbers that, when applied in the _lifting scheme_ with rounding steps specified by the standard, produce an exactly invertible transform — every integer input maps to integer intermediate values, and the inverse perfectly recovers the originals.
+Floating-point arithmetic is not exact: rounding errors in the filter coefficients mean that a forward-then-inverse transform does not reproduce the original integers. Even tiny rounding differences make lossless coding impossible. The CDF 5/3 filter uses integer arithmetic throughout: its analysis and synthesis filter coefficients are rational numbers that, when applied in the _lifting scheme_ with rounding steps specified by the standard, produce an exactly invertible transform. Every integer input maps to integer intermediate values, and the inverse perfectly recovers the originals.
 ]
 
 #exercise("43.5", 2)[
@@ -635,16 +639,16 @@ print("All assertions passed. MSEs:", [f"{e:.1f}" for e in errors])
 
 - D. S. Taubman and M. W. Marcellin, _JPEG 2000: Image Compression Fundamentals, Standards and Practice_, Kluwer Academic, 2002. The definitive textbook on every aspect of the standard; still the primary reference.
 
-- #link("https://www.openjpeg.org/")[OpenJPEG project (openjpeg.org)] — the main open-source JPEG 2000 library (UCLouvain, Belgium), written in C.
+- #link("https://www.openjpeg.org/")[OpenJPEG project (openjpeg.org)]: the main open-source JPEG 2000 library (UCLouvain, Belgium), written in C.
 
-- #link("https://github.com/aous72/OpenJPH")[OpenJPH (github.com/aous72/OpenJPH)] — open-source HTJ2K implementation; an excellent resource for understanding the HT block coder.
+- #link("https://github.com/aous72/OpenJPH")[OpenJPH (github.com/aous72/OpenJPH)]: open-source HTJ2K implementation; useful for understanding the HT block coder.
 
 - #link("https://journal.code4lib.org/articles/17596")[M. Appleby et al., "Evaluating HTJ2K as a Drop-In Replacement for JPEG 2000 with IIIF," _Code4Lib Journal_, 2023.] Practical evaluation of HTJ2K performance in library/museum image servers.
 
-- D. S. Taubman, "High Performance Scalable Image Compression with EBCOT," _IEEE Trans. Image Processing_, vol. 9, no. 7, July 2000. The original EBCOT paper — required reading for understanding the theory.
+- D. S. Taubman, "High Performance Scalable Image Compression with EBCOT," _IEEE Trans. Image Processing_, vol. 9, no. 7, July 2000. The original EBCOT paper, and the primary reference for the theory.
 
 - #link("https://www.dcimovies.com/specification/")[DCI Digital Cinema System Specification v1.4.2, June 2022.] Shows exactly how JPEG 2000 is mandated in cinema.
 
 #bridge[
-JPEG 2000 showed that wavelets, embedded coding, and genuine scalability can coexist in one standard — but also that patent risk and complexity cost can strand a format in niches, however powerful it is. Chapter 44 turns to the other side of the image-format story: the formats that _did_ win the web. GIF gave the world the animated meme and a patent firestorm. PNG fixed the losslessness that JPEG could never offer. And QOI (2021) proved that a motivated programmer with a weekend and a remarkably simple idea could write a format that outperforms PNG on decode speed with a single-file specification. They are all waiting for us in the next chapter.
+JPEG 2000 showed that wavelets, embedded coding, and genuine scalability can coexist in one standard. It also showed that patent risk and implementation complexity can strand a format in niches, however technically capable it is. Chapter 44 turns to the other side of the image-format story: the formats that _did_ win the web. GIF gave the world the animated meme and a patent firestorm. PNG fixed the losslessness that JPEG could never offer. And QOI (2021) proved that a motivated programmer with a weekend and a remarkably simple idea could write a format that outperforms PNG on decode speed with a single-file specification. They are all waiting for us in the next chapter.
 ]

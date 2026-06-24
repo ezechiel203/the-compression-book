@@ -10,17 +10,17 @@
 
 Imagine you are maintaining the operating system on a million computers. Every few weeks
 you push a security update. A typical OS image is 500 MB. Sending 500 MB to a million
-machines is 500 terabytes of traffic — and you are updating a handful of changed functions
+machines is 500 terabytes of traffic, and you are updating a handful of changed functions
 inside one library, maybe 50 KB of real changes.
 
 What if you could send only the _difference_ between the old file and the new one?
 Fifty kilobytes, not five hundred megabytes. A 10,000-to-1 saving. That is the core
-promise of *delta compression* — and it is used every time your phone receives an app
+promise of *delta compression*. It is used every time your phone receives an app
 update, every time you pull a Git commit, and every time a backup system stores your
 files without duplicating what it already has.
 
-This chapter covers three tightly related ideas that all exploit the same insight — that
-data often already exists, somewhere, in a slightly different form, and we only need to
+This chapter covers three tightly related ideas that all exploit the same insight: data
+often already exists, somewhere, in a slightly different form, and we only need to
 record the change:
 
 - *Delta compression and binary diffing:* computing the differences between two versions
@@ -36,7 +36,7 @@ only the residual" trick that powered DPCM (Chapter 40) and inter-frame video pr
 #recap[
   In Chapter 28 we built LZ77's sliding-window match finder: the encoder scans forward,
   finds the longest match in a history buffer, and emits a _(distance, length)_ back-reference.
-  That is delta compression in miniature — but the "dictionary" is the recent past of
+  That is delta compression in miniature, but the "dictionary" is the recent past of
   the _same_ file. In delta compression we extend this idea across _two different files_:
   the old version is the dictionary, and the new version is what we are encoding against it.
 
@@ -62,8 +62,8 @@ only the residual" trick that powered DPCM (Chapter 40) and inter-frame video pr
 
 All delta compression follows the same three-part model.
 
-You have a *source* — the old version of the data, already known to both the
-encoder and the decoder. You want to transmit a *target* — the new version. Instead
+You have a *source* (the old version of the data, already known to both the
+encoder and the decoder). You want to transmit a *target*, the new version. Instead
 of transmitting the target in full, you compute and transmit a *delta* (also called
 a *patch*). The decoder reconstructs the target by applying the delta to the source:
 
@@ -73,7 +73,7 @@ The delta is useful only if it is smaller than the target. How much smaller depe
 on how similar the two files are. If you are patching version 3.1.2 of a library with
 version 3.1.3, the files are 99% identical and the delta might be 1% the size of the
 original. If you try to delta-compress two completely unrelated files, the delta will
-be at least as large as the target — no savings at all.
+be at least as large as the target. There are no savings at all.
 
 #keyidea[
   Delta compression works by exploiting the similarity between two versions of
@@ -91,7 +91,7 @@ the encoder finds matches anywhere within it.
 This means a delta compressor must solve a search problem: given a byte sequence in
 the target, find the longest matching sequence anywhere in (potentially megabytes of)
 source. A naive scan would be too slow. Every efficient delta compressor uses an
-index over the source — a hash table or a suffix array — to make this fast.
+index over the source (a hash table or a suffix array) to make this fast.
 
 == VCDIFF: The Standard Delta Format
 
@@ -121,7 +121,7 @@ how to reconstruct the target file:
 )
 
 That is the entire instruction set. The art is in choosing which instruction to use
-and at what position — that is the _delta computation_ problem.
+and at what position. That is the _delta computation_ problem.
 
 #aside[
   `RUN` is a special case of `ADD` for constant runs, optimized because runs are
@@ -142,7 +142,7 @@ ADD  1, "h"      # add literal "h"
 COPY 2, 20       # copy "at" from source[20..22]
 ```
 
-That is 3 instructions instead of 22 bytes — and in practice the instruction stream
+That is 3 instructions instead of 22 bytes. In practice the instruction stream
 itself is entropy-coded (the RFC allows an application-level codec like zlib on top).
 
 #gopython("String slicing to reconstruct a VCDIFF-style delta")[
@@ -195,7 +195,7 @@ the "history" is a separate file rather than the recent past of the same file.
 
 == bsdiff: Suffix Sorting for Better Binary Patches
 
-VCDIFF with a hash table is fast but not always optimal — a match starting at
+VCDIFF with a hash table is fast but not always optimal: a match starting at
 an unusual position can be missed if the hash collides or the window size misses it.
 Colin Percival addressed this in 2003 with *bsdiff*, a binary patching tool that
 uses a _suffix array_ over the source to find the best possible match for every
@@ -206,7 +206,7 @@ position in the target.
   part of his work on FreeBSD's update system. Originally named `bdiff/bpatch`,
   it was renamed to avoid clashes. The name "bsdiff" is sometimes said to stand
   for "binary software diff" or to be an abbreviation with a less polite first word
-  — Percival himself left it ambiguous.
+  Percival himself left it ambiguous.
 
   bsdiff became the foundation for software update diffing at Apple (macOS updates),
   Google (Chrome updates, via Courgette which preprocesses executables before bsdiff),
@@ -217,7 +217,7 @@ position in the target.
 === Why Executables Are Hard to Diff
 
 Binary executables are deceptive: two versions of a program might be logically
-nearly identical — the same functions, just recompiled — yet differ by thousands
+nearly identical (the same functions, just recompiled) yet differ by thousands
 of bytes scattered throughout the file because of address relocation. When a function
 moves by 16 bytes, every pointer to it changes. A naive differ finds no long matches
 because the bytes at every address have shifted.
@@ -245,8 +245,8 @@ bsdiff encodes three streams:
   $(3 - 250) mod 256 = (3 - 250 + 256) mod 256 = 9 mod 256 = 9$.
 
   Because nearby versions of an executable differ by small amounts at most
-  positions, the difference stream has very low entropy — it is dominated
-  by zeros and small values — and bzip2 compresses it extremely well.
+  positions, the difference stream has very low entropy: it is dominated
+  by zeros and small values, and bzip2 compresses it extremely well.
 ]
 
 === Finding Matches with a Suffix Array
@@ -259,12 +259,12 @@ each position in the target binary-searches to find the suffix in the source tha
 matches the longest prefix of the remaining target.
 
 #mathrecall[Suffix arrays (Chapter 35) sort all suffixes of a string and enable
-  O(|pattern| × log N) substring search by binary search — the same structure used
+  O(|pattern| × log N) substring search by binary search, the same structure used
   by the FM-index for genomic alignment.]
 
-Because the comparison is done on raw bytes — including the non-contiguous "this
-byte is close to this source byte" heuristic using the difference trick — bsdiff
-tends to find longer and better matches than hash-based approaches.
+Because the comparison is done on raw bytes (including the "this byte is close to
+this source byte" heuristic from the difference trick), bsdiff tends to find longer
+and better matches than hash-based approaches.
 
 #algo(
   name: "bsdiff",
@@ -273,7 +273,7 @@ tends to find longer and better matches than hash-based approaches.
   aim: "Compute a compact binary patch between two versions of a file, especially executables, using suffix-array matching and byte-difference encoding.",
   complexity: "O(N log N) encoding (suffix sort dominates); O(N + M) decoding. Memory: O(N) for the suffix array.",
   strengths: "Produces very small patches for binary executables; handles relocated code naturally via byte-difference encoding; broadly deployed.",
-  weaknesses: "Slow encoding for large files; requires suffix array in RAM (O(N) space); no streaming — the full source must be present.",
+  weaknesses: "Slow encoding for large files; requires suffix array in RAM (O(N) space); no streaming (the full source must be present).",
 )[
   Tool page: `https://www.daemonology.net/bsdiff/`. Google's Courgette preprocesses
   executables (disassembling them to normalize addresses) before applying bsdiff,
@@ -283,7 +283,7 @@ tends to find longer and better matches than hash-based approaches.
 === Courgette: Preprocessing for Even Smaller Patches
 
 Google engineers noticed that most of the "noise" in binary patches comes from
-address relocation — pointer values that change by a fixed offset when a function
+address relocation: pointer values that change by a fixed offset when a function
 moves. Courgette (released 2009) first _disassembles_ the executable to a
 pseudo-assembly language, normalizes all relative addresses so they are expressed
 as labels rather than absolute offsets, then applies bsdiff. The result: Chrome
@@ -297,7 +297,7 @@ This is the same principle as predictive coding: remove the predictable componen
 
 Delta compression works brilliantly when you have two _specific_ versions of a file
 to compare. But backup systems face a different problem: they store thousands of
-files, many of which share large identical regions — two virtual machine disk images
+files, many of which share large identical regions. Two virtual machine disk images
 might share an operating system, or many users might store the same popular PDF.
 
 *Deduplication* is the technique of finding and eliminating this redundancy by
@@ -307,8 +307,8 @@ storing each unique piece of data exactly once. There are two main levels:
 
 The simplest form: hash every file, and if two files have the same hash (SHA-256 is
 the standard), store only one copy and just add a pointer for the second. This works
-for exact duplicates but misses the case where two files are 95% identical —
-like two versions of the same document.
+for exact duplicates but misses the case where two files are 95% identical,
+as with two versions of the same document.
 
 #gopython("Computing a file's SHA-256 hash in Python")[
   `hashlib` is Python's built-in cryptographic hashing library. A hash function
@@ -337,9 +337,9 @@ like two versions of the same document.
   whole thing into memory) and feed each piece to `h.update`, because a digest can
   be built up incrementally. The loop uses the two-argument form of `iter`:
   `iter(callable, sentinel)` calls `callable()` over and over until it returns the
-  `sentinel` value, then stops. Here `callable` is `lambda: f.read(65536)` — a
+  `sentinel` value, then stops. Here `callable` is `lambda: f.read(65536)`, a
   throwaway one-line function (the `lambda`, from Chapter 16) that reads the next
-  64 KB — and the sentinel is `b""`, the empty `bytes` that `read` returns at
+  64 KB, and the sentinel is `b""`, the empty `bytes` that `read` returns at
   end-of-file. So the loop walks the file 64 KB at a time and halts when the file
   runs out. File-level deduplication hashes every file this way and stores duplicates
   as pointers to the existing copy.
@@ -349,7 +349,7 @@ like two versions of the same document.
 
 To catch partial duplicates, we can split files into fixed-size *blocks* (say,
 4 KB each), hash every block, and store only unique blocks. This already works
-much better — two Linux ISO images might deduplicate at 90%.
+much better: two Linux ISO images might deduplicate at 90%.
 
 But there is a fatal flaw: *the shift problem*. Insert one byte near the start
 of a file and every subsequent fixed-size block shifts by one byte. Two blocks
@@ -371,14 +371,14 @@ blocks before comparing them (Chapter 51). We need the same idea for byte stream
 
 The solution is to choose chunk boundaries based on the _content_ of the file,
 not on fixed byte positions. If the same content appears in both the old and new
-version of a file — even if it has shifted in position — content-defined chunking
+version of a file, even if it has shifted in position, content-defined chunking
 will assign the same boundary positions relative to the content and produce the
 same chunk, so it will hash to the same value.
 
 #keyidea[
   *Content-defined chunking (CDC):* split a byte stream at positions determined
   by the content itself (a local property of the bytes), not by a fixed offset.
-  Identical content, wherever it appears, produces the same chunks — even if
+  Identical content, wherever it appears, produces the same chunks, even if
   surrounding content has changed.
 ]
 
@@ -401,28 +401,28 @@ slides one byte forward.
   the hash at every position in a file of length $N$ in total time $O(N)$ rather
   than $O(N times w)$.
 
-  The Rabin fingerprint uses polynomial arithmetic over GF(2) — arithmetic where
+  The Rabin fingerprint uses polynomial arithmetic over GF(2), which is arithmetic where
   every number is just a single bit (0 or 1) and "add" means XOR (Chapter 5).
   Think of the window's $w$ bytes as the long list of bits of a polynomial $P(x)$,
   then the fingerprint is the remainder $P(x) mod Q(x)$ after dividing by a fixed
-  $Q(x)$. ($Q(x)$ is chosen to be _irreducible_ — it has no smaller factors, the
-  polynomial version of a prime number — which spreads the fingerprints out so
+  $Q(x)$. ($Q(x)$ is chosen to be _irreducible_, meaning it has no smaller factors,
+  the polynomial version of a prime number, which spreads the fingerprints out so
   collisions are rare.) Because this kind of division is _linear_ (it plays nicely
-  with XOR), sliding the window one byte corresponds to a simple XOR and shift —
+  with XOR), sliding the window one byte corresponds to a simple XOR and shift,
   computable in one or two CPU instructions. You do not need any of this to use a
   rolling hash; the analogy below is all the intuition the rest of the chapter needs.
 
   *Simpler analogy:* imagine the rolling hash as a running "personality score" of
   the last 64 bytes. Each new byte nudges the score, and the oldest byte's
-  contribution is subtracted. When the personality score hits a special value —
-  say, the last 13 bits are all zero — you declare a chunk boundary. On average
+  contribution is subtracted. When the personality score hits a special value
+  (say, the last 13 bits are all zero), you declare a chunk boundary. On average
   this happens every $2^(13) = 8192$ bytes.
 ]
 
 The chunk-boundary rule is: declare a boundary at position $i$ if and only if
 $H_i "mod" T = 0$, where $T$ is the *target chunk size*. Because the test depends
 only on the content of the window, two streams containing the same byte sequence
-will agree on boundary positions — regardless of what precedes them.
+will agree on boundary positions, regardless of what precedes them.
 
 #fig(
   [Content-defined chunking with a rolling hash. The hash is evaluated at every
@@ -433,7 +433,7 @@ will agree on boundary positions — regardless of what precedes them.
     import cetz.draw: *
     // Draw a file stream
     rect((0,3),(12,4), fill: rgb("#dbeafe"), stroke: 0.7pt)
-    content((6,3.5))[ #text(size: 8pt)[File byte stream] ]
+    content((6,3.5), box(width: 11.6cm, inset: 2pt, align(center, text(size: 8pt)[File byte stream])))
 
     // Draw chunk boundaries
     line((2,3),(2,4), stroke: 1.5pt + rgb("#1d4ed8"))
@@ -442,20 +442,20 @@ will agree on boundary positions — regardless of what precedes them.
     line((11,3),(11,4), stroke: 1.5pt + rgb("#1d4ed8"))
 
     // Label chunks
-    content((1,2.5))[#text(size:7.5pt)[Chunk A]]
-    content((3.5,2.5))[#text(size:7.5pt)[Chunk B]]
-    content((6.5,2.5))[#text(size:7.5pt)[Chunk C]]
-    content((9.5,2.5))[#text(size:7.5pt)[Chunk D]]
+    content((1,2.5), box(width: 1.6cm, inset: 1pt, align(center, text(size: 7.5pt)[Chunk A])))
+    content((3.5,2.5), box(width: 2.6cm, inset: 1pt, align(center, text(size: 7.5pt)[Chunk B])))
+    content((6.5,2.5), box(width: 2.6cm, inset: 1pt, align(center, text(size: 7.5pt)[Chunk C])))
+    content((9.5,2.5), box(width: 2.6cm, inset: 1pt, align(center, text(size: 7.5pt)[Chunk D])))
 
     // Rolling hash indicator
     rect((4,1),(6,2), fill: rgb("#dcfce7"), stroke: 0.7pt)
-    content((5,1.5))[#text(size:7.5pt)[rolling hash\nwindow (64 B)]]
+    content((5,1.5), box(width: 1.6cm, inset: 2pt, align(center, text(size: 7.5pt)[rolling hash window (64 B)])))
     line((5,2),(5,3), stroke: (dash:"dashed"))
 
     // Labels
-    content((2,4.3))[#text(size:7.5pt, fill: rgb("#1d4ed8"))[boundary]]
-    content((5,4.3))[#text(size:7.5pt, fill: rgb("#1d4ed8"))[boundary]]
-    content((8,4.3))[#text(size:7.5pt, fill: rgb("#1d4ed8"))[boundary]]
+    content((2,4.3), box(width: 1.6cm, inset: 1pt, align(center, text(size: 7.5pt, fill: rgb("#1d4ed8"))[boundary])))
+    content((5,4.3), box(width: 1.6cm, inset: 1pt, align(center, text(size: 7.5pt, fill: rgb("#1d4ed8"))[boundary])))
+    content((8,4.3), box(width: 1.6cm, inset: 1pt, align(center, text(size: 7.5pt, fill: rgb("#1d4ed8"))[boundary])))
   })
 )
 
@@ -467,7 +467,7 @@ while maintaining nearly the same deduplication ratio. FastCDC uses three key id
 
 1. *Gear hash:* replace Rabin's polynomial computation with a simpler table-lookup
    hash (called a Gear hash) that is faster to compute per byte.
-2. *Skip sub-minimum:* chunks smaller than a minimum size are never cut — the
+2. *Skip sub-minimum:* chunks smaller than a minimum size are never cut. The
    algorithm skips all positions up to `min_size` without evaluating the hash,
    saving time.
 3. *Normalized chunking:* after skipping the minimum zone, use a stricter boundary
@@ -481,7 +481,7 @@ Restic (since 2022).
   name: "Content-Defined Chunking (CDC) / FastCDC",
   year: "Rabin fingerprints: Rabin 1981; applied to CDC: LBFS 2001; FastCDC: Xia et al., USENIX ATC 2016",
   authors: "Michael O. Rabin (fingerprints); Athicha Muthitacharoen et al. (LBFS CDC); Wen Xia et al. (FastCDC)",
-  aim: "Split a byte stream at content-determined boundaries so that identical content, wherever it appears, produces identical chunks — enabling deduplication across shifted or partially-changed files.",
+  aim: "Split a byte stream at content-determined boundaries so that identical content, wherever it appears, produces identical chunks, enabling deduplication across shifted or partially-changed files.",
   complexity: "O(N) scan of the file using O(1) rolling hash update per byte.",
   strengths: "Eliminates boundary-shift problem; chunks are position-independent; deduplication works across file versions and across different files sharing content.",
   weaknesses: "Chunk sizes vary (must cap at a max size to bound memory); the chunking function is a parameter to tune; does not help if files share no common subsequences.",
@@ -522,7 +522,7 @@ restore using the stored hash.
 portability: it stores each chunk (called a "pack") as a blob in object storage
 (local filesystem, S3, B2, SFTP, etc.), addressed by SHA-256. Since 2022 it uses
 FastCDC. Restic encrypts all data at rest using AES-256-CTR and an HMAC-SHA256
-check-tag, before deduplication — which means the repository server learns nothing
+check-tag, before deduplication. This means the repository server learns nothing
 about file contents.
 
 #checkpoint[
@@ -542,7 +542,7 @@ ZFS (originally from Sun Microsystems, now maintained by OpenZFS) can deduplicat
 at the *block level* within a storage pool: before writing any block, ZFS computes
 its SHA-256 hash and consults a per-pool deduplication table. If the block already
 exists in the pool, ZFS stores only a reference. ZFS deduplication is _inline_
-(happens on the write path, synchronously) and _block-level_ (not chunk-level —
+(happens on the write path, synchronously) and _block-level_ (not chunk-level;
 boundaries are fixed by the block size, typically 4–128 KB).
 
 ZFS deduplication has a reputation for being memory-hungry: the dedup table must
@@ -578,7 +578,7 @@ model is a masterclass in applying delta compression at scale.
 Every object in Git (a file snapshot called a *blob*, a directory listing called
 a *tree*, a commit, or a tag) is stored as a zlib-compressed file named by its
 SHA-1 (or SHA-256 in newer Git) hash. This is content-addressable storage at the
-object level — the same file content always has the same hash and is stored once.
+object level: the same file content always produces the same hash and is stored once.
 
 Initially Git stores each object as a separate "loose object" file. Over time, as
 objects accumulate, Git packs them into *packfiles* for efficiency.
@@ -603,7 +603,7 @@ literal bytes.
 #history[
   Git was created by Linus Torvalds in April 2005, in roughly ten days, as a
   replacement for BitKeeper after a licensing dispute. The packfile format and
-  delta compression were crucial design decisions: without them, a repository of
+  delta compression were key design decisions: without them, a repository of
   the Linux kernel (50,000+ files, 30+ years of history) would occupy hundreds
   of gigabytes. With packfiles and delta compression, the entire Linux kernel
   history fit comfortably in a few gigabytes by the 2010s.
@@ -631,26 +631,26 @@ after sorting.
     import cetz.draw: *
     // Base object
     rect((0,1.5),(2.5,2.5), fill: rgb("#dbeafe"), stroke: 0.7pt)
-    content((1.25,2))[#text(size:8pt)[Base blob\n(zlib, full)]]
+    content((1.25,2), box(width: 2.1cm, inset: 2pt, align(center, text(size: 8pt)[Base blob (zlib, full)])))
 
     // Delta objects
     rect((4,2),(6.5,3), fill: rgb("#dcfce7"), stroke: 0.7pt)
-    content((5.25,2.5))[#text(size:8pt)[Delta 1\n(COPY+INSERT)]]
+    content((5.25,2.5), box(width: 2.1cm, inset: 2pt, align(center, text(size: 8pt)[Delta 1 (COPY+INSERT)])))
 
     rect((4,0.5),(6.5,1.5), fill: rgb("#dcfce7"), stroke: 0.7pt)
-    content((5.25,1))[#text(size:8pt)[Delta 2\n(COPY+INSERT)]]
+    content((5.25,1), box(width: 2.1cm, inset: 2pt, align(center, text(size: 8pt)[Delta 2 (COPY+INSERT)])))
 
     rect((8,0.5),(10.5,1.5), fill: rgb("#fef9c3"), stroke: 0.7pt)
-    content((9.25,1))[#text(size:8pt)[Delta 3\n(COPY+INSERT)]]
+    content((9.25,1), box(width: 2.1cm, inset: 2pt, align(center, text(size: 8pt)[Delta 3 (COPY+INSERT)])))
 
     // Arrows (OFS_DELTA chain)
     line((2.5,2),(4,2.5), mark: (end: ">"), stroke: 0.7pt)
     line((2.5,2),(4,1), mark: (end: ">"), stroke: 0.7pt)
     line((6.5,1),(8,1), mark: (end: ">"), stroke: 0.7pt)
 
-    content((3.25,2.6))[#text(size:7pt)[base]]
-    content((3.25,1.3))[#text(size:7pt)[base]]
-    content((7.25,0.65))[#text(size:7pt)[base of 2]]
+    content((3.25,2.6), box(width: 1.2cm, inset: 1pt, align(center, text(size: 7pt)[base])))
+    content((3.25,1.3), box(width: 1.2cm, inset: 1pt, align(center, text(size: 7pt)[base])))
+    content((7.25,0.65), box(width: 1.6cm, inset: 1pt, align(center, text(size: 7pt)[base of 2])))
   })
 )
 
@@ -692,11 +692,11 @@ the base image; each successive layer adds, modifies, or marks files as deleted
 
 Each layer is stored as a tar archive on disk, addressed by its SHA-256 digest.
 Docker Engine 29.0 and later (2025) uses containerd's image store by default,
-where layers are stored by digest in a content store — identical layers across
+where layers are stored by digest in a content store; identical layers across
 different images share storage transparently.
 
 #aside[
-  Docker layers are *not* content-defined chunks of file data — they are file-level
+  Docker layers are *not* content-defined chunks of file data. They are file-level
   diffs of directory trees. If a single large file changes by one byte, the entire
   file appears in the new layer. This is why Docker best practices recommend placing
   frequently-changing files at the top of the layer stack: each `Dockerfile` line
@@ -710,28 +710,28 @@ different images share storage transparently.
     import cetz.draw: *
     // Shared base
     rect((0,0),(10,1), fill: rgb("#bfdbfe"), stroke: 0.7pt)
-    content((5,0.5))[#text(size:8pt)[Layer 0: Ubuntu 24.04 base (stored once, ~30 MB)]]
+    content((5,0.5), box(width: 9.6cm, inset: 2pt, align(center, text(size: 8pt)[Layer 0: Ubuntu 24.04 base (stored once, ~30 MB)])))
 
     // Image 1 layers
     rect((0,1.1),(3,2.1), fill: rgb("#bbf7d0"), stroke: 0.7pt)
-    content((1.5,1.6))[#text(size:7.5pt)[nginx layer\n(Image A)]]
+    content((1.5,1.6), box(width: 2.6cm, inset: 2pt, align(center, text(size: 7.5pt)[nginx layer (Image A)])))
     rect((0,2.2),(3,3.2), fill: rgb("#fde68a"), stroke: 0.7pt)
-    content((1.5,2.7))[#text(size:7.5pt)[app layer\n(Image A)]]
+    content((1.5,2.7), box(width: 2.6cm, inset: 2pt, align(center, text(size: 7.5pt)[app layer (Image A)])))
 
     // Image 2 layers
     rect((3.5,1.1),(6.5,2.1), fill: rgb("#bbf7d0"), stroke: 0.7pt)
-    content((5,1.6))[#text(size:7.5pt)[python layer\n(Image B)]]
+    content((5,1.6), box(width: 2.6cm, inset: 2pt, align(center, text(size: 7.5pt)[python layer (Image B)])))
     rect((3.5,2.2),(6.5,3.2), fill: rgb("#fde68a"), stroke: 0.7pt)
-    content((5,2.7))[#text(size:7.5pt)[flask app\n(Image B)]]
+    content((5,2.7), box(width: 2.6cm, inset: 2pt, align(center, text(size: 7.5pt)[flask app (Image B)])))
 
     // Image 3 layers
     rect((7,1.1),(10,2.1), fill: rgb("#bbf7d0"), stroke: 0.7pt)
-    content((8.5,1.6))[#text(size:7.5pt)[nginx layer\n(shared!)]]
+    content((8.5,1.6), box(width: 2.6cm, inset: 2pt, align(center, text(size: 7.5pt)[nginx layer (shared!)])))
     rect((7,2.2),(10,3.2), fill: rgb("#fde68a"), stroke: 0.7pt)
-    content((8.5,2.7))[#text(size:7.5pt)[config layer\n(Image C)]]
+    content((8.5,2.7), box(width: 2.6cm, inset: 2pt, align(center, text(size: 7.5pt)[config layer (Image C)])))
 
     // Arrow indicating sharing
-    content((5,-0.5))[#text(size:7.5pt, fill: rgb("#1d4ed8"))[All three images share this layer — stored once on disk.]]
+    content((5,-0.5), box(width: 9.6cm, inset: 2pt, align(center, text(size: 7.5pt, fill: rgb("#1d4ed8"))[All three images share this layer, stored once on disk.])))
   })
 )
 
@@ -755,7 +755,7 @@ explicit patch format.
   Andrew Tridgell's 1996 PhD thesis (University of Canberra) described the
   rsync algorithm. The key insight was using a weak (Adler-32 based) rolling hash
   to find _candidate_ matching blocks quickly, then confirming matches with a
-  strong MD4 hash — a two-level filter that made the protocol efficient even on
+  strong MD4 hash, a two-level filter that made the protocol efficient even on
   slow links. rsync became one of the most-used Unix utilities and directly inspired
   the content-defined chunking line of research.
 ]
@@ -765,9 +765,9 @@ explicit patch format.
 Let us trace through a concrete example. You are backing up a project directory
 to Borg. It contains three large files:
 
-- `data.csv` — 10 MB, the same on Monday, Tuesday, and Wednesday (not modified)
-- `model.pkl` — 50 MB on Monday; 51 MB on Tuesday (retrained); 51.5 MB on Wednesday
-- `report.pdf` — 5 MB on Monday; the first page updated on Tuesday and Wednesday
+- `data.csv`: 10 MB, unchanged on Monday, Tuesday, and Wednesday
+- `model.pkl`: 50 MB on Monday; 51 MB on Tuesday (retrained); 51.5 MB on Wednesday
+- `report.pdf`: 5 MB on Monday; the first page updated on Tuesday and Wednesday
 
 On *Monday* (first backup), Borg chunks all three files using its rolling hash
 (target chunk size ~2 MB). Suppose `data.csv` produces 5 chunks (D1–D5), `model.pkl`
@@ -790,8 +790,8 @@ This is the everyday magic of a deduplication backup tool.
 
 == Delta Compression vs. Traditional Compression: When to Use Which
 
-It is worth pausing to compare these techniques with the general-purpose compressors
-we studied in Chapters 28–36.
+These techniques contrast with the general-purpose compressors from Chapters 28–36
+in an important way.
 
 #table(
   columns: (auto, 1fr, 1fr),
@@ -820,7 +820,7 @@ Data Domain, NetApp WAFL) and can achieve significantly higher ratios at the cos
 of more CPU.
 
 The algorithm: given a new chunk, find the most similar existing chunk (using
-a sampling fingerprint — hash a few bytes from different positions in the chunk),
+a sampling fingerprint (hash a few bytes from different positions in the chunk),
 then apply a lightweight binary diff (often a VCDIFF variant) and store the diff.
 
 #misconception[
@@ -842,7 +842,7 @@ then apply a lightweight binary diff (often a VCDIFF variant) and store the diff
   "Fixed-size chunking fails when files shift; content-defined chunking (CDC) uses rolling hashes to place boundaries based on content, not position, eliminating the boundary-shift problem.",
   "Rabin fingerprints are the classical rolling hash for CDC; FastCDC (Xia et al., 2016) achieves ~10× higher throughput with near-identical deduplication ratios.",
   "Deduplication stores each unique chunk once (addressed by SHA-256), sharing it across all files and backups that contain it. Borg and Restic implement this with encryption and compression on top.",
-  "Git packfiles use object-level delta compression (OBJ\_OFS\_DELTA / OBJ\_REF\_DELTA) between similar blobs, making it feasible to store decades of version history in a few gigabytes.",
+  "Git packfiles use object-level delta compression (OBJ\_OFS\_DELTA / OBJ\_REF\_DELTA) between similar blobs. This makes it feasible to store decades of version history in a few gigabytes.",
   "Docker uses OverlayFS to stack immutable, content-addressed layers; identical layers across images are stored once, providing file-level deduplication for container images.",
   "General compression, delta compression, and deduplication are complementary and are routinely combined: deduplicate to remove identical chunks, then compress each unique chunk.",
 ))
@@ -860,12 +860,12 @@ then apply a lightweight binary diff (often a VCDIFF variant) and store the diff
   The target is two copies of the source concatenated.
 
   Instruction sequence:
-  - `COPY 9, 0` — copy all 9 bytes from `source[0..9]`, producing `"aaabbbccc"`.
-  - `COPY 9, 0` — copy the same 9 bytes again from source, producing the second `"aaabbbccc"`.
+  - `COPY 9, 0` (copy all 9 bytes from `source[0..9]`, producing `"aaabbbccc"`)
+  - `COPY 9, 0` (copy the same 9 bytes again from source, producing the second `"aaabbbccc"`)
 
   This is 2 instructions instead of 18 literal bytes. Note that VCDIFF also supports
   "target window" COPY (copying from the already-produced target output), so an
-  alternative is: `COPY 9, 0` then `COPY 9, 0` from the target — both are valid.
+  alternative is: `COPY 9, 0` then `COPY 9, 0` from the target; both are valid.
 ]
 
 #exercise("71.2", 1)[
@@ -878,12 +878,12 @@ then apply a lightweight binary diff (often a VCDIFF variant) and store the diff
   With fixed-size chunking (say, 4 KB blocks), block $k$ contains bytes
   $4096(k-1)$ through $4096k - 1$. Insert one byte at position 0, and every
   block shifts: block $k$ now contains bytes $4096(k-1) + 1$ through $4096k$.
-  Every block's content has changed — different bytes — so every block hashes to
+  Every block's content has changed (different bytes), so every block hashes to
   a new value. The deduplication system sees no matches at all.
 
   Content-defined chunking places boundaries where a rolling hash of the local bytes
   hits a specific pattern. After the insertion, the bytes at the start shift, but
-  eventually — once past the insertion point — the same sequences of bytes appear
+  eventually, once past the insertion point, the same sequences of bytes appear
   in the same order. As soon as the rolling hash window moves past the inserted byte,
   it sees the same byte sequence as before and produces the same boundary decisions.
   All chunks beyond the insertion point are identical to the previous version.
@@ -908,7 +908,7 @@ then apply a lightweight binary diff (often a VCDIFF variant) and store the diff
   This stream has very low entropy: most values are 0 or small positive integers.
   A general-purpose compressor like bzip2 (or zstd) will find very short codes for
   these values. In an executable, most positions change by at most a few due to
-  address relocation — so the difference stream is dominated by zeros and small
+  address relocation, so the difference stream is dominated by zeros and small
   values, compressing to a small fraction of its raw size.
 ]
 
@@ -924,7 +924,7 @@ then apply a lightweight binary diff (often a VCDIFF variant) and store the diff
   The 100-byte insertion shifts the first 1,900,000 bytes of the file. The first
   chunk boundary in the original file was at byte 1,900,000. After insertion it is
   at approximately byte 1,900,100 (shifted by 100 bytes). So the first chunk is now
-  ~100 bytes longer than before and has different content — it is a new, unique chunk.
+  ~100 bytes longer than before and has different content; it is a new, unique chunk.
 
   After the first boundary, the remaining ~18 MB of the file is identical to
   Monday's backup (same byte sequences, same rolling-hash outcomes). Those chunks
@@ -1016,7 +1016,7 @@ def cdc_chunk(data: bytes, target: int = 65536) -> list[bytes]:
 
     return chunks
 
-# --- self-test ---
+# self-test
 import os as _os
 
 base = b"Hello world! " * 5000        # ~65 KB of repeated content
@@ -1032,7 +1032,7 @@ same_later = sum(
 print(f"Base chunks: {len(chunks_base)}, Modified chunks: {len(chunks_mod)}")
 print(f"Chunks after first that are identical: {same_later} "
       f"out of {len(chunks_base) - 1}")
-# Expected: most are identical — the insertion only changes the first chunk.
+# Expected: most are identical; the insertion only changes the first chunk.
 ```
 
   The key insight in the test: inserting one byte changes only the first chunk;
@@ -1052,15 +1052,15 @@ print(f"Chunks after first that are identical: {same_later} "
 
 - Tridgell, A. (1999). #link("https://www.samba.org/~tridge/phd_thesis.pdf")[*Efficient Algorithms for Sorting and Synchronization.*] PhD thesis, Australian National University. The rsync algorithm.
 
-- Chacon, S. & Straub, B. (2014). #link("https://git-scm.com/book/en/v2/Git-Internals-Packfiles")[*Pro Git — Packfiles.*] git-scm.com. Accessible explanation of Git's internal storage and delta compression.
+- Chacon, S. & Straub, B. (2014). #link("https://git-scm.com/book/en/v2/Git-Internals-Packfiles")[*Pro Git: Packfiles.*] git-scm.com. Accessible explanation of Git's internal storage and delta compression.
 
 #bridge[
   Every technique in this chapter removed redundancy by exploiting something already
   known: an older file version, an existing chunk, a base image layer. The next chapter
-  flips the idea completely — instead of removing redundancy to save space, we
+  flips the idea completely. Instead of removing redundancy to save space, we
   _add_ redundancy on purpose, to survive errors. Chapter 72 asks: once you have
   compressed a file as tightly as possible, how do you protect it against bit flips,
-  disk failures, and network corruption? The answer is error-correcting codes —
-  Reed–Solomon, LDPC, and polar codes — and it is the other half of Shannon's
+  disk failures, and network corruption? The answer is error-correcting codes:
+  Reed-Solomon, LDPC, and polar codes. That is the other half of Shannon's
   original 1948 duality between source coding and channel coding.
 ]

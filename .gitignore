@@ -17,5 +17,8 @@ papers/
 # PDFs are distributed via GitHub Releases, not committed (keeps the repo lean)
 /TheCompressionBook-Vol*.pdf
 /TheCompressionBook-VolI.pdf
+/TheCompressionBook-Complete.pdf
 /sk.pdf
 web/site/pdf/
+chapters_pretone/
+chapters_prediagramfix/

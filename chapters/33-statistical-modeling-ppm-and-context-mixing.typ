@@ -11,7 +11,7 @@
 Picture yourself reading a mystery novel. After the sentence "The butler entered the dimly lit
 library carrying a candle," the word that follows is almost certainly not "xylophone." Your brain
 effortlessly assigns xylophone a probability near zero and candlestick a probability near one.
-You are doing statistical modeling — exactly what this chapter's algorithms do, one character at a
+You are doing statistical modeling, exactly what this chapter's algorithms do, one character at a
 time, millions of times per second.
 
 Every compressor we have built so far answers the question "what symbol comes next?" with
@@ -21,7 +21,7 @@ All of these are approximations to the true answer, which requires knowing the e
 the stream and the deep structure of the source.
 
 The algorithms in this chapter push that approximation to its limit. They track rich statistical
-contexts — the last 5, 10, even 20 characters — and they blend the predictions of dozens or
+contexts (the last 5, 10, even 20 characters) and they blend the predictions of dozens or
 hundreds of specialized models into one bit-level probability. The payoff is extraordinary
 compression ratios. The cost is compute time measured in hours for a gigabyte, and RAM measured
 in gigabytes. These are the ratio champions of the classical era, and they sit right at the
@@ -73,11 +73,11 @@ there is a problem.
 
 Every time you raise the order, you encounter more contexts you have never seen before. If you
 have never seen the trigram "zxq" in your training data, your order-2 model assigns probability
-zero to any symbol after "zq" — and if you try to encode such a symbol with an arithmetic coder
-that sees probability zero, you divide by zero. Your compressor crashes.
+zero to any symbol after "zq". If you try to encode such a symbol with an arithmetic coder
+that sees probability zero, you divide by zero and the compressor crashes.
 
 This is the *zero-frequency problem*, also known as the *sparse data* problem. It is not a
-corner case — in a typical English file, the majority of high-order contexts appear only once or
+corner case. In a typical English file, the majority of high-order contexts appear only once or
 twice, and countless others never appear at all. Any practical high-order model must handle it.
 
 #gomaths("Probability and Frequency Estimation")[
@@ -134,8 +134,8 @@ When encoding a symbol $x$ given context $c$ of length $k$:
       let y = -i * gap
       let col = if i == 1 { rgb("#0b6e4f") } else if i == 0 { rgb("#9a2617") } else { rgb("#555555") }
       rect((0, y - box-height/2), (box-width, y + box-height/2), stroke: 0.8pt + col, fill: col.lighten(92%))
-      content((box-width / 2, y + 0.18), text(size: 8pt, weight: "bold", fill: col)[#label: #ctx])
-      content((box-width / 2, y - 0.18), text(size: 7pt, fill: col.darken(10%))[#seen  #action])
+      content((box-width / 2, y + 0.18), box(width: 2.8cm, align(center, text(size: 8pt, weight: "bold", fill: col)[#label: #ctx])))
+      content((box-width / 2, y - 0.18), box(width: 2.8cm, align(center, text(size: 7pt, fill: col.darken(10%))[#seen  #action])))
       // Arrow down (except last)
       if i < 3 {
         line((box-width/2, y - box-height/2), (box-width/2, y - gap + box-height/2), mark: (end: ">"), stroke: 0.7pt + rgb("#444"))
@@ -203,8 +203,8 @@ the option to choose when file size matters more than time.
 #history[
   Alistair Moffat's 1990 paper "Implementing the PPM Data Compression Scheme" is one of the most
   carefully engineered compression papers ever written. Where the 1984 original was conceptual,
-  Moffat specified exact data structures — a trie of contexts with carefully maintained count
-  arrays — that made PPM practical on the computers of the day. The paper is still the standard
+  Moffat specified exact data structures (a trie of contexts with carefully maintained count
+  arrays) that made PPM practical on the computers of the day. The paper is still the standard
   reference for implementers. Moffat went on to co-author the textbook _Managing Gigabytes_
   (1999), which shaped a generation of information retrieval and compression engineers.
 ]
@@ -222,10 +222,10 @@ escapes all the way to order $-1$ (uniform over the alphabet). As we encode:
 - *R*: similarly.
 - *A*: the order-1 model (context "R") is empty, escape; order-0 model has {A:1, B:1, R:1}, A has count 1 of 3. Encode A there. Update: add A after "RA" in order-2 table.
 - After "ABRA" the model has counts like: after "R" → {A:1}, after "A" → {B:1}, etc.
-- When we reach the second "BRA" near the end, order-2 sees "BR" → {A:1} with certainty — one bit to encode A.
+- When we reach the second "BRA" near the end, order-2 sees "BR" → {A:1} with certainty: one bit to encode A.
 
 The result: early symbols cost many bits (escaping to order $-1$); later symbols with rich context
-cost near zero. PPM is a pure *online* learner — no offline training pass needed.
+cost near zero. PPM is a pure *online* learner, requiring no offline training pass.
 
 #checkpoint[
   After encoding "ABRACAD", what does the order-1 table contain for the context "A"?
@@ -240,7 +240,7 @@ cost near zero. PPM is a pure *online* learner — no offline training pass need
 No `#project` step is assigned to Chapter 33 (PPMd has no tinyzip step), but a small, readable
 implementation makes the algorithm concrete.
 
-#gopython("Dictionaries of dictionaries — nested tables")[
+#gopython("Dictionaries of dictionaries: nested tables")[
   In Python, a `dict[str, dict[int, int]]` is a dictionary whose keys are strings (the contexts)
   and whose values are themselves dictionaries mapping byte values to counts. This nesting is the
   natural way to represent a PPM context table.
@@ -262,12 +262,12 @@ implementation makes the algorithm concrete.
   ```
 
   The outer key is the context string; the inner dict maps symbol bytes to their counts.
-  `counts.get(symbol, 0)` returns 0 if the symbol has never appeared — the zero-frequency
+  `counts.get(symbol, 0)` returns 0 if the symbol has never appeared: the zero-frequency
   problem in miniature.
 ]
 
 ```python
-# ppm_demo.py — order-2 PPM model (probability query only; no actual arithmetic coding)
+# ppm_demo.py: order-2 PPM model (probability query only; no actual arithmetic coding)
 # Python 3.14
 
 def ppm_escape_prob_c(counts: dict[int, int]) -> float:
@@ -338,7 +338,7 @@ if __name__ == "__main__":
 ```
 
 The output shows probabilities rising as the model learns: the second "a" after "br" has
-probability 1.0 after the model has seen "bra" once — one free bit.
+probability 1.0 after the model has seen "bra" once: one free bit.
 
 == The Limits of PPM: Why One Context Is Not Enough
 
@@ -357,8 +357,8 @@ decide how much to trust each one?
 == Context Mixing: Many Predictors, One Verdict
 
 *Context mixing* (CM) is the family of techniques that run multiple prediction models in parallel
-and combine their outputs. Every CM compressor operates *bit by bit* — not byte by byte. This is
-crucial: at the bit level, each model outputs a single number $p in [0,1]$ (the probability that
+and combine their outputs. Every CM compressor operates *bit by bit*, not byte by byte. This matters:
+at the bit level, each model outputs a single number $p in [0,1]$ (the probability that
 the next bit is 1), which makes combination trivially one-dimensional.
 
 The models run in parallel on every bit:
@@ -379,7 +379,7 @@ do we combine their $p_i$ predictions into a single probability?
 
 The naive approach: weighted average $P = sum_i w_i p_i$ where weights $sum_i w_i = 1$.
 This has a crippling flaw. If model A predicts $p_A = 0.9$ and model B predicts $p_B = 0.1$, the
-average is $0.5$ — uncertain. But if A is always right when it's confident and B is always wrong
+average is $0.5$, leaving us uncertain. But if A is always right when it's confident and B is always wrong
 when it's confident, a smart combiner should *invert* B and get $P approx 0.9$. Linear mixing
 has no way to express this inversion; weights must be positive.
 
@@ -410,7 +410,7 @@ The solution is to work in *logit space* (also called log-odds space).
   *Example:* If model A gives $p = 0.9$ and model B gives $p = 0.1$:
   - Logits: $s_A = ln(9) approx 2.20$, $s_B = ln(0.1/0.9) approx -2.20$
   - With weights $w_A = 1.0, w_B = -1.0$: $S = 1.0 times 2.20 + (-1.0) times (-2.20) = 4.40$
-  - $sigma(4.40) approx 0.988$ — confidently predicting 1, correctly inverting B.
+  - $sigma(4.40) approx 0.988$, confidently predicting 1, correctly inverting B.
 
   Negative weights are now meaningful! A model that consistently predicts backwards gets a
   negative weight, and its "wrongness" becomes useful signal.
@@ -428,7 +428,7 @@ compressing.
 #mathrecall[
   Two ideas we already built power this. From Chapter 23, the *cross-entropy loss* of coding a bit
   whose true value is $b$ with predicted probability $P$ is $-log_2 P$ when $b = 1$ and
-  $-log_2(1 - P)$ when $b = 0$ — the number of bits the arithmetic coder will actually spend. From
+  $-log_2(1 - P)$ when $b = 0$, which is the number of bits the arithmetic coder will actually spend. From
   Chapter 11, *gradient descent* nudges each tunable number a small step *opposite* its slope, so
   the loss goes downhill. Put together: after each bit we ask "which way should each weight move to
   spend fewer bits?" and take one tiny step that way.
@@ -443,12 +443,12 @@ where $eta$ (eta) is a learning rate (typically around 0.002 to 0.01). The facto
 and positive, and every model that voted "1" (positive logit) gets its weight pushed up so it counts
 for more next time; a model that voted "0" gets pushed down. When $P$ already matches the bit, the
 error is near zero and weights barely move. This is exactly the *backpropagation* update for a
-single sigmoid output neuron — the same learning rule that trains the giant neural networks of
+single sigmoid output neuron. This is the same learning rule that trains the giant neural networks of
 Volume IV, here running on one tiny layer, one step per bit.
 
 #keyidea[
   A context-mixing compressor *is* a real-time, online neural network. Every bit it encodes is
-  a training step. The "model" is not pre-trained — it learns from the very data it is
+  a training step. The "model" is not pre-trained. It learns from the very data it is
   compressing, which is exactly what we want: the model specializes to this particular file.
 ]
 
@@ -464,24 +464,24 @@ Volume IV, here running on one tiny layer, one step per bit.
     for (i, m) in models.enumerate() {
       let y = (3.5 - i * 1.0)
       rect((-3.2, y - 0.28), (-1.8, y + 0.28), stroke: 0.6pt + rgb("#0b5394"), fill: rgb("#dce9f5"))
-      content((-2.5, y), text(size: 7.5pt)[#m])
+      content((-2.5, y), box(width: 1.2cm, align(center, text(size: 7.5pt)[#m])))
       line((-1.8, y), (-0.8, 0.0), stroke: 0.5pt + rgb("#888"))
     }
     // Mixer node
     circle((0.0, 0.0), radius: 0.6, stroke: 0.8pt + rgb("#0b6e4f"), fill: rgb("#d9f0e8"))
-    content((0.0, 0.0), text(size: 8pt, weight: "bold")[logit \ mix])
+    content((0.0, 0.0), box(width: 1.0cm, align(center, text(size: 8pt, weight: "bold")[logit mix])))
     // Output
     line((0.6, 0.0), (1.8, 0.0), mark: (end: ">"), stroke: 0.8pt)
     rect((1.8, -0.3), (3.0, 0.3), stroke: 0.6pt + rgb("#9a2617"), fill: rgb("#f7ddd9"))
-    content((2.4, 0.0), text(size: 7.5pt)[σ(S) = P])
+    content((2.4, 0.0), box(width: 1.0cm, align(center, text(size: 7.5pt)[σ(S)=P])))
     // Weight update arrow
     line((2.4, -0.3), (2.4, -1.1), stroke: 0.6pt + rgb("#783f04"), mark: (end: ">"))
-    content((2.4, -1.4), text(size: 7.5pt, style: "italic", fill: rgb("#783f04"))[update w])
+    content((2.4, -1.4), box(width: 1.2cm, align(center, text(size: 7.5pt, style: "italic", fill: rgb("#783f04"))[update w])))
     line((2.4, -1.4), (0.0, -1.4), stroke: 0.4pt + rgb("#783f04"))
     line((0.0, -1.4), (0.0, -0.6), stroke: 0.4pt + rgb("#783f04"), mark: (end: ">"))
     // Labels
-    content((-2.5, -4.1), text(size: 7pt, style: "italic")[context models])
-    content((0.0, 0.85), text(size: 7pt, style: "italic")[Σ wᵢ·logit(pᵢ)])
+    content((-2.5, -4.1), box(width: 2.0cm, align(center, text(size: 7pt, style: "italic")[context models])))
+    content((0.0, 0.85), box(width: 2.8cm, align(center, text(size: 7pt, style: "italic")[sum wᵢ·logit(pᵢ)])))
   })
 )
 
@@ -493,7 +493,7 @@ Volume IV, here running on one tiny layer, one step per bit.
   complexity: "O(M) per bit where M = number of models; O(M + context tables) space.",
   strengths: "Dramatically better than any single model; negative weights allow model inversion; purely online.",
   weaknesses: "Requires many models → slow (seconds per MB); hard to tune without expertise.",
-  superseded: "Not superseded — still the basis of the best classical compressors as of 2026.",
+  superseded: "Not superseded. Still the basis of the best classical compressors as of 2026.",
 )[
   Logistic mixing formula per bit:
   $ S = sum_(i=1)^M w_i dot "logit"(p_i), quad P = 1/(1 + e^(-S)) $
@@ -515,15 +515,15 @@ by a small learning rate. Over time, the table learns the mixer's systematic bia
 them. A well-tuned SSE stage can improve compression by several percent on its own.
 
 A concrete picture: suppose that, whenever the mixer outputs $P = 0.90$, the bit actually turns out
-to be 1 only about 80% of the time — the mixer is *over-confident* in that range. SSE notices this.
+to be 1 only about 80% of the time: the mixer is *over-confident* in that range. SSE notices this.
 Its bucket for "input near 0.90" gradually drifts down toward the observed 0.80, so the next time
 the mixer says 0.90, SSE quietly hands the arithmetic coder 0.80 instead. Because the coder spends
 $-log_2 P$ bits, feeding it a *calibrated* probability spends fewer bits on average than feeding it
 the mixer's raw, slightly-wrong one. The table needs no formula for *why* the mixer is biased; it
 simply measures the bias bucket by bucket and cancels it.
 
-Think of SSE as a learned "correction layer" on top of the mixer — a two-stage inference that
-first blends models, then calibrates the result. (This is the same calibration idea that the
+Think of SSE as a learned "correction layer" on top of the mixer: first blends models,
+then calibrates the result. (This is the same calibration idea that the
 adaptive bit model of Chapter 23 used at the level of a single context; SSE applies it to the
 mixer's *output*.)
 
@@ -537,7 +537,7 @@ code, and a global community of hobbyists began contributing model ideas.
 #history[
   The PAQ story is one of the most unusual collaborative software projects in history. Unlike
   Linux (millions of professionals) or Wikipedia (millions of amateurs), PAQ was driven by a
-  small, deeply technical community — perhaps a dozen active contributors at peak — who competed
+  small, deeply technical community (perhaps a dozen active contributors at peak) who competed
   fiercely and collaborated generously, sharing ideas on data-compression forums (primarily
   encode.ru). The culture was meritocratic: better compression spoke for itself. Contributors
   included professional researchers, students, and self-taught enthusiasts from Russia, Poland,
@@ -547,14 +547,14 @@ code, and a global community of hobbyists began contributing model ideas.
 
 *PAQ1–PAQ4* (2002–2003): Established the basic multi-model arithmetic-coding framework.
 *PAQ6* (2003): Introduced a rich model set (byte, word, and position models) that set new records.
-*PAQ7* (2005): Alexander Rhatushnyak and others introduced *logistic mixing* — the neural net
+*PAQ7* (2005): Alexander Rhatushnyak and others introduced *logistic mixing*, the neural net
   layer. This was the decisive improvement; PAQ7 leapt past all competitors.
 *PAQ8* (2006 onward): Dozens of specialized models, SSE stages, and preprocessing transforms.
   The PAQ8 family branched into many variants: `paq8l`, `paq8px`, `paq8pxd`, `paq8kx`, each
   tuned for different data types (text, executable, binary, images).
 *paq8px v209* (2025): The community continues. Version 209 of paq8px, released in 2025, added
   LSTM-based models, pre-trained word-level dictionaries, and further SSE tuning. On enwik8
-  it achieves approximately 1.27 bits per character — in other words, about 2.7× compression
+  it achieves approximately 1.27 bits per character, or about 2.7× compression
   on the first 100 MB of English Wikipedia.
 
 #aside[
@@ -571,7 +571,7 @@ One practical problem with PAQ was longevity: a file compressed with `paq8l` fro
 be decompressed by `paq8l`. If that binary is lost or the OS changes, the data is unrecoverable.
 Mahoney solved this in *ZPAQ (2009–2015)* with a clever design: the archive header contains a
 complete description of the decompressor in a simple bytecode. A fixed, minimal `zpaq` program
-just interprets that bytecode — and can therefore decompress files made by any future version
+just interprets that bytecode and can therefore decompress files made by any future version
 of the compressor it has never seen.
 
 ZPAQ is designed for *archival* use: compress once, decompress reliably decades later. It is the
@@ -591,7 +591,7 @@ only general-purpose compressor with this guarantee. Mahoney maintained ZPAQ thr
   ZPAQ archive structure: header block containing a ZPAQL bytecode program that, when
   interpreted by the reference `zpaq` runtime, produces the exact decoding algorithm used
   to create the archive. Data block follows. A future `zpaq` binary only needs the ZPAQL
-  interpreter — the decompression logic is inside the archive itself.
+  interpreter; the decompression logic is inside the archive itself.
 ]
 
 === cmix: The Current Champion
@@ -607,10 +607,10 @@ of deep neural sequence modeling with traditional context statistics is extraord
 
 #note[
   Do not worry if "LSTM," "recurrent neural network," and "long short-term memory" are unfamiliar
-  here — they belong to the deep-learning toolkit we build from scratch in Chapter 56. For now,
+  here; they belong to the deep-learning toolkit we build from scratch in Chapter 56. For now,
   treat an LSTM as a black box with one job: it reads the bytes seen so far and outputs a
   probability for the next byte, learning as it goes. Crucially it slots into the *exact same
-  socket* as every other model — it just produces a $p_i$ that the logistic mixer blends in. That
+  socket* as every other model. It just produces a $p_i$ that the logistic mixer blends in. That
   is why a 2014 statistical compressor could bolt a neural network onto a pile of count tables and
   have them cooperate.
 ]
@@ -620,13 +620,13 @@ top position on the leaderboard.
 
 == The Hutter Prize: Compressing Human Knowledge
 
-In 2006, Marcus Hutter — the AI researcher who formalized the theory of general intelligence in
-terms of compression (AIXI, 2000) — founded the *Hutter Prize* with a simple premise: compress
+In 2006, Marcus Hutter, the AI researcher who formalized the theory of general intelligence in
+terms of compression (AIXI, 2000), founded the *Hutter Prize* with a simple premise: compress
 a snapshot of human knowledge as densely as possible, and win money for doing so.
 
 #history[
-  Marcus Hutter's theoretical work established that the optimal predictor — the one that
-  compresses best — is also the optimal reasoner. His 2000 book *Universal Artificial
+  Marcus Hutter's theoretical work established that the optimal predictor (the one that
+  compresses best) is also the optimal reasoner. His 2000 book *Universal Artificial
   Intelligence* and the AIXI framework (which we preview in Chapter 22 and revisit in
   Chapter 61) show that intelligence and compression are mathematically equivalent. The Hutter
   Prize was a practical bet: if you believe compression equals intelligence, then a prize for
@@ -649,7 +649,7 @@ world* (knowing that "Paris is the capital of" is followed by "France").
 The prize structure is elegant: beat the current record by $x%$ and collect $x%$ of the total
 €500,000 fund (€5,000 per 1% improvement). Constraints prevent brute-force: the decompressor
 must run in under approximately 100 hours on a single CPU core, within 10 GB of RAM, with no
-GPU, on a standard machine — and source code must be released under a free license.
+GPU, on a standard machine; source code must also be released under a free license.
 
 These constraints are the whole point: a giant pre-trained language model can "compress" enwik9
 by simply memorizing it, but that does not demonstrate algorithmic intelligence. The time and
@@ -658,15 +658,15 @@ memory limits force the compressor to work with learned statistics, not stored a
 #scoreboard(
   caption: "Hutter Prize enwik9 record progression (selected milestones).",
   [*Year*], [*Submitter*], [*Program*], [*Bytes on enwik9*], [*bpc*],
-  [2020 (baseline)], [—], [reference], [116,671,095], [~0.933],
+  [2020 (baseline)], [(none)], [reference], [116,671,095], [~0.933],
   [2021], [Margaritov], [starlit], [~115,000,000], [~0.920],
   [2023], [Kumar], [fast-cmix], [114,156,155], [0.913],
   [Aug 2024], [Orav], [fx-cmix], [112,578,322], [0.900],
   [Sep 2024], [Orav & Knoll], [*fx2-cmix*], [*110,793,128*], [*0.886*],
 )
 
-The current record — 110,793,128 bytes — was set in September 2024 by Kaido Orav and Byron Knoll
-with *fx2-cmix*, awarded €7,950. It compresses enwik9 from 1,000,000,000 bytes to 110,793,128 —
+The current record of 110,793,128 bytes was set in September 2024 by Kaido Orav and Byron Knoll
+with *fx2-cmix*, awarded €7,950. It compresses enwik9 from 1,000,000,000 bytes to 110,793,128,
 a ratio of 9.02:1 on Wikipedia text. The compression time is measured in *days*; this is not a
 practical tool but a scientific measurement of how much algorithmic intelligence knows.
 
@@ -682,7 +682,7 @@ argument.
 In Chapter 22 we introduced Kolmogorov complexity: the length of the shortest program that
 produces a given string. In Chapter 23 we proved that a perfect predictor is a perfect
 compressor. Ray Solomonoff's 1964 *universal prior* gives probability $2^(-K(x))$ to any string
-$x$ where $K(x)$ is its Kolmogorov complexity — the shorter the program, the more probable the
+$x$ where $K(x)$ is its Kolmogorov complexity. The shorter the program, the more probable the
 string. Hutter showed that an agent maximizing expected reward, using the Solomonoff prior, is
 the optimal rational agent (AIXI).
 
@@ -693,12 +693,12 @@ approximate it through billions of parameters. They are all playing the identica
 
 In 2023, Google DeepMind published "Language Modeling Is Compression" (Delétang et al., ICLR
 2024), showing that large language models like Chinchilla and Llama 2 compress enwik8 better
-than most classical compressors when paired with arithmetic coding — the math works out exactly
+than most classical compressors when paired with arithmetic coding; the math works out exactly
 as theory predicts. We will revisit this in Chapter 62, where we build that LLM compressor as
 the final tinyzip step.
 
 #misconception[
-  "PAQ and cmix are just clever data structures — they are not really doing anything like thinking."
+  "PAQ and cmix are just clever data structures, not really doing anything like thinking."
 ][
   They are implementing, approximately and computably, the same mathematical ideal (Solomonoff
   induction) that the theoretical frameworks of machine intelligence are based on. The PAQ
@@ -736,7 +736,7 @@ ratio, maximum time, maximum memory. Where do they fit in practice?
 
 #pitfall[
   PPMd's compression ratio can be destroyed by a poor choice of order and memory parameters.
-  7-Zip defaults to order=6 and memory=16 MB for PPMd — fine for typical use — but on very long
+  7-Zip defaults to order=6 and memory=16 MB for PPMd, which is fine for typical use, but on very long
   correlated texts (novels, code repositories) raising order to 12 or 16 with 64+ MB memory
   makes a significant difference. Too much order on short files hurts ratio because the model
   never builds reliable high-order statistics.
@@ -753,14 +753,14 @@ adaptive probability estimation that are direct descendants of PPM ideas. Each s
 after each element. The whole video bitstream is coded with probabilities that adapt in real time.
 
 *LZMA (Chapter 31)* uses range coding (arithmetic coding over a range) driven by context models
-for its literal bytes, length codes, and match distances — each with separate adaptive models
+for its literal bytes, length codes, and match distances, each with separate adaptive models
 updated incrementally. LZMA is architecturally a hybrid: LZ dictionary for matches, PPM-style
 context models for the arithmetic coder.
 
 *Zstandard's* finite state entropy (tANS-based Huffman) uses trained frequency tables that are
 recomputed per block, which is a simple one-shot version of the same idea.
 
-The context mixing paradigm — run multiple models, blend adaptively — is thus embedded in
+The context mixing paradigm (run multiple models, blend adaptively) is embedded in
 everyday software even if "PAQ" is not a household name.
 
 == Looking Under the Hood: A Context-Mixing Toy
@@ -786,7 +786,7 @@ clarifying code in the chapter.
 
 #gopython("Walking two lists together with `zip`")[
   The mixer needs to march through two lists in lock-step: each model's weight $w_i$ alongside
-  that model's prediction $p_i$. Python's built-in `zip` does exactly that — it pairs up the
+  that model's prediction $p_i$. Python's built-in `zip` does exactly that: it pairs up the
   items of several iterables position by position and hands you one tuple per step:
 
   ```python
@@ -802,7 +802,7 @@ clarifying code in the chapter.
 ]
 
 ```python
-# context_mixer_demo.py — a minimal bit-level context mixer
+# context_mixer_demo.py: a minimal bit-level context mixer
 # Python 3.14
 import math
 
@@ -909,7 +909,7 @@ than the original relative offsets (which jump around unpredictably based on cod
 7-Zip optionally does a simple form of this for document archives).
 
 *BWT (Burrows-Wheeler Transform, Chapter 35):* Not typically used ahead of PPM (PPM makes
-better use of raw context order), but BWT is crucial for bzip2's approach of making similar
+better use of raw context order), but BWT is central to bzip2's approach of making similar
 characters cluster together.
 
 #pitfall[
@@ -930,8 +930,8 @@ characters cluster together.
     // Axes
     line((0, 0), (5.5, 0), mark: (end: ">"))
     line((0, 0), (0, 4.5), mark: (end: ">"))
-    content((5.5, -0.35), text(size: 8pt)[Compression speed (MB/s, log scale) →])
-    content((-0.5, 4.5), text(size: 8pt)[Ratio →], angle: 90deg)
+    content((2.8, -0.35), box(width: 5.0cm, align(center, text(size: 8pt)[Compression speed (MB/s, log scale) →])))
+    content((-0.4, 2.3), box(width: 1.5cm, align(center, text(size: 8pt)[Ratio →])), angle: 90deg)
 
     // Points: (x_speed, y_ratio, label)  x: 0=slow..5=fast  y: 0=low..4=high
     let pts = (
@@ -947,14 +947,14 @@ characters cluster together.
     )
     for (x, y, lbl) in pts {
       circle((x, y), radius: 0.09, fill: rgb("#0b5394"), stroke: none)
-      content((x + 0.15, y + 0.05), text(size: 7pt)[#lbl])
+      content((x + 0.15, y + 0.05), box(width: 1.5cm, text(size: 7pt)[#lbl]))
     }
   })
 )
 
 The figure makes the trade-off visual: you can have Zstandard (fast, good ratio) or cmix
 (extraordinarily slow, extraordinary ratio), but not both. PPMd sits comfortably in the
-"slow but usable" zone — better ratio than LZ codecs, faster than PAQ by two orders of magnitude.
+"slow but usable" zone: better ratio than LZ codecs, and faster than PAQ by two orders of magnitude.
 
 == Exercises
 
@@ -966,7 +966,7 @@ The figure makes the trade-off visual: you can have Zstandard (fast, good ratio)
 #solution("33.1")[
   It would hurt. Raising the escape probability to 0.5 means only 0.5 of the probability mass
   is shared among the 5 known symbols. If a known symbol had count 10/20 (probability 0.5 of
-  the non-escape mass under PPMC), it now gets at most $0.5 times 0.5 = 0.25$ — far less than
+  the non-escape mass under PPMC), it now gets at most $0.5 times 0.5 = 0.25$, far less than
   the $0.5 times 0.8 = 0.4$ it gets under PPMC. Encoding it costs $-log_2(0.25) = 2$ bits
   instead of $-log_2(0.4) approx 1.32$ bits. Over-escaping wastes bits on the symbols you do know.
 ]
@@ -1031,7 +1031,7 @@ The figure makes the trade-off visual: you can have Zstandard (fast, good ratio)
   #pyrecall[
     `defaultdict(int)` from the `collections` module is a dictionary that, when you look up a
     missing key, silently creates it with a default value (`int()` gives `0`) instead of raising an
-    error — so `d[k] += 1` just works on a fresh key. `defaultdict(lambda: defaultdict(int))` nests
+    error, so `d[k] += 1` just works on a fresh key. `defaultdict(lambda: defaultdict(int))` nests
     this: a missing outer key auto-creates an *inner* counting dictionary. (The `lambda` one-liner
     is from Chapter 16.) It saves the "if key not in dict: create it" dance we wrote by hand earlier.
   ]
@@ -1074,15 +1074,15 @@ The figure makes the trade-off visual: you can have Zstandard (fast, good ratio)
 #solution("33.6")[
   The Hutter Prize's enwik9 benchmark has both deep strength and genuine weaknesses. Its strength
   is that compressing English prose well requires implicit knowledge of grammar, facts, and
-  structure — a real proxy for knowledge. Its weaknesses: (a) enwik9 was seen by the program's
+  structure, which is a real proxy for knowledge. Its weaknesses: (a) enwik9 was seen by the program's
   author during development; the program is trained on the test set implicitly, which is not
   the same as generalization to unseen knowledge. (b) The 100-hour CPU limit excludes modern
-  GPU/TPU models, which are the actual frontier of learned compression — jax-compress broke the
+  GPU/TPU models, which are the actual frontier of learned compression; jax-compress broke the
   limit in March 2026 and the rules may need revision. (c) Intelligence also involves spatial
   reasoning, perception, action planning, and common sense that do not appear in a Wikipedia
   text dump. A program perfectly compressing enwik9 still cannot recognize a face or tie a knot.
   Nevertheless, the prize remains the cleanest single-number proxy for "how much does this
-  algorithm know about the world in text form" — a useful if incomplete measure.
+  algorithm know about the world in text form": a useful if incomplete measure.
 ]
 
 == Further Reading
@@ -1095,18 +1095,18 @@ The figure makes the trade-off visual: you can have Zstandard (fast, good ratio)
 
 - #link("https://cs.fit.edu/~mmahoney/compression/nn_paper.pdf")[Mahoney, M. (2000). "Fast Text Compression with Neural Networks." *FLAIRS 2000*.] The paper that spawned PAQ.
 
-- #link("https://en.wikipedia.org/wiki/Context_mixing")[Wikipedia: Context mixing] — surprisingly comprehensive coverage of the PAQ family with links to all variants.
+- #link("https://en.wikipedia.org/wiki/Context_mixing")[Wikipedia: Context mixing]: surprisingly comprehensive coverage of the PAQ family with links to all variants.
 
-- #link("http://prize.hutter1.net/")[Hutter Prize official site] — current record, rules, and history of all awarded submissions.
+- #link("http://prize.hutter1.net/")[Hutter Prize official site]: current record, rules, and history of all awarded submissions.
 
-- #link("http://www.mattmahoney.net/dc/text.html")[Mahoney, M. Large Text Compression Benchmark (LTCB)] — enwik8 and enwik9 leaderboards; the field's de facto scoreboard.
+- #link("http://www.mattmahoney.net/dc/text.html")[Mahoney, M. Large Text Compression Benchmark (LTCB)]: enwik8 and enwik9 leaderboards; the field's de facto scoreboard.
 
-- #link("https://arxiv.org/abs/2309.10668")[Delétang et al. (2024). "Language Modeling Is Compression." *ICLR 2024*.] DeepMind's proof that LLMs are SOTA lossless compressors — the theoretical bridge to Chapter 62.
+- #link("https://arxiv.org/abs/2309.10668")[Delétang et al. (2024). "Language Modeling Is Compression." *ICLR 2024*.] DeepMind's proof that LLMs are SOTA lossless compressors; see Chapter 62 for the full treatment.
 
-- #link("https://github.com/kaitz/fx2-cmix")[GitHub: kaitz/fx2-cmix] — source code of the current Hutter Prize champion (September 2024 record).
+- #link("https://github.com/kaitz/fx2-cmix")[GitHub: kaitz/fx2-cmix]: source code of the current Hutter Prize champion (September 2024 record).
 
 #takeaways((
-  "PPM (Cleary & Witten, 1984) encodes each symbol using the longest available context, escaping to shorter ones when the symbol is unseen — the core mechanism for handling the zero-frequency problem.",
+  "PPM (Cleary & Witten, 1984) encodes each symbol using the longest available context, escaping to shorter ones when the symbol is unseen. This is the core mechanism for handling the zero-frequency problem.",
   "PPMC (Moffat, 1990) added exclusion and better escape estimation; PPMd (Shkarin, 2002) refined it further with information inheritance and ships inside 7-Zip today.",
   "Context mixing runs many models in parallel, blending predictions via logistic (log-odds) weighted summation, trained online as a one-layer neural network after every bit.",
   "SSE (Secondary Symbol Estimation) corrects systematic biases in the mixed probability through a learned calibration table.",
@@ -1120,9 +1120,9 @@ The figure makes the trade-off visual: you can have Zstandard (fast, good ratio)
 #bridge[
   We have now seen the statistical summit of classical lossless compression: PPM and context
   mixing squeeze English text to as little as 0.9 bits per character. The next chapter, Chapter 34,
-  climbs even higher into the ratio champions — PAQ, ZPAQ, and cmix in full detail — examining
+  climbs even higher into the ratio champions: PAQ, ZPAQ, and cmix in full detail, examining
   their exact model structures, memory layouts, and the community of researchers who built them.
   After that, Chapter 35 takes a completely different approach: the Burrows-Wheeler Transform,
-  which reorganizes data so that ordinary PPM-style modeling becomes far more powerful — and which
-  secretly underpins not just bzip2 but the entire field of genome alignment.
+  which reorganizes data so that ordinary PPM-style modeling becomes far more powerful. It also
+  underpins not just bzip2 but the entire field of genome alignment.
 ]

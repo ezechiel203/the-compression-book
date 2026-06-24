@@ -5,38 +5,38 @@
 
 #epigraph[
   The best interface between a waveform and a language model
-  is a sequence of discrete tokens — small, fast, and full of meaning.
+  is a sequence of discrete tokens: small, fast, and full of meaning.
 ][Alexandre Défossez, Meta AI Research, 2022]
 
 Here is a puzzle: you want to build a voice assistant that can not only understand
-speech but generate it — one that continues a conversation in your own voice, with
+speech but generate it. One that continues a conversation in your own voice, with
 your own accent and emotional colour. You have a powerful language model that
 predicts sequences of text tokens beautifully. But audio is not text. A single
 second of high-quality speech contains 24,000 or 44,100 individual floating-point
 samples. Feeding raw samples to a language model would be like trying to read a novel
-one atom at a time. How do you bridge these two worlds — the continuous waveform of
-sound and the discrete token stream that language models understand?
+one atom at a time. How do you bridge these two worlds (the continuous waveform of
+sound and the discrete token stream that language models understand)?
 
 The answer arrived in a burst between 2021 and 2023, in three papers that together
 redefined what an audio codec is for: Google's *SoundStream* (2021), Meta's *EnCodec*
 (2022), and Descript's *DAC* (2023). These codecs can compress speech to a few
-kilobits per second — as good as the best traditional codecs — but they deliver
+kilobits per second, as good as the best traditional codecs, but they deliver
 something classical codecs never dreamed of: a neat stream of *discrete integers*
 that a language model can treat exactly like words. Codec and tokenizer have converged
 into the same device.
 
 This chapter explains how they work, why the key ingredient is a technique called
-*residual vector quantization*, and how the resulting tokens now underpin a remarkable
-zoo of systems — from voice cloning to real-time conversational AI.
+*residual vector quantization*, and how the resulting tokens now power a remarkable
+zoo of systems, from voice cloning to real-time conversational AI.
 
 #recap[
   Chapters 56 and 57 introduced the machinery of learned compression: autoencoders,
-  rate–distortion loss, quantization-as-noise, and the hyperprior that transmits
+  rate--distortion loss, quantization-as-noise, and the hyperprior that transmits
   "side information" about a learned prior. Chapter 58 showed how GAN and diffusion
   losses push codecs toward perceptual realism. Chapter 59 examined neural video
   codecs and implicit neural representations. All of this dealt with *images* and
-  *video*. Now we turn to *audio*, where the same ideas land on a new substrate —
-  one-dimensional waveforms sampled at 16 kHz to 48 kHz — and gain a second career
+  *video*. Now we turn to *audio*, where the same ideas land on a new substrate,
+  one-dimensional waveforms sampled at 16 kHz to 48 kHz, and gain a second career
   as the foundation of audio language models.
 ]
 
@@ -51,10 +51,10 @@ zoo of systems — from voice cloning to real-time conversational AI.
   [Explain how AudioLM, VALL-E, and Moshi use codec tokens as their working currency,
    and why semantic versus acoustic tokens matter.],
   [Identify the trade-offs (bitrate, latency, codebook collapse, compute) and
-   describe the directions the field is exploring in 2025–2026.],
+   describe the directions the field is exploring in 2025--2026.],
 ))
 
-== From Waveform to Latent: the Encoder–Decoder Backbone
+== From Waveform to Latent: the Encoder--Decoder Backbone
 
 Every neural audio codec is, at its heart, an autoencoder for one-dimensional
 signals. Recall from Chapter 56 that an autoencoder consists of two networks: an
@@ -67,7 +67,7 @@ The encoder in SoundStream is a stack of *strided convolutional layers*. Each la
 doubles or quadruples the number of channels while halving the time dimension, so a
 one-second audio clip at 24 kHz (24,000 samples) ends up as a sequence of, say,
 75 frames, each a 512-dimensional vector. The ratio of input samples to output frames
-is called the *stride product* or *downsampling factor* — in SoundStream it is 320,
+is called the *stride product* or *downsampling factor*. In SoundStream it is 320,
 meaning one latent frame for every 320 raw samples. The decoder is the mirror image:
 strided *transposed* convolutions that upsample back to full audio rate and reconstruct
 the waveform.
@@ -82,11 +82,11 @@ the waveform.
   such layers with strides 2, 4, 8, and 8 and you get a total downsampling of
   $2 times 4 times 8 times 8 = 512$, compressing 24,000 samples to 47 frames.
   A *transposed convolution* (sometimes called a deconvolution) is the reverse: it
-  upsamples — for every output position it scatters the kernel weights, effectively
+  upsamples, scattering the kernel weights for every output position, effectively
   inserting zeros between samples and then convolving with the kernel.
 ]
 
-Between the encoder and decoder sits the quantizer — the only lossy step, just as
+Between the encoder and decoder sits the quantizer, the only lossy step, just as
 rounding is the only lossy step in JPEG's pipeline. But here the quantizer is not
 a simple "round to the nearest integer"; it is a *vector quantizer* operating on
 512-dimensional vectors, and it is what makes the codec a tokenizer.
@@ -101,7 +101,7 @@ a simple "round to the nearest integer"; it is a *vector quantizer* operating on
   *learned latents* coming out of a neural encoder rather than raw signal samples.
 ]
 
-Imagine you have a set of 1,024 reference vectors stored in a table — a *codebook*.
+Imagine you have a set of 1,024 reference vectors stored in a table, a *codebook*.
 When the encoder outputs a 512-dimensional frame, instead of transmitting all 512
 floating-point numbers, you find the *nearest neighbour* in the codebook and transmit
 only its integer index (10 bits, since $log_2 1024 = 10$). The decoder looks up
@@ -119,7 +119,7 @@ network.
 
 This is enormously efficient. SoundStream's 75 frames per second, each indexed into
 a codebook of 1,024 entries, costs $75 times 10 = 750$ bits per second. At 24 kHz,
-that is the same as transmitting 750 bits for every 24,000 samples — a 32× reduction
+that is the same as transmitting 750 bits for every 24,000 samples, a 32x reduction
 over even 8-bit PCM, and the reconstruction from a good decoder is remarkable.
 
 But 750 bps is very aggressive. At that rate, a single codebook is too coarse to
@@ -128,12 +128,12 @@ capture all the acoustic detail of speech and music. The elegant solution is to
 
 #gomaths("Nearest Neighbour in High Dimensions")[
   The nearest-neighbour operation $"argmin"_k norm(z - e_k)_2$ is just finding the
-  closest point in a list — the same idea as finding the nearest house on a map.
+  closest point in a list, the same idea as finding the nearest house on a map.
   The squared Euclidean distance between two $d$-dimensional vectors
   $z = (z_1, dots, z_d)$ and $e = (e_1, dots, e_d)$ is
   $ norm(z - e)^2_2 = sum_(i=1)^d (z_i - e_i)^2 $
   For a codebook of size $K$, a brute-force search takes $O(K d)$ operations.
-  With $K=1024$ and $d=512$, that is about 524,288 multiplications per frame —
+  With $K=1024$ and $d=512$, that is about 524,288 multiplications per frame,
   fast enough on modern hardware.
 ]
 
@@ -144,7 +144,7 @@ refining the error left by the previous one. The idea is beautifully simple.
 
 Step 1: quantize the encoder output $z$ to get the first token $k_1$ and the
 reconstructed first-level vector $hat(z)_1 = e_(k_1)$. Compute the *residual*
-$r_1 = z - hat(z)_1$ — the part the first quantizer could not capture.
+$r_1 = z - hat(z)_1$ (the part the first quantizer could not capture).
 
 Step 2: feed $r_1$ into a *second* vector quantizer with its own separate codebook,
 getting token $k_2$ and reconstruction $hat(z)_2 = e_(k_2)^((2))$. Compute
@@ -159,14 +159,14 @@ $
 
 If each codebook has $K$ entries, one frame is represented by $N_q$ indices, and the
 total bitrate for that frame is $N_q times log_2 K$ bits. By choosing $N_q$, you
-slide along the rate–quality curve: more quantizers = higher bitrate = better quality.
+slide along the rate--quality curve: more quantizers = higher bitrate = better quality.
 SoundStream uses $N_q = 1$ to $32$ quantizers and a single model covers bitrates from
 3 kbps to 24 kbps simply by choosing how many levels to include at runtime.
 
 #keyidea[
   Residual vector quantization is just VQ applied repeatedly to the leftover error.
-  Each new codebook captures a finer layer of detail that the previous ones missed —
-  the first codebook gets the big shapes, the second gets the grain, the third gets
+  Each new codebook captures a finer layer of detail that the previous ones missed.
+  The first codebook gets the big shapes, the second gets the grain, the third gets
   the texture, and so on. The decoder sums up all the contributions to reconstruct
   a rich signal from a short sequence of small integers.
 ]
@@ -182,7 +182,7 @@ SoundStream uses $N_q = 1$ to $32$ quantizers and a single model covers bitrates
   line((0, 1.5), (0, 1.1), mark: (end: ">"))
   // VQ1
   rect((-1.5, 0.0), (-0.5, 1.0), fill: rgb("#d0e8d0"), stroke: 0.8pt)
-  content((-1.0, 0.5))[#text(size:8pt)[VQ1]]
+  content((-1.0, 0.5), box(width: 0.8cm, inset: 1pt, align(center, text(size: 8pt)[VQ1])))
   line((0, 1.0), (-1.0, 1.0), mark: (end: ">"))
   line((-1.0, 0.0), (-1.0, -0.4), mark: (end: ">"))
   content((-1.0, -0.7))[$k_1$]
@@ -191,7 +191,7 @@ SoundStream uses $N_q = 1$ to $32$ quantizers and a single model covers bitrates
   line((0.5, 1.0), (0.5, 0.5))
   // VQ2
   rect((-0.2, 0.0), (0.8, 1.0), fill: rgb("#d0e8d0"), stroke: 0.8pt)
-  content((0.3, 0.5))[#text(size:8pt)[VQ2]]
+  content((0.3, 0.5), box(width: 0.8cm, inset: 1pt, align(center, text(size: 8pt)[VQ2])))
   line((0.5, 0.5), (0.3, 0.5))
   line((0.3, 0.0), (0.3, -0.4), mark: (end: ">"))
   content((0.3, -0.7))[$k_2$]
@@ -200,23 +200,23 @@ SoundStream uses $N_q = 1$ to $32$ quantizers and a single model covers bitrates
   line((1.3, 0.5), (1.3, 0.0))
   // VQ3
   rect((0.8, 0.0), (1.8, 1.0), fill: rgb("#d0e8d0"), stroke: 0.8pt)
-  content((1.3, 0.5))[#text(size:8pt)[VQ3]]
+  content((1.3, 0.5), box(width: 0.8cm, inset: 1pt, align(center, text(size: 8pt)[VQ3])))
   line((1.3, 0.0), (1.3, -0.4), mark: (end: ">"))
   content((1.3, -0.7))[$k_3$]
   // label at top
-  content((0.0, 3.0))[Encoder output]
-  content((0.0, -1.2))[Token stream per frame]
+  content((0.0, 3.0), text(size: 9pt)[Encoder output])
+  content((0.0, -1.2), text(size: 9pt)[Token stream per frame])
 }))
 
 === Training the Codebooks
 
-Training is the tricky part. The nearest-neighbour operation — "find the closest
-codebook vector" — has no gradient. You cannot just run backpropagation through it
+Training is the tricky part. The nearest-neighbour operation ("find the closest
+codebook vector") has no gradient. You cannot just run backpropagation through it
 because there is no smooth slope to follow when the output suddenly jumps from one
 codebook entry to another.
 
 The standard fix, introduced in the original VQ-VAE paper (van den Oord, Vinyals,
-and Kavukcuoglu, 2017 — whose codebook idea we traced in Chapter 39 and whose
+and Kavukcuoglu, 2017, whose codebook idea we traced in Chapter 39 and whose
 gradient trick reappeared in Chapter 57) and adopted by all three codecs, is the
 *straight-through estimator* (STE). During the *forward* pass, the quantized vector
 $hat(z)$ is used as normal. During the *backward* pass (gradient descent), the
@@ -225,7 +225,7 @@ encoder output $z$, as if the quantization step were the identity function. The
 gradient "passes straight through the rounding."
 
 The codebook entries themselves are updated by an *exponential moving average* of
-the encoder outputs that were assigned to each entry — a soft form of the
+the encoder outputs that were assigned to each entry, a soft form of the
 $k$-means algorithm. A *commitment loss* pushes the encoder outputs to stay close
 to the chosen codebook entry, preventing the encoder from wildly jumping between
 entries and making training unstable.
@@ -241,8 +241,8 @@ entries and making training unstable.
 
 One persistent problem is *codebook collapse*: some codebook entries get chosen
 repeatedly while others are never used, wasting capacity. Both EnCodec and DAC
-introduced tricks to fight this — random codebook resets (replacing unused entries
-with randomly selected encoder outputs) and improved initialisation — and DAC
+introduced tricks to fight this, including random codebook resets (replacing unused entries
+with randomly selected encoder outputs) and improved initialisation. DAC
 especially made codebook utilisation a design priority.
 
 == SoundStream (2021): the First Universal Neural Audio Codec
@@ -256,8 +256,8 @@ including speech, music, and environmental sounds.
   name: "SoundStream",
   year: "2021",
   authors: "Zeghidour, Luebs, Omran, Skoglund, Tagliasecca (Google)",
-  aim: "End-to-end neural audio codec for speech and general audio using RVQ; operates at 3–18 kbps at 24 kHz.",
-  complexity: "Encoder: causal convolutions, stride 320. Decoder: mirrored transposed convolutions. RVQ: $N_q$ = 1–32.",
+  aim: "End-to-end neural audio codec for speech and general audio using RVQ; operates at 3--18 kbps at 24 kHz.",
+  complexity: "Encoder: causal convolutions, stride 320. Decoder: mirrored transposed convolutions. RVQ: $N_q$ = 1--32.",
   strengths: "First universal codec; variable bitrate via quantizer dropout; real-time on a single CPU; strong perceptual quality at low rates.",
   weaknesses: "No Transformer refinement; no real-time stereo support in the original; codebook collapse can occur without careful training.",
   superseded: "EnCodec (2022) and DAC (2023) on quality; Mimi (2024) for language-model use.",
@@ -265,20 +265,20 @@ including speech, music, and environmental sounds.
   The most important design choice beyond the architecture itself was *quantizer
   dropout*: during training, the model randomly drops some of the later RVQ quantizers.
   This forces the decoder to learn to reconstruct good audio from as few as one quantizer
-  level — so at inference, you simply choose how many levels to use and the same model
+  level, so at inference, you simply choose how many levels to use and the same model
   works at any bitrate in a wide range. No retraining needed.
 
   Training uses a combination of losses: a reconstruction loss in the waveform domain
   (L1 distance on raw samples and on log-mel spectrograms) and a *discriminator* loss
-  from a multi-scale spectrogram discriminator — a simplified GAN loss that rewards the
+  from a multi-scale spectrogram discriminator, a simplified GAN loss that rewards the
   decoder for producing audio that "sounds real" rather than just minimising a pixel-wise
-  number. This perceptual component is crucial at low bitrates.
+  number. This perceptual component is important at low bitrates.
 ]
 
 #history[
   Before SoundStream, the art of neural speech coding had progressed through LPCNet
   (2019, Valin and Skoglund), which combined a classical linear predictive coder
-  with a recurrent neural network for the residual — a hybrid approach rather than
+  with a recurrent neural network for the residual, a hybrid approach rather than
   a pure end-to-end one. SoundStream was the first fully end-to-end neural codec to
   compete with and then beat classical codecs across diverse audio content.
 ]
@@ -289,40 +289,40 @@ Meta's EnCodec, by Alexandre Défossez, Jade Copet, Gabriel Synnaeve, and Yossi 
 (2022), kept the SoundStream architecture and RVQ core but added several improvements.
 
 The most important is a *streaming* design. SoundStream could already run in real
-time, but EnCodec carefully made the encoder *causal* — each output frame depends
+time, but EnCodec carefully made the encoder *causal*: each output frame depends
 only on past input frames, never on future ones. This is essential for live
 communication: you cannot wait for the whole audio file before starting to encode.
 
-EnCodec also introduced *stereophonic support* at 48 kHz — music fidelity rather
-than just voice fidelity. And it added a lightweight *language model entropy coder*
+EnCodec also introduced *stereophonic support* at 48 kHz (music fidelity rather
+than just voice fidelity) and a lightweight *language model entropy coder*
 on top of the RVQ indices.
 
 #mathrecall[
   A *Transformer* (introduced in Chapter 59) is a neural network that processes a
   sequence by letting every position "attend" to every other position, so each output
   can depend on the whole context. Trained to predict the next item, it becomes a
-  probability model for sequences — exactly what an entropy coder needs.
+  probability model for sequences, exactly what an entropy coder needs.
 ]
 
 After the RVQ step produces a stream of integers, a tiny
 Transformer reads the sequence and predicts the probability of each next index,
 then passes those probabilities to an arithmetic coder (Chapter 26). This "post-hoc"
-entropy coding squeezes an additional 20–40% out of the bitstream, because adjacent
-RVQ codes are correlated — the model exploits that correlation the same way a
+entropy coding squeezes an additional 20--40% out of the bitstream, because adjacent
+RVQ codes are correlated. The model exploits that correlation the same way a
 language model exploits word co-occurrence.
 
 #algo(
   name: "EnCodec",
   year: "2022",
   authors: "Défossez, Copet, Synnaeve, Adi (Meta AI Research)",
-  aim: "High-fidelity streaming neural audio codec with RVQ + lightweight Transformer entropy coding; targets 1.5–24 kbps.",
+  aim: "High-fidelity streaming neural audio codec with RVQ + lightweight Transformer entropy coding; targets 1.5--24 kbps.",
   complexity: "Causal convolutions + RVQ up to 8 quantizers; 24 kHz mono or 48 kHz stereo. Entropy coder: small Transformer.",
-  strengths: "Real-time streaming; stereo support; 20–40% extra compression via entropy coding; open-sourced; became default tokenizer for VALL-E and AudioLM.",
+  strengths: "Real-time streaming; stereo support; 20--40% extra compression via entropy coding; open-sourced; became default tokenizer for VALL-E and AudioLM.",
   weaknesses: "Entropy coder adds latency; codebook collapse occurs without care; at 1.5 kbps stereo music quality is limited.",
-  superseded: "DAC (2023) on reconstruction quality for music; Mimi (2024) for semantic–acoustic disentanglement.",
+  superseded: "DAC (2023) on reconstruction quality for music; Mimi (2024) for semantic--acoustic disentanglement.",
 )[
-  EnCodec shipped with two public checkpoints — one for 24 kHz mono (speech) and one
-  for 48 kHz stereo (music) — and released the model weights on Hugging Face, which
+  EnCodec shipped with two public checkpoints, one for 24 kHz mono (speech) and one
+  for 48 kHz stereo (music), and released the model weights on Hugging Face, which
   accelerated adoption dramatically. Within months, nearly every audio language model
   paper was built on EnCodec tokens.
 ]
@@ -349,15 +349,15 @@ that has not been used recently is teleported to a randomly chosen encoder outpu
 This keeps every entry in use and maximises the information each code carries.
 
 *Periodic activations.* Instead of standard ReLU nonlinearities, DAC uses *snake
-activations* — a nonlinearity of the form $x + (1/alpha) sin^2(alpha x)$, where the
+activations* - a nonlinearity of the form $x + (1/alpha) sin^2(alpha x)$, where the
 learnable parameter $alpha$ sets the frequency. The plain $x$ term keeps the gradient
 healthy (just like ReLU's straight half), while the $sin^2$ term injects a built-in
 periodicity, so the network does not have to laboriously synthesise oscillation out of
-piecewise-linear pieces. Speech and music are full of periodic structure — vowels,
-musical notes, drum hits — and an activation that is *itself* periodic represents that
+piecewise-linear pieces. Speech and music are full of periodic structure (vowels,
+musical notes, drum hits), and an activation that is *itself* periodic represents that
 structure far more efficiently.
 
-*Wideband fidelity.* DAC supports 44.1 kHz — the CD standard — with 9 residual
+*Wideband fidelity.* DAC supports 44.1 kHz, the CD standard, with 9 residual
 quantizers, achieving near-transparent quality on music. This was the first open
 neural codec that could plausibly replace a lossless file at high enough bitrate.
 
@@ -371,57 +371,57 @@ neural codec that could plausibly replace a lossless file at high enough bitrate
   weaknesses: "Not designed for streaming (non-causal); heavier than SoundStream/EnCodec at comparable bitrate; no built-in entropy coder.",
   superseded: "Mimi (2024) for language-model-friendly tokenisation; specialist music codecs for narrowly musical use cases.",
 )[
-  DAC became the standard ablation baseline for neural audio codec research in 2024–2025.
+  DAC became the standard ablation baseline for neural audio codec research in 2024--2025.
   Its open weights, clear code, and strong quality across content types made it the
-  "ImageNet ResNet" of the audio codec world — the thing everything is compared against.
+  "ImageNet ResNet" of the audio codec world, the thing everything is compared against.
 ]
 
 #fig([Comparison of neural audio codec architectures. SoundStream, EnCodec, and DAC all
-  share the encoder–RVQ–decoder skeleton; they differ in encoder depth, activation
+  share the encoder--RVQ--decoder skeleton; they differ in encoder depth, activation
   functions, training losses, and codebook management.], cetz.canvas({
   import cetz.draw: *
   // Three column headers
-  content((-3.2, 3.5), text(weight: "bold")[SoundStream])
-  content((0.0, 3.5), text(weight: "bold")[EnCodec])
-  content((3.2, 3.5), text(weight: "bold")[DAC])
+  content((-3.2, 3.5), box(width: 2.0cm, align(center, text(weight: "bold", size: 8pt)[SoundStream])))
+  content((0.0, 3.5), box(width: 2.0cm, align(center, text(weight: "bold", size: 8pt)[EnCodec])))
+  content((3.2, 3.5), box(width: 2.0cm, align(center, text(weight: "bold", size: 8pt)[DAC])))
   // Common backbone
   for x in (-3.2, 0.0, 3.2) {
     rect((x - 1.2, 0.6), (x + 1.2, 1.3), fill: rgb("#d8ecf8"), stroke: 0.7pt)
-    content((x, 0.95))[Strided Encoder]
+    content((x, 0.95), box(width: 2.0cm, inset: 1pt, align(center, text(size: 8pt)[Strided Encoder])))
     rect((x - 1.2, -0.3), (x + 1.2, 0.4), fill: rgb("#d0e8d0"), stroke: 0.7pt)
-    content((x, 0.05))[RVQ]
+    content((x, 0.05), box(width: 2.0cm, inset: 1pt, align(center, text(size: 8pt)[RVQ])))
     rect((x - 1.2, -1.2), (x + 1.2, -0.5), fill: rgb("#fce8d8"), stroke: 0.7pt)
-    content((x, -0.85))[Transposed Dec.]
+    content((x, -0.85), box(width: 2.0cm, inset: 1pt, align(center, text(size: 8pt)[Transp. Dec.])))
     line((x, 0.6), (x, 0.4), mark: (end: ">"))
     line((x, -0.3), (x, -0.5), mark: (end: ">"))
   }
   // Distinctive labels
-  content((-3.2, -1.7), text(size: 7.5pt)[Variable $N_q$])
-  content((0.0, -1.7), text(size: 7.5pt)[Causal + Entropy])
-  content((3.2, -1.7), text(size: 7.5pt)[Snake act. + 44.1 kHz])
+  content((-3.2, -1.7), box(width: 2.0cm, inset: 1pt, align(center, text(size: 7.5pt)[Variable $N_q$])))
+  content((0.0, -1.7), box(width: 2.0cm, inset: 1pt, align(center, text(size: 7.5pt)[Causal + Entropy])))
+  content((3.2, -1.7), box(width: 2.0cm, inset: 1pt, align(center, text(size: 7.5pt)[Snake + 44.1 kHz])))
 }))
 
 == The Token Hierarchy: Acoustic vs. Semantic
 
-The RVQ structure is not just an engineering convenience — it creates a natural
+The RVQ structure is more than an engineering convenience: it creates a natural
 *hierarchy of information* in the tokens. The first quantizer captures the
 coarsest, most important structure. The later ones add progressively finer detail.
 
 Researchers noticed something striking: the *first* RVQ token per frame tends to
-encode *semantic* content — what the speaker is saying, the words, the
-linguistic meaning. The later tokens carry *acoustic* content — timbre, pitch,
+encode *semantic* content (what the speaker is saying, the words, the
+linguistic meaning). The later tokens carry *acoustic* content: timbre, pitch,
 speaking style, room acoustics. This happens because the first quantizer faces the
 hardest task (reconstruct the audio from one vector), so it latches onto the most
 predictable, most compressible features, which happen to be the linguistic ones.
 The rest is refined by subsequent quantizers.
 
 #misconception[
-  "All RVQ tokens are equivalent — they all carry the same kind of audio information."
+  "All RVQ tokens are equivalent; they all carry the same kind of audio information."
 ][
   The tokens form a strict hierarchy. Token stream 1 (the coarsest quantizer) contains
-  mostly *semantic* information: what is being said. Token streams 2–8 carry *acoustic*
-  details: how it sounds — the speaker's voice, room acoustics, emotion. This hierarchy
-  is not designed in; it *emerges* from the rate–distortion pressure of training.
+  mostly *semantic* information: what is being said. Token streams 2--8 carry *acoustic*
+  details: how it sounds (the speaker's voice, room acoustics, emotion). This hierarchy
+  is not designed in; it *emerges* from the rate--distortion pressure of training.
   Systems like AudioLM exploit this by using separate models for the two levels.
 ]
 
@@ -443,7 +443,7 @@ The idea is straightforward: run a SoundStream encoder on hours of audio, collec
 all the RVQ token streams, train a Transformer language model to predict the next
 token (exactly as GPT predicts the next word), and to generate audio, sample from
 this model and run the SoundStream decoder. The result: a model that can extend
-a snippet of audio in a way that is not just plausible but remarkably natural —
+a snippet of audio in a way that is remarkably natural,
 preserving the speaker's voice, musical style, and long-range structure like verse
 and chorus.
 
@@ -458,13 +458,13 @@ application: zero-shot voice cloning. The system treats text-to-speech as a
 conditional codec-token language model: given a transcript and just three seconds
 of a target speaker's voice (encoded as EnCodec tokens), predict the EnCodec tokens
 that a speaker would produce reading the transcript in that voice, then decode.
-VALL-E's results shocked the research community — three seconds of audio was enough
+VALL-E's results surprised the research community. Three seconds of audio was enough
 to imitate not just a voice but emotional tone and room acoustics.
 
 #aside[
   VALL-E uses EnCodec tokens because EnCodec was the open neural codec available
   when the paper was written. The linguistic layer uses an autoregressive Transformer
-  to generate the first RVQ stream token-by-token; the acoustic layers (streams 2–8)
+  to generate the first RVQ stream token-by-token; the acoustic layers (streams 2--8)
   are generated *in parallel* by a non-autoregressive model conditioned on stream 1.
   This hybrid approach speeds up generation enormously: you only need to do the slow
   sequential decoding for the small semantic token stream.
@@ -472,7 +472,7 @@ to imitate not just a voice but emotional tone and room acoustics.
 
 By 2023 and 2024, the pattern had become standard: every major audio language model
 used a neural codec as its tokenisation layer. MusicLM, AudioPaLM, VoiceCraft,
-SoundStorm, VoiceLM — all of them convert audio to codec tokens, run a language
+SoundStorm, VoiceLM (all of them) convert audio to codec tokens, run a language
 model, and decode. The neural audio codec had become the audio equivalent of the
 text tokenizer: the irreplaceable bridge between a continuous signal and a language
 model's discrete vocabulary.
@@ -497,7 +497,7 @@ model's discrete vocabulary.
 
   Indexing `tokens[q][t]` gives the integer code for quantizer level `q` at
   time frame `t`. With $N_q = 8$ levels and 75 frames/s, one second of audio
-  becomes an 8×75 array of integers — 600 small numbers instead of 24,000
+  becomes an 8x75 array of integers: 600 small numbers instead of 24,000
   floating-point samples.
 ]
 
@@ -508,16 +508,16 @@ Suppose the encoder has produced the vector:
 $
 z = (1.2,  -0.8,  2.1)
 $
-(a 3-dimensional latent for clarity — real codecs use 512-dimensional vectors).
+(a 3-dimensional latent for clarity; real codecs use 512-dimensional vectors).
 
 Each codebook has 4 entries ($K=4$, costing $log_2 4 = 2$ bits per level):
 
 #table(
-  columns: (auto, auto, auto, auto),
+  columns: (auto, 1fr, 1fr, 1fr),
   [*Code*], [*Codebook 1*], [*Codebook 2*], [*Codebook 3*],
   [$k=0$], [$(0.0, -0.5, 1.8)$], [$(1.0, -0.3, 0.2)$], [$(0.1, -0.05, 0.08)$],
   [$k=1$], [$(1.0, -1.0, 2.0)$], [$(0.3, -0.1, 0.4)$], [$(0.0, 0.1, -0.1)$],
-  [$k=2$], [$(0.5,  0.5, 1.0)$], [$(0.5,  0.2, 0.1)$], [$(0.2,  0.0, 0.15)$],
+  [$k=2$], [$(0.5, 0.5, 1.0)$], [$(0.5, 0.2, 0.1)$], [$(0.2, 0.0, 0.15)$],
   [$k=3$], [$(1.5, -0.5, 2.5)$], [$(0.2, -0.4, 0.3)$], [$(0.0, -0.1, 0.05)$],
 )
 
@@ -550,9 +550,9 @@ Nearest: $k_3 = 1$, reconstruction $hat(z)_3 = (0.0, 0.1, -0.1)$.
 *Final reconstruction:*
 $hat(z) = hat(z)_1 + hat(z)_2 + hat(z)_3 = (1.0+0.5+0.0, -1.0+0.2+0.1, 2.0+0.1-0.1) = (1.5, -0.7, 2.0)$
 
-The transmitted token stream for this frame is just $(1, 2, 1)$ — three 2-bit
+The transmitted token stream for this frame is just $(1, 2, 1)$, three 2-bit
 codes = 6 bits total. Original: $3 times 32 = 96$ bits floating-point. Compression
-ratio: 16×. The reconstruction error is $z - hat(z) = (-0.3, -0.1, 0.1)$, small
+ratio: 16x. The reconstruction error is $z - hat(z) = (-0.3, -0.1, 0.1)$, small
 enough that a well-trained decoder will produce excellent audio.
 
 #gopython("NumPy and argmin")[
@@ -568,7 +568,7 @@ enough that a well-trained decoder will produce excellent audio.
                  n_q: int) -> list[int]:
       """Encode one latent frame z with n_q RVQ levels.
 
-      codebooks[q] has shape (K, d) — K entries of dimension d.
+      codebooks[q] has shape (K, d) - K entries of dimension d.
       Returns a list of n_q integer indices.
       """
       tokens: list[int] = []
@@ -592,7 +592,7 @@ enough that a well-trained decoder will produce excellent audio.
       return recon
   ```
 
-  `np.argmin(dists)` returns the index of the smallest value in the array —
+  `np.argmin(dists)` returns the index of the smallest value in the array,
   exactly the nearest-neighbour search. Both encode and decode run in microseconds
   per frame.
 ]
@@ -613,11 +613,11 @@ large self-supervised model trained to understand speech content. This is the sa
 low-latency codec.
 
 The result: Mimi encodes one second of speech into just 12.5 RVQ frames (an
-8× lower frame rate than EnCodec at the same quality), with 8 codebooks, for a
-total bitrate of only 1.1 kbps — far below any classical codec at this quality.
-The first token stream is semantic; tokens 2–8 are acoustic.
+8x lower frame rate than EnCodec at the same quality), with 8 codebooks, for a
+total bitrate of only 1.1 kbps, far below any classical codec at this quality.
+The first token stream is semantic; tokens 2--8 are acoustic.
 
-Moshi itself uses Mimi as its tokenizer and runs an "inner monologue" — an LLM
+Moshi itself uses Mimi as its tokenizer and runs an "inner monologue": an LLM
 simultaneously generating text tokens and acoustic tokens, operating in real time
 with under 200 milliseconds of latency. It was the first fully open conversational
 AI system capable of full-duplex dialogue: the model listens and speaks at the same
@@ -626,15 +626,15 @@ time, without waiting for a turn-taking signal.
 #history[
   The full-duplex spoken dialogue problem had been considered nearly impossible for
   neural systems: how do you interrupt, respond to interruption, and maintain
-  conversational coherence when both sides speak simultaneously? Moshi achieved
-  this by processing *two* parallel audio streams — the user's voice and the
-  system's own voice — as two interleaved token sequences, letting a single LLM
+  conversational coherence when both sides speak simultaneously? Moshi solved
+  this by processing *two* parallel audio streams (the user's voice and the
+  system's own voice) as two interleaved token sequences, letting a single LLM
   reason about both at once. The 200 ms latency was comparable to a satellite
-  phone call — not quite natural conversation, but the first neural system in
+  phone call, not quite natural conversation, but the first neural system in
   that range.
 ]
 
-== The Semantic–Acoustic Split in Practice
+== The Semantic--Acoustic Split in Practice
 
 The distinction between semantic and acoustic tokens has concrete consequences for
 how audio LLMs are designed. Consider the two extreme cases.
@@ -642,23 +642,23 @@ how audio LLMs are designed. Consider the two extreme cases.
 A *pure acoustic* codec (like a vanilla SoundStream without distillation) produces
 tokens that capture sound very faithfully but have no particular linguistic structure.
 A language model trained on these tokens must simultaneously learn linguistics and
-acoustics — a harder joint problem. Generation tends to produce very natural-sounding
+acoustics, a harder joint problem. Generation tends to produce very natural-sounding
 audio but is harder to control for *content*.
 
 A *semantic-only* tokenizer (like a discrete unit from a HuBERT model) produces
-tokens with strong linguistic structure — you can decode them to text roughly — but
+tokens with strong linguistic structure (you can decode them to text roughly) but
 loses speaker identity, emotion, and paralinguistic detail. Generation is controllable
 but sounds like a robot.
 
 The *hybrid* approach (SpeechTokenizer, Mimi) uses the RVQ hierarchy to put semantics
-in stream 1 and acoustics in streams 2–$N_q$. You can then run a separate generative
-model on stream 1 (small, fast, text-aligned) and a second model on streams 2–$N_q$
+in stream 1 and acoustics in streams 2--$N_q$. You can then run a separate generative
+model on stream 1 (small, fast, text-aligned) and a second model on streams 2--$N_q$
 conditioned on stream 1 (handling voice style). This is exactly AudioLM's two-stage
 design, now made cleaner by a codec that explicitly disentangles the two.
 
 #keyidea[
-  The two-level hierarchy — one semantic token stream + several acoustic token
-  streams — is the standard architecture for neural audio language models as of
+  The two-level hierarchy, one semantic token stream plus several acoustic token
+  streams, is the standard architecture for neural audio language models as of
   2025. The semantic stream is small (low bitrate, linguistically structured,
   easy to condition on text), and the acoustic streams are generated in parallel
   conditioned on the semantic stream. The neural audio codec is the infrastructure
@@ -672,40 +672,40 @@ design, now made cleaner by a codec that explicitly disentangles the two.
   import cetz.draw: *
   // Waveform input
   rect((-0.5, 4.2), (0.5, 4.9), fill: rgb("#e8e8f8"), stroke: 0.7pt)
-  content((0, 4.55))[Audio in]
+  content((0, 4.55), box(width: 0.8cm, inset: 1pt, align(center, text(size: 8pt)[Audio in])))
   line((0, 4.2), (0, 3.8), mark: (end: ">"))
   // Encoder
   rect((-1.2, 3.2), (1.2, 3.8), fill: rgb("#d8ecf8"), stroke: 0.7pt)
-  content((0, 3.5))[Encoder + Transformer]
+  content((0, 3.5), box(width: 2.0cm, inset: 1pt, align(center, text(size: 8pt)[Encoder + Transf.])))
   line((0, 3.2), (0, 2.8), mark: (end: ">"))
   // RVQ box
   rect((-1.8, 2.0), (1.8, 2.8), fill: rgb("#d0e8d0"), stroke: 0.7pt)
-  content((0, 2.4))[Residual VQ]
+  content((0, 2.4), box(width: 3.2cm, inset: 1pt, align(center, text(size: 8pt)[Residual VQ])))
   // Output streams
   line((-1.2, 2.0), (-1.8, 1.2), mark: (end: ">"))
   line((0, 2.0), (0, 1.2), mark: (end: ">"))
   line((1.2, 2.0), (1.8, 1.2), mark: (end: ">"))
   // Stream labels
   rect((-2.3, 0.5), (-1.3, 1.2), fill: rgb("#ffe8d0"), stroke: 0.7pt)
-  content((-1.8, 0.85))[Stream 0]
-  content((-1.8, 0.35), text(size: 7.5pt)[semantic])
+  content((-1.8, 0.85), box(width: 0.8cm, inset: 1pt, align(center, text(size: 8pt)[Stream 0])))
+  content((-1.8, 0.35), box(width: 1.2cm, inset: 1pt, align(center, text(size: 7.5pt)[semantic])))
   rect((-0.5, 0.5), (0.5, 1.2), fill: rgb("#e8d0e8"), stroke: 0.7pt)
-  content((0, 0.85))[Stream 1]
-  content((0, 0.35), text(size: 7.5pt)[acoustic])
+  content((0, 0.85), box(width: 0.8cm, inset: 1pt, align(center, text(size: 8pt)[Stream 1])))
+  content((0, 0.35), box(width: 1.0cm, inset: 1pt, align(center, text(size: 7.5pt)[acoustic])))
   rect((1.3, 0.5), (2.3, 1.2), fill: rgb("#e8d0e8"), stroke: 0.7pt)
-  content((1.8, 0.85))[Stream $N_q-1$]
-  content((1.8, 0.35), text(size: 7.5pt)[acoustic])
+  content((1.8, 0.85), box(width: 0.8cm, inset: 1pt, align(center, text(size: 8pt)[Str. $N_q-1$])))
+  content((1.8, 0.35), box(width: 1.0cm, inset: 1pt, align(center, text(size: 7.5pt)[acoustic])))
 }))
 
-== WavTokenizer and the Single-Codebook Frontier (2024–2025)
+== WavTokenizer and the Single-Codebook Frontier (2024--2025)
 
-The extreme end of compression — can we push to *one single integer per short time
-slice*, rather than eight per frame? — is the frontier explored by *WavTokenizer*
-(Pan et al., 2024). WavTokenizer uses a single vector quantizer (not residual) but
-with a *much larger* codebook ($K = 4096$ or $K = 8192$ entries) and a *much wider*
-context window in the encoder, allowing each code to represent many more acoustic
-features at once. At 40 tokens per second with a single quantizer, WavTokenizer
-encodes one second of 24 kHz audio into 40 integers — a codebook sequence small
+The extreme end of compression is asking whether one single integer per short time
+slice is workable, rather than eight per frame. This is the territory explored by
+*WavTokenizer* (Pan et al., 2024). WavTokenizer uses a single vector quantizer (not
+residual) but with a *much larger* codebook ($K = 4096$ or $K = 8192$ entries) and a
+*much wider* context window in the encoder, allowing each code to represent many more
+acoustic features at once. At 40 tokens per second with a single quantizer, WavTokenizer
+encodes one second of 24 kHz audio into 40 integers, a codebook sequence small
 enough to fit inside a standard language model's context window alongside text with
 room to spare.
 
@@ -718,41 +718,41 @@ fidelity?
 
 #aside[
   There is a deep parallel here with the history of text tokenisation. Early language
-  models used character-level tokens (one integer per character — maximum granularity,
+  models used character-level tokens (one integer per character, maximum granularity,
   very long sequences). Then word-level tokens reduced sequence length but gave a huge
-  vocabulary. Byte-pair encoding (BPE) — a scheme that starts from single bytes and
-  repeatedly merges the most frequent adjacent pair into a new token, the same
-  greedy "merge what recurs" instinct behind the dictionary coders of Chapter 28 —
+  vocabulary. Byte-pair encoding (BPE), a scheme that starts from single bytes and
+  repeatedly merges the most frequent adjacent pair into a new token (the same
+  greedy "merge what recurs" instinct behind the dictionary coders of Chapter 28),
   found a middle ground. Audio
   tokenisation is having exactly the same debate: frame-level vs. chunk-level, RVQ
   hierarchy vs. single codebook, temporal resolution vs. vocabulary size. The answers
-  will not be the same as for text — audio has physical structure that text does not —
+  will not be the same as for text (audio has physical structure that text does not),
   but the design pressures are similar.
 ]
 
-== Trade-offs and Open Problems (2025–2026)
+== Trade-offs and Open Problems (2025--2026)
 
 Neural audio codecs have transformed both compression and audio AI, but they come
 with real costs and open questions.
 
 *Latency.* A streaming codec must encode the audio in real time and add only a
 fixed look-ahead (the algorithmic delay). EnCodec's 320-sample stride at 24 kHz
-gives 13 ms of delay per frame — acceptable for a live call. But the Transformer
+gives 13 ms of delay per frame, acceptable for a live call. But the Transformer
 entropy coder in EnCodec, and the Transformer encoder in Mimi, add more compute.
 Achieving sub-100 ms round-trip delay while maintaining quality remains an active
 design challenge.
 
 *Codebook collapse.* Despite EMA updates and codebook resets, some codebooks still
-underutilise entries. Recent work (2024–2025) has explored *finite scalar
+underutilise entries. Recent work (2024--2025) has explored *finite scalar
 quantization* (FSQ), which replaces the codebook with per-dimension bounded integers
-(e.g., each of 8 dimensions is quantized to $\{-2, -1, 0, 1, 2\}$ — five levels, giving
-$5^8 = 390,625$ effective codes) — eliminating the collapse problem entirely.
+(e.g., each of 8 dimensions is quantized to $\{-2, -1, 0, 1, 2\}$, five levels, giving
+$5^8 = 390,625$ effective codes), eliminating the collapse problem entirely.
 
 *Reproducibility and streaming.* Neural codecs use floating-point arithmetic. Two
 machines with different GPU architectures can produce different RVQ token streams
 for the same audio because floating-point rounding differs. This is harmless for
 compression (transmit the tokens and decode them on the same machine) but
-catastrophic for a protocol where sender and receiver must agree — the audio
+catastrophic for a protocol where sender and receiver must agree. The audio
 arrives as tokens, and the decoder must produce identical results. This is the
 analogue of the "reproducible floating-point" problem in learned image coding
 (Chapter 57) and remains unsolved for real deployment.
@@ -765,8 +765,8 @@ frontier.
 
 *Evaluation.* Classical audio codecs have a well-understood evaluation toolkit:
 PESQ, VISQOL, MOS (mean opinion score from human listeners). Neural codecs add a
-new goal — how well do their tokens serve downstream audio language models? — for
-which there is no agreed metric. The *Codec-SUPERB* benchmark (2024) began
+new goal, namely how well their tokens serve downstream audio language models,
+for which there is no agreed metric. The *Codec-SUPERB* benchmark (2024) began
 addressing this by testing codecs on multiple downstream tasks, but a universal
 "tokenization quality" metric remains elusive.
 
@@ -779,15 +779,15 @@ addressing this by testing codecs on multiple downstream tasks, but a universal
 
 == The Big Picture: Codec and Tokenizer Converge
 
-We began this chapter with a puzzle — how do you feed audio to a language model?
+We began this chapter with a puzzle: how do you feed audio to a language model?
 The answer turned out to require reimagining what a codec *is*. For fifty years a
 codec was a compression device: it shrank files for storage and transmission. Neural
 audio codecs are still that. But they are simultaneously *tokenizers*: they convert
 continuous waveforms into discrete sequences that sit comfortably inside the vocabulary
 of a transformer language model.
 
-This convergence matters deeply. It means that every advance in language modelling
-— better architectures, better training data, better scaling laws — can now be
+This convergence matters. It means that every advance in language modelling,
+better architectures, better training data, better scaling laws, can now be
 applied directly to audio. The spectacular results of VALL-E, AudioLM, MusicLM, and
 their successors are not primarily results about audio; they are results about language
 modelling, enabled by a codec that translates audio into the right input format.
@@ -816,7 +816,7 @@ modelling, enabled by a codec that translates audio into the right input format.
   [SoundStream (2021) was the first universal end-to-end neural audio codec,
    introducing quantizer dropout for variable-bitrate operation.],
   [EnCodec (2022) added causal streaming, stereo support, and a Transformer entropy
-   coder on top of RVQ for an additional 20–40% bitrate saving.],
+   coder on top of RVQ for an additional 20--40% bitrate saving.],
   [DAC (2023) improved codebook utilisation with random codebook resets and periodic
    (snake) activations, enabling near-transparent 44.1 kHz music quality.],
   [The first RVQ token stream tends to capture semantic (linguistic) information;
@@ -826,7 +826,7 @@ modelling, enabled by a codec that translates audio into the right input format.
    neural codec tokens can generate highly natural audio, including zero-shot voice
    cloning from three seconds of reference audio.],
   [Mimi (2024) combines streaming with semantic distillation, achieving 1.1 kbps at
-   12.5 Hz — the codec backbone of the Moshi full-duplex spoken dialogue system.],
+   12.5 Hz, the codec backbone of the Moshi full-duplex spoken dialogue system.],
   [Open problems include codebook collapse, reproducible floating-point token streams,
    real-time decode on low-power hardware, and standardised evaluation for
    tokenization quality.],
@@ -854,7 +854,7 @@ modelling, enabled by a codec that translates audio into the right input format.
 #solution("60.2")[
   Codebook collapse is when some codebook entries are selected for every (or almost
   every) encoder output, while other entries are never used. It happens because the
-  training objective does not directly penalise unused entries — gradient descent just
+  training objective does not directly penalise unused entries: gradient descent just
   reinforces whatever is already working. DAC prevents it by periodic *random restart*:
   any entry that has not been chosen for a fixed number of steps is replaced by a
   randomly selected encoder output from the current minibatch, forcing it back into
@@ -920,12 +920,12 @@ modelling, enabled by a codec that translates audio into the right input format.
   (a) The function $k = "argmin"_k norm(z - e_k)_2$ outputs an integer index.
   Changing $z$ slightly does not change $k$ until $z$ crosses the boundary between
   two Voronoi cells, at which point $k$ jumps discontinuously. A function that is
-  constant except at isolated jump points has zero gradient almost everywhere — there
+  constant except at isolated jump points has zero gradient almost everywhere: there
   is no smooth slope for gradient descent to follow.
 
   (b) Forward pass: the quantized vector $hat(z) = e_(k^star)$ is used normally in
   the computation. Backward pass: the gradient $partial cal(L) / partial hat(z)$ is
-  passed directly to $z$ as if the quantization were the identity — "pass straight
+  passed directly to $z$ as if the quantization were the identity, "passed straight
   through." The codebook entries themselves are not updated by backpropagation;
   they are updated by EMA.
 
@@ -970,18 +970,18 @@ modelling, enabled by a codec that translates audio into the right input format.
   # SoundStream: 24000 / 320 = 75 fps, n_q=8, K=1024
   ss_rate = bitrate_from_rvq(8, 1024, 75.0)
   print(f"SoundStream raw bitrate: {ss_rate:.0f} bps = {ss_rate/1000:.1f} kbps")
-  # → 6000 bps = 6.0 kbps
+  # -> 6000 bps = 6.0 kbps
 
   # EnCodec with 25% entropy saving: effective rate ~6 kbps from 8 kbps raw
-  # (8 kbps raw × 0.75 = 6 kbps after entropy coding)
+  # (8 kbps raw x 0.75 = 6 kbps after entropy coding)
   ec_raw = bitrate_from_rvq(8, 1024, 75.0)
   ec_effective = ec_raw * 0.75
   print(f"EnCodec effective bitrate: {ec_effective:.0f} bps = {ec_effective/1000:.1f} kbps")
-  # → 4500 bps = 4.5 kbps (illustrative; actual EnCodec configuration varies)
+  # -> 4500 bps = 4.5 kbps (illustrative; actual EnCodec configuration varies)
 
   # Minimum K to hit 12 kbps with n_q=4, 75 fps
   K = min_codebook_bits(12000.0, 75.0, 4)
-  print(f"Minimum K for 12 kbps, n_q=4: {K}")  # → K = 16 (4 bits each)
+  print(f"Minimum K for 12 kbps, n_q=4: {K}")  # -> K = 16 (4 bits each)
   ```
 ]
 
@@ -991,13 +991,13 @@ modelling, enabled by a codec that translates audio into the right input format.
 
 - #link("https://arxiv.org/abs/2210.13438")[Défossez et al. (2022). *High Fidelity Neural Audio Compression (EnCodec).* arXiv:2210.13438.] The EnCodec paper. Section 3 on the Transformer entropy coder is particularly instructive.
 
-- #link("https://arxiv.org/abs/1711.00937")[van den Oord, Vinyals, Kavukcuoglu (2017). *Neural Discrete Representation Learning (VQ-VAE).* NeurIPS 2017 / arXiv:1711.00937.] The paper that introduced vector quantization as a training objective and the straight-through estimator for codebook learning — foundational reading.
+- #link("https://arxiv.org/abs/1711.00937")[van den Oord, Vinyals, Kavukcuoglu (2017). *Neural Discrete Representation Learning (VQ-VAE).* NeurIPS 2017 / arXiv:1711.00937.] The paper that introduced vector quantization as a training objective and the straight-through estimator for codebook learning. Foundational reading.
 
 - #link("https://arxiv.org/abs/2209.03143")[Borsos et al. (2022). *AudioLM: A Language Modeling Approach to Audio Generation.* arXiv:2209.03143.] The paper that demonstrated that audio generation is a language modelling problem, using SoundStream tokens as the vocabulary.
 
-- #link("https://arxiv.org/abs/2301.02111")[Wang et al. (2023). *VALL-E: Neural Codec Language Models are Zero-Shot Text to Speech Synthesizers.* arXiv:2301.02111.] The voice-cloning paper that shocked the research community.
+- #link("https://arxiv.org/abs/2301.02111")[Wang et al. (2023). *VALL-E: Neural Codec Language Models are Zero-Shot Text to Speech Synthesizers.* arXiv:2301.02111.] The voice-cloning paper that surprised the research community.
 
-- #link("https://arxiv.org/abs/2308.16692")[Zhang et al. (2024). *SpeechTokenizer: Unified Speech Tokenizer for Speech Language Models.* ICLR 2024 / arXiv:2308.16692.] Formalises the semantic–acoustic split in RVQ via distillation.
+- #link("https://arxiv.org/abs/2308.16692")[Zhang et al. (2024). *SpeechTokenizer: Unified Speech Tokenizer for Speech Language Models.* ICLR 2024 / arXiv:2308.16692.] Formalises the semantic--acoustic split in RVQ via distillation.
 
 - #link("https://kyutai.org/Moshi.pdf")[Défossez et al. (2024). *Moshi: A Speech-Text Foundation Model for Real-Time Dialogue.* Kyutai Technical Report.] Describes both Mimi and the Moshi spoken dialogue system. Unusually thorough engineering description.
 
@@ -1005,7 +1005,7 @@ modelling, enabled by a codec that translates audio into the right input format.
 
 #bridge[
   We have seen that a language model operating on codec tokens can generate,
-  clone, and transform speech — the codec is the missing glue. But what does it
+  clone, and transform speech. The codec is the missing glue. But what does it
   *mean* for a language model to be good at compression? In Chapter 61 we step back
   to the theory: the deep connection between generalisation, intelligence, and
   compression that runs through Solomonoff induction, the Minimum Description

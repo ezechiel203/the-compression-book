@@ -10,7 +10,7 @@
 ][_Attributed to no one, but felt by every compression engineer_]
 
 Imagine you are copying a book by hand. On page 47 you encounter the phrase
-_"the quick brown fox"_ for the first time — you write it out letter by letter.
+_"the quick brown fox"_ for the first time, and you write it out letter by letter.
 Then, on page 53, the exact same phrase appears again. A smart copyist would not
 laboriously write out all eighteen characters; they would simply jot a margin
 note: _"same as page 47, line 12."_ That two-word note takes far less ink than
@@ -18,34 +18,34 @@ the original phrase. This, in essence, is *dictionary coding*: instead of
 re-emitting text you have already seen, emit a short *reference* to the earlier
 occurrence.
 
-The entropy coders we built in Chapters 24 through 27 — Huffman, arithmetic
-coding, rANS — are brilliant, but they are amnesiac. They see each symbol in
+The entropy coders we built in Chapters 24 through 27 (Huffman, arithmetic
+coding, rANS) are brilliant, but they are amnesiac. They see each symbol in
 isolation and price it by its marginal frequency. They have no memory of
 *patterns*. Feed them the string `abcabcabcabc` and they see twelve symbols,
 each cheap (one of two letters). They cannot see that the whole thing is just
 `abc` repeated four times. Dictionary coding sees exactly that, and says: emit
 `abc` once, then "copy the last 3 bytes, four more times."
 
-This one idea — reference the past instead of repeating it — is the theoretical
+This one idea (reference the past instead of repeating it) is the theoretical
 and practical backbone of almost every general-purpose compressor in widespread
 use: gzip, zlib, PNG, ZIP, Zstandard, 7-Zip, Brotli, and many more. And it all
 traces back to two researchers at the Technion, Israel's leading technical
 university, who published a pair of landmark papers in 1977 and 1978.
 
 #recap[
-  In *Chapter 24* we built Huffman coding — the optimal *symbol-by-symbol*
-  prefix code. In *Chapter 26* arithmetic coding, and in *Chapter 27* rANS —
+  In *Chapter 24* we built Huffman coding, the optimal *symbol-by-symbol*
+  prefix code. In *Chapter 26* arithmetic coding, and in *Chapter 27* rANS,
   two ways to approach the entropy limit. All of those coders model individual
   symbols. This chapter starts Part II of Volume II: instead of modeling
   symbols, we model *substrings*. In *Chapter 30* we will combine what we build
-  here with Huffman coding to produce DEFLATE — the engine of gzip and the web.
+  here with Huffman coding to produce DEFLATE, the engine of gzip and the web.
 ]
 
 #objectives((
   "Explain the sliding-window intuition of LZ77 and trace a worked encoding by hand.",
   "Explain the explicit-dictionary intuition of LZ78 and contrast it with LZ77.",
   "State and intuitively understand the universality result: why both algorithms converge to the entropy rate.",
-  "Understand LZSS — the practical improvement that made LZ77 deployable.",
+  "Understand LZSS, the practical improvement that made LZ77 deployable.",
   "Implement Step 12 of tinyzip: a working LZ77 match-finder, greedy parser, and token stream in Python 3.14.",
   "Read the algorithm profiles for LZ77, LZ78, and LZSS and understand the trade-offs.",
 ))
@@ -57,7 +57,7 @@ Let us be precise about what entropy coding cannot do.
 Take the string:
 #align(center)[`abracadabra`]
 
-The frequencies are: a×5, b×2, r×2, c×1, d×1 — eleven symbols total.
+The frequencies are: a×5, b×2, r×2, c×1, d×1, eleven symbols total.
 Shannon entropy $H ≈ 2.04$ bits per symbol, so the entropy limit for this
 string is about $11 × 2.04 ≈ 22.5$ bits. A Huffman coder, working
 symbol-by-symbol, can get close to that.
@@ -100,7 +100,7 @@ $(d, ell, c)$ where:
 
 - $d$ is the *distance* (how many bytes back the match starts),
 - $ell$ is the *length* (how many bytes the match covers),
-- $c$ is the *next literal* — the character right after the match.
+- $c$ is the *next literal*, the character right after the match.
 
 If no match is found, it emits a literal token $(0, 0, c)$.
 
@@ -110,7 +110,7 @@ literal) move from the lookahead into the search buffer.
 #aside[
   The original Lempel–Ziv 1977 paper defines tokens as *(offset, length, literal)*
   triples. In practice, almost every implementation uses some variant of this
-  encoding — the exact bit layout varies. DEFLATE, for instance, separates
+  encoding; the exact bit layout varies. DEFLATE, for instance, separates
   literals from (length, distance) pairs and encodes them with Huffman codes.
 ]
 
@@ -126,11 +126,11 @@ in angle brackets.
 Position 0:  [] <abra>
   No match (empty buffer). Emit (0, 0, 'a'). Slide 1.
 Position 1:  [a] <brac>
-  Look for 'b' in [a] — no match. Emit (0, 0, 'b'). Slide 1.
+  Look for 'b' in [a] - no match. Emit (0, 0, 'b'). Slide 1.
 Position 2:  [ab] <raca>
-  Look for 'r' in [ab] — no match. Emit (0, 0, 'r'). Slide 1.
+  Look for 'r' in [ab] - no match. Emit (0, 0, 'r'). Slide 1.
 Position 3:  [abr] <acad>
-  Look for 'a' in [abr] — match at distance 3, length 1.
+  Look for 'a' in [abr] - match at distance 3, length 1.
   Lookahead next char after match: 'c'. Emit (3, 1, 'c'). Slide 2.
 Position 5:  [abrac] <adab>
   'a' found at distance 5 (the first 'a'), length 1.
@@ -150,7 +150,7 @@ So the encoded token stream is:
 
 Six tokens cover eleven bytes. The first three are literals; the last three are
 back-references. Notice how `(7, 4, '')` compactly expresses "copy the first
-four bytes of what we already sent" — that is the power of sliding-window
+four bytes of what we already sent." That is the power of sliding-window
 compression.
 
 #note[
@@ -159,7 +159,7 @@ compression.
   "match" actually costs *more* than just spelling the byte out, so the practical
   code we build in Step 12 sets a `MIN_MATCH` of 3 and emits those short
   would-be-matches as plain literals instead. On `abracadabra` that leaves a
-  single real back-reference — the final length-4 `abra` — which is exactly what
+  single real back-reference (the final length-4 `abra`), which is exactly what
   the `lz77.py` self-test reports.
 ]
 
@@ -174,7 +174,7 @@ far. For each token $(d, ell, c)$:
 There is one subtlety called an *overlap match* or *run-length copy*: if
 $ell > d$, the copy extends into the region it is writing. For example, with
 $d=2$ and $ell=6$: copy bytes at positions $[-2], [-1], [-2], [-1], [-2], [-1]$
-— this produces a pattern that repeats the two preceding bytes, effectively
+This produces a pattern that repeats the two preceding bytes, effectively
 run-length encoding. Decoders must handle this by copying one byte at a time,
 not with a `memcpy`.
 
@@ -189,8 +189,7 @@ not with a `memcpy`.
 
 Lempel and Ziv proved something remarkable: as the window size $W$ grows
 without bound and the input length $n$ grows, the compression ratio of LZ77
-converges to the *entropy rate* of any stationary ergodic source — and the
-algorithm does this *without knowing the source statistics in advance*. This is
+converges to the *entropy rate* of any stationary ergodic source. The algorithm does this *without knowing the source statistics in advance*. This is
 called *universal compression*.
 
 #gomaths("Entropy rate and universal compression")[
@@ -201,12 +200,12 @@ called *universal compression*.
   $ h = lim_(n -> oo) (H(X_1, X_2, dots, X_n)) / n $
   This is the minimum bits-per-symbol any lossless coder can achieve on that
   source, no matter how good the model. LZ77 achieves $h$ asymptotically *without
-  ever estimating probabilities* — the sliding window implicitly does the modeling
+  ever estimating probabilities*: the sliding window implicitly does the modeling
   by finding long repeated phrases.
 
   *Intuition:* if a phrase of length $k$ has appeared before, its re-occurrence
   is not surprising. By referring back to it with a short pointer, you are
-  effectively saying "this phrase has high probability" — without ever computing
+  effectively saying "this phrase has high probability," without ever computing
   a probability.
 ]
 
@@ -260,7 +259,7 @@ Step 7: Lookahead = 'r'. "r"→3. Next = 'a'. "ra" not in dict. Emit (3,'a'). Ad
 (Input exhausted.)
 ```
 
-Tokens: `(0,'a')(0,'b')(0,'r')(1,'c')(1,'d')(1,'b')(3,'a')` — 7 tokens for 11 characters. On a longer text, dictionary entries grow longer and fewer tokens are needed per character.
+Tokens: `(0,'a')(0,'b')(0,'r')(1,'c')(1,'d')(1,'b')(3,'a')`, 7 tokens for 11 characters. On a longer text, dictionary entries grow longer and fewer tokens are needed per character.
 
 Decoding is equally simple: maintain a dictionary; for each token $(i, c)$,
 output dictionary[i] concatenated with $c$, then add that phrase to the
@@ -271,7 +270,7 @@ dictionary.
   year: "1978",
   authors: "Abraham Lempel, Jacob Ziv (Technion, Israel)",
   aim: "Universal compression via an explicitly maintained, growing phrase dictionary.",
-  complexity: "O(n) expected with hash table. Dictionary can grow unboundedly — may need pruning.",
+  complexity: "O(n) expected with hash table. Dictionary can grow unboundedly; may need pruning.",
   strengths: "Universal; explicit dictionary enables direct lookup (no window scan); elegant theory.",
   weaknesses: "Dictionary can grow very large; no bound on memory; harder to implement pruning without losing correctness.",
   superseded: "LZW (drops the literal from each token); LZMA, LZX (better ratio); Zstandard (trained dictionaries).",
@@ -321,7 +320,7 @@ takes only the cost of the (distance, length) pair regardless of what follows.
 
 This is the form used in DEFLATE (Chapter 30), LZ4, and virtually every real
 LZ77 implementation. The "break-even length" (the minimum match length worth
-encoding as a reference rather than literals) is a crucial tuning parameter —
+encoding as a reference rather than literals) is a key tuning parameter:
 DEFLATE uses 3, LZ4 uses 4.
 
 #algo(
@@ -340,7 +339,7 @@ DEFLATE uses 3, LZ4 uses 4.
 We glossed over decoding in the worked example. Let us be precise, because a
 correct decoder is what makes round-tripping work.
 
-The decoder maintains a *ring buffer* — a fixed-size array of bytes where the
+The decoder maintains a *ring buffer*, a fixed-size array of bytes where the
 write position wraps around when it reaches the end. This ring buffer holds the
 last $W$ decoded bytes, exactly matching the encoder's search window. For each
 token the decoder reads:
@@ -354,12 +353,12 @@ token the decoder reads:
    to both the ring buffer and the output.
 
 The one-byte-at-a-time copy is critical for overlapping matches. If `distance`
-is smaller than `length`, the copy overwrites into the region it is reading —
-but since we write one byte at a time, each new byte is immediately available
+is smaller than `length`, the copy overwrites into the region it is reading.
+Since we write one byte at a time, each new byte is immediately available
 as a source for the next copy. This naturally produces run-length patterns.
 
 #gopython("Python `bytearray` for mutable byte buffers")[
-  Python's `bytes` type is *immutable* — you cannot change individual bytes
+  Python's `bytes` type is *immutable*: you cannot change individual bytes
   in place. A `bytearray` is the mutable cousin: it supports item assignment
   (`buf[i] = 42`) and slice operations. For a ring buffer in a decoder, we
   want a fixed-size container we can write into and read from:
@@ -380,8 +379,8 @@ as a source for the next copy. This naturally produces run-length patterns.
   ```
 
   This runs in O(1) per byte with no allocation. The `%` operator (modulo)
-  wraps the index so position 32768 becomes 0, 32769 becomes 1, and so on —
-  the "ring" in ring buffer.
+  wraps the index so position 32768 becomes 0, 32769 becomes 1, and so on.
+  That wrapping is what makes it a ring buffer.
 ]
 
 The ring-buffer decoder approach is used in almost every real LZ77
@@ -391,9 +390,9 @@ clarity, but the correctness requirement is identical: copy one byte at a time.
 == Match Finding: The Real Engineering Problem
 
 The mathematical description of LZ77 is elegant. The engineering reality is that
-finding the *longest match* at every position — scanning all of the search buffer
-— takes $O(W dot n)$ time, where $W$ is the window size and $n$ is the input
-length. With a 32 KB window, that is $32768$ comparisons per input byte —
+finding the *longest match* at every position by scanning the entire search buffer
+takes $O(W dot n)$ time, where $W$ is the window size and $n$ is the input
+length. With a 32 KB window, that is $32768$ comparisons per input byte,
 roughly 1 billion comparisons for a 30 KB file. Completely impractical.
 
 Real implementations use data structures to speed up the search:
@@ -416,7 +415,7 @@ at $i+1$ is longer (by more than 1), skip position $i$ as a literal and use the
 longer match. This costs one extra match-find per step but often improves ratio.
 
 #gopython("Python dictionaries as hash tables")[
-  Python's `dict` is a *hash table* — a data structure that maps keys to values
+  Python's `dict` is a *hash table*, a data structure that maps keys to values
   and answers "is key X present, and what value does it have?" in $O(1)$ average
   time. For our hash-chain match finder, we will use a `dict[int, list[int]]`
   that maps a 3-byte hash to a list of positions where that trigram appeared.
@@ -431,7 +430,7 @@ longer match. This costs one extra match-find per step but often improves ratio.
   ```
 
   `<<` shifts bits left (Chapter 17). `|` is bitwise OR. Together they pack
-  three bytes into one integer — a fast, collision-resistant hash.
+  three bytes into one integer: a fast, collision-resistant hash.
 ]
 
 == Step 12 of tinyzip: `lz77.py`
@@ -448,13 +447,13 @@ will be imported and used in Chapter 30's DEFLATE implementation.
   the ones from *Chapter 16* and *Chapter 17*.
 ]
 
-#project("Step 12 · lz77.py — sliding-window match finder and greedy parser")[
+#project("Step 12 · lz77.py - sliding-window match finder and greedy parser")[
 
 Create `tinyzip/lz77.py`:
 
 ```python
 """
-tinyzip/lz77.py — LZ77/LZSS sliding-window compressor (Step 12).
+tinyzip/lz77.py - LZ77/LZSS sliding-window compressor (Step 12).
 
 Produces a token stream:
   Literal token:    Token(is_match=False, literal=byte)
@@ -477,7 +476,7 @@ MAX_CHAIN   : int = 64      # max hash-chain length to walk (speed/ratio trade-o
 # ── token dataclass ─────────────────────────────────────────────────────────
 @dataclass
 class Token:
-    """One LZ77/LZSS output token — either a literal byte or a back-reference."""
+    """One LZ77/LZSS output token - either a literal byte or a back-reference."""
     is_match : bool
     literal  : int  = 0    # used when is_match == False
     distance : int  = 0    # used when is_match == True
@@ -668,11 +667,11 @@ OK |     0B →     0B (0.00x) | 0/0 match tokens  | b''
 OK |   256B →   512B (2.00x) | 0/256 match tokens | b'\x00\x01\x02\x03\x04...'
 ```
 
-The first sample expands slightly — our simple byte-level token format has
+The first sample expands slightly. Our simple byte-level token format has
 overhead that the Huffman coding in DEFLATE (Chapter 30) will eliminate, and
 short texts give the match-finder little history to work with. The all-bytes
 sample expands to exactly 2× because *every* byte is a distinct literal (each
-costing a flag byte plus the data byte) — it is genuinely incompressible. But
+costing a flag byte plus the data byte) and is genuinely incompressible. But
 the run of 24 `a` characters collapses to 7 bytes (one literal plus a single
 length-23 overlap match), and the repeated sentence shrinks below its original
 size: the second and third copies become long back-references.
@@ -722,15 +721,13 @@ appeared. When the encoder reaches position `pos`, it:
          mark: (end: ">"), stroke: (paint: rgb("#0b5394"), thickness: 0.6pt))
     line((7.45, 0), (7.45, -0.6), (1.75, -0.6),
          mark: (end: ">"), stroke: (paint: rgb("#0b5394"), thickness: 0.6pt))
-    content((5.5, -2.5), text(size: 8pt, style: "italic")[
-      Encoder at pos 7 walks chain: checks pos 0 first (newest→oldest)
-    ])
+    content((5.5, -2.5), box(width: 6.0cm, inset: 1pt, align(center, text(size: 8pt, style: "italic")[Encoder at pos 7 walks chain: checks pos 0 first (newest→oldest)])))
   })
 )
 
 When the encoder is at position 7 (the second `a` in `abracadabra`), it hashes
 `abr` and finds the chain `[0]`. It then checks position 0: `data[0..4] = abra`
-matches `data[7..11] = abra` — a match of length 4, distance 7. That is the
+matches `data[7..11] = abra`: a match of length 4, distance 7. That is the
 longest possible match (the lookahead runs out at position 11).
 
 == Greedy vs Optimal Parsing
@@ -739,7 +736,7 @@ Our implementation uses *greedy parsing*: at each position, take the longest
 match available and move forward. This is simple and fast, but not optimal.
 
 Consider the string `abababab`. At position 2, the greedy parser finds
-`abababab` starting at distance 2 with length 6 — excellent. But what if we
+`abababab` starting at distance 2 with length 6, which is excellent. But what if we
 had a string where taking a slightly shorter match now allowed a much longer
 match immediately after? Greedy can miss that.
 
@@ -755,7 +752,7 @@ achieves better ratios than zlib at the cost of much slower encoding.
   distance=6, length=6 at position 6. What single token represents the entire
   second half of the string?
 ][
-  A match token with `distance=6, length=6` — "go back 6 bytes and copy 6
+  A match token with `distance=6, length=6`: "go back 6 bytes and copy 6
   bytes." The decoder reads `aabbcc` from its output buffer and appends it,
   reconstructing `aabbccaabbcc` exactly.
 ]
@@ -769,7 +766,7 @@ about entropy (mostly ASCII text with English prose patterns).
 Using our `tinyzip/lz77.py` encoder (which uses the simple 5-byte token format):
 
 #scoreboard(
-  caption: "Running compression scoreboard — shared 1,000-byte text sample.",
+  caption: "Running compression scoreboard: shared 1,000-byte text sample.",
   [*Method*], [*Bytes*], [*Ratio*], [*Notes*],
   [Raw (uncompressed)], [1000], [1.00×], [Baseline],
   [Huffman (Ch 24)], [570], [1.75×], [Symbol frequencies only],
@@ -780,7 +777,7 @@ Using our `tinyzip/lz77.py` encoder (which uses the simple 5-byte token format):
 
 The LZ77 tokens-only number uses the simple reference format (5 bytes per match
 token). In Chapter 30, adding Huffman coding on top of the LZ77 token stream
-(which is what DEFLATE does) will push this to roughly 350 bytes — a 2.9× ratio.
+(which is what DEFLATE does) will push this to roughly 350 bytes, a 2.9× ratio.
 The lesson: LZ77 and entropy coding are synergistic; each removes a different
 kind of redundancy.
 
@@ -788,7 +785,7 @@ kind of redundancy.
 
 #history[
   *Abraham Lempel* (born 1936) and *Jacob Ziv* (born 1931) were both professors
-  at the Technion — Israel Institute of Technology in Haifa. They met at MIT in
+  at the Technion (Israel Institute of Technology in Haifa). They met at MIT in
   the late 1950s, and their collaboration spanned decades. Their 1977 and 1978
   papers were not immediately recognized as revolutionary; the information theory
   community at the time was focused on probabilistic models. But by the mid-1980s,
@@ -796,13 +793,13 @@ kind of redundancy.
   data, and was fast enough to run in software.
 
   Terry Welch's 1984 LZW paper (Chapter 29) brought LZ78 into mass use via the
-  Unix `compress` program and GIF — and the subsequent patent battles over LZW
+  Unix `compress` program and GIF. The subsequent patent battles over LZW
   (the Unisys GIF firestorm) would ironically accelerate the spread of LZ77 via
   DEFLATE, which Phil Katz deliberately made patent-free.
 
   Jacob Ziv won the IEEE Medal of Honor in 1995. Lempel was awarded the IEEE
   Richard W. Hamming Medal in 1996. Together, in 2004, they received the Marconi
-  Prize — sometimes called the "Nobel Prize of communications." Their two papers
+  Prize (sometimes called the "Nobel Prize of communications"). Their two papers
   remain among the ten most-cited works in the history of information theory.
 ]
 
@@ -832,8 +829,8 @@ concise map:
   LZW (a LZ78 descendant) poisoned the LZ78 branch from 1985 to ~2003, pushing
   engineers toward LZ77-based designs. Second, LZ77's sliding-window model
   naturally bounds memory, while LZ78's growing dictionary can balloon without
-  bound. When Collet designed Zstandard, he stayed firmly in the LZ77 camp —
-  and trained dictionaries gave zstd's LZ78-like ability to share prefix
+  bound. When Collet designed Zstandard, he stayed firmly in the LZ77 camp.
+  Trained dictionaries gave zstd the LZ78-like ability to share prefix
   knowledge without the unbounded-memory problem.
 ]
 
@@ -843,7 +840,7 @@ Real data is not random. English text repeats words, phrases, and grammatical
 patterns. HTML repeats tags and attributes. Machine code repeats instruction
 patterns. Executables repeat function prologues. The LZ77 sliding window
 exploits all of these because it captures *whatever patterns appear in the recent
-context* — it needs no prior knowledge of the data type.
+context*, with no prior knowledge of the data type.
 
 To make this concrete, consider what a 32 KB window "sees" inside a typical
 data file:
@@ -863,7 +860,7 @@ data file:
 
 This adaptivity is the magic. A Huffman coder needs to know the frequency of
 each byte value to assign short codes. LZ77 needs to know nothing in advance
-— it just notices "I have seen this before" and points back to it.
+It just notices "I have seen this before" and points back to it.
 
 #misconception[
   "LZ77 is just run-length encoding."
@@ -926,12 +923,12 @@ need). No algorithm is best on all four simultaneously.
 
 *Window size* determines how far back a reference can reach. A 32 KB window
 (DEFLATE) suffices for most text and HTML. A 512 KB window (LZ4 high) or an
-8 MB window (LZMA) catches repetitions in larger files — firmware, executables,
+8 MB window (LZMA) catches repetitions in larger files: firmware, executables,
 and archives. Larger windows cost more memory for *both* encoder and decoder.
 
 To illustrate: on a 100 MB virtual machine disk image, the Linux kernel is
 included in multiple forms (source, object files, installed binary). The kernel
-is self-similar across these representations — the same string constants,
+is self-similar across these representations: the same string constants,
 function names, and header file contents repeat at intervals of tens of
 megabytes. A 32 KB window *cannot* see these far-away repetitions; a 64 MB
 window *can*. This is why xz (`--lzma2`) at maximum settings uses a 64 MB window
@@ -951,13 +948,12 @@ encoder. At level 1, the encoder looks at the hash chain but stops after 8
 candidates. At level 9, it walks the entire chain (up to 4,096 candidates per
 position in zlib). The data is the same; the encoder just works harder to find
 better matches. The ratio improvement from level 1 to level 9 is typically
-10–20% for typical files — useful, but not dramatic. The speed difference can
+10–20% for typical files, useful but not dramatic. The speed difference can
 be 10–50 times.
 
 === Decode Speed: The Asymmetry That Won the Web
 
-*Decode speed is always fast* regardless of compression level — this is the
-key asymmetry of LZ77. A decoder needs only a ring buffer and simple byte-copy
+*Decode speed is always fast* regardless of compression level. That asymmetry defines LZ77. A decoder needs only a ring buffer and simple byte-copy
 operations. There is no search to do; just "jump to position, copy bytes." On
 modern hardware, DEFLATE decompression runs at 400–600 MB/s in software. LZ4
 decodes at multi-gigabytes per second. The encoder might be 20× slower than
@@ -976,10 +972,10 @@ clients decompress in milliseconds. The encoder pays once; every reader benefits
 
 === The Speed/Ratio Spectrum in 2026
 
-As of mid-2026, the practical landscape looks like this:
+As of mid-2026, the field looks roughly like this:
 
 #align(center, table(
-  columns: (auto, auto, auto, auto),
+  columns: (auto, auto, 1fr, 1fr),
   [*Compressor*], [*Typical ratio (text)*], [*Encode speed*], [*Decode speed*],
   [LZ4 default], [1.5–2.0×], [Very fast (500 MB/s+)], [Very fast (2+ GB/s)],
   [Snappy], [1.4–1.9×], [Very fast], [Very fast],
@@ -996,8 +992,8 @@ displaced gzip across most infrastructure.
 
 == The Universality Proof Sketched
 
-For the curious reader, here is the intuition behind the universality result —
-more rigorous than the earlier hand-wave, less rigorous than the full proof in
+For the curious reader, here is the intuition behind the universality result,
+more rigorous than the earlier hand-wave, though less rigorous than the full proof in
 Ziv and Lempel's 1977 paper.
 
 #theorem("LZ77 universality")[
@@ -1009,7 +1005,7 @@ Ziv and Lempel's 1977 paper.
 
 #proof[
   *Sketch only.* The key observation is that LZ77 partitions the input into
-  *phrases* — the matches plus the trailing literals. Let $c(n)$ be the number
+  *phrases* (the matches plus the trailing literals). Let $c(n)$ be the number
   of phrases produced by encoding $n$ symbols. Lempel and Ziv show that
   $c(n) = O(n \/ log n)$ (the dictionary grows as the log of the input length).
 
@@ -1030,34 +1026,34 @@ Ziv and Lempel's 1977 paper.
 
 == Looking Ahead
 
-LZ77 by itself — our simple token stream — is not yet a complete compressor. The
+LZ77 by itself, as our simple token stream implements it, is not yet a complete compressor. The
 tokens are not bit-packed, the distances and lengths are not entropy-coded, and
 the flag-bit overhead is large. The next steps in the book address this:
 
-- *Chapter 29* (LZW and the Patent Wars): covers the LZ78 branch — how LZW
+- *Chapter 29* (LZW and the Patent Wars): covers the LZ78 branch: how LZW
   became GIF and nearly died due to patents.
 - *Chapter 30* (DEFLATE, zlib, gzip, and PNG): takes our `lz77.py` token stream
-  and adds two-level Huffman coding to produce a real DEFLATE/gzip compressor —
+  and adds two-level Huffman coding to produce a real DEFLATE/gzip compressor,
   the most widely deployed compression format in history.
-- *Chapter 31* (LZMA): explores the high-ratio end — huge windows, range
+- *Chapter 31* (LZMA): explores the high-ratio end, with huge windows, range
   coding, and context-modelled literals.
 - *Chapter 32* (Zstandard, Brotli, LZ4): the modern Pareto frontier where
   different codecs target different speed/ratio corners.
 
 #bridge[
-  We have built the match-finder — the core insight of dictionary coding. But a
+  We have built the match-finder, the core insight of dictionary coding. But a
   list of raw (distance, length) pairs and literal bytes is not yet compressed:
   those tokens still occupy more space than useful for small inputs, and the
   distribution of token types is far from uniform. In *Chapter 29* we take a
   detour through the LZ78 branch to understand why LZW's explicit dictionary
-  became ubiquitous — and why a single patent nearly killed GIF and gave us PNG.
+  became ubiquitous, and why a single patent nearly killed GIF and gave us PNG.
   Then in *Chapter 30* we will wire `lz77.py` to `huffman.py` from Chapter 24
   and build the real thing: a working DEFLATE compressor.
 ]
 
 #takeaways((
   "LZ77 compresses by replacing repeated substrings with (distance, length) back-references into a sliding window of recently seen bytes.",
-  "LZ78 builds an explicit, numbered phrase dictionary instead; both are provably universal — they converge to the entropy rate of any stationary source.",
+  "LZ78 builds an explicit, numbered phrase dictionary instead; both are provably universal and converge to the entropy rate of any stationary source.",
   "LZSS improves LZ77 by using flag bits to avoid emitting triples for short matches, only emitting a reference when the match length exceeds a break-even threshold.",
   "Match-finding is the expensive part of encoding; hash chains reduce the naive O(W·n) cost to O(n) in practice.",
   "Greedy parsing is simple and fast; optimal parsing (used in LZMA) finds the globally cheapest token sequence at the cost of much slower encoding.",
@@ -1076,13 +1072,13 @@ the flag-bit overhead is large. The next steps in the book address this:
 #solution("28.1")[
   Starting with an empty buffer and encoding left to right:
 
-  - Pos 0: `[]` `<bana>` — no match. Emit `(0,0,'b')`. Advance 1.
-  - Pos 1: `[b]` `<anan>` — no match for `a`. Emit `(0,0,'a')`. Advance 1.
-  - Pos 2: `[ba]` `<nana>` — no match for `n`. Emit `(0,0,'n')`. Advance 1.
-  - Pos 3: `[ban]` `<anab>` — `a` found at dist 2, try extending: `an`→dist 2 len 2 works! try `ana`→dist 2 len 3. Next char after 3: `b`. Emit `(2,3,'b')`. Advance 4.
-  - Pos 7: `[nabana]` (window=6, last 6) — lookahead `<anana>` (5 chars left). `an` at dist 4 (pos 3 in buffer), `ana` len 3, `anan` len 4, `anana` len 5. Emit `(4,5,'')`. Done.
+  - Pos 0: `[]` `<bana>`: no match. Emit `(0,0,'b')`. Advance 1.
+  - Pos 1: `[b]` `<anan>`: no match for `a`. Emit `(0,0,'a')`. Advance 1.
+  - Pos 2: `[ba]` `<nana>`: no match for `n`. Emit `(0,0,'n')`. Advance 1.
+  - Pos 3: `[ban]` `<anab>`: `a` found at dist 2, try extending: `an`→dist 2 len 2 works! try `ana`→dist 2 len 3. Next char after 3: `b`. Emit `(2,3,'b')`. Advance 4.
+  - Pos 7: `[nabana]` (window=6, last 6): lookahead `<anana>` (5 chars left). `an` at dist 4 (pos 3 in buffer), `ana` len 3, `anan` len 4, `anana` len 5. Emit `(4,5,'')`. Done.
 
-  Tokens: `(0,0,'b') (0,0,'a') (0,0,'n') (2,3,'b') (4,5,'')` — 5 tokens for 12 chars.
+  Tokens: `(0,0,'b') (0,0,'a') (0,0,'n') (2,3,'b') (4,5,'')`, 5 tokens for 12 chars.
 
   Decode: `b` → `ba` → `ban` → copy dist=2,len=3 from `ban`: positions 1,2,3→`ana`, plus `b` → `banana` → copy dist=4,len=5: pos 3,4,5,6... `a,n,a,n,a` → `bananabanana`. Correct.
 ]
@@ -1115,7 +1111,7 @@ the flag-bit overhead is large. The next steps in the book address this:
   at the position 2 bytes before the current end:
   - Byte 1: `x` (from position end-2)
   - Byte 2: `y` (from position end-1)
-  - Byte 3: `x` (from position end-2 again — but end has moved!)
+  - Byte 3: `x` (from position end-2 again, but end has moved!)
   - Byte 4: `y`
   - Byte 5: `x`
 
@@ -1250,9 +1246,9 @@ the flag-bit overhead is large. The next steps in the book address this:
   reference occurrences within the last 32 KB; a 64 MB window can reference
   the 50 MB-earlier occurrence directly.
 
-  *Costs:* (1) Memory — the decoder must keep the entire window in RAM during
-  decompression. A 4 GB LZMA window requires 4 GB of RAM. (2) Encoder speed —
-  a larger window means more candidate matches to evaluate. (3) Latency — the
+  *Costs:* (1) Memory: the decoder must keep the entire window in RAM during
+  decompression. A 4 GB LZMA window requires 4 GB of RAM. (2) Encoder speed:
+  a larger window means more candidate matches to evaluate. (3) Latency: the
   decoder cannot emit output until the window is filled (or until each token
   is processed).
 

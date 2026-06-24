@@ -7,12 +7,12 @@
   "There is no such thing as information in the abstract, apart from a physical representation."
 ][Rolf Landauer, _Physics Today_ (1991)]
 
-Here is the puzzle that opens this chapter. You take a photograph, save it, and email it to a friend. Your friend opens the photo on a phone, a laptop, and a tablet, and it looks right on all three — even though those machines were built in different countries, by different companies, using different chips, running different operating systems. How does every machine agree on what that picture looks like? The answer, underneath all the software, is a social contract: a set of agreements about how to represent things as numbers, and how to represent numbers as patterns of bits. Every compressed file in the rest of this book — every Huffman code, every DEFLATE stream, every JPEG block — is ultimately a blob of bytes that only matters because of these agreements.
+Here is the puzzle that opens this chapter. You take a photograph, save it, and email it to a friend. Your friend opens the photo on a phone, a laptop, and a tablet, and it looks right on all three, even though those machines were built in different countries, by different companies, using different chips, running different operating systems. How does every machine agree on what that picture looks like? The answer, underneath all the software, is a social contract: a set of agreements about how to represent things as numbers, and how to represent numbers as patterns of bits. Every compressed file in the rest of this book (every Huffman code, every DEFLATE stream, every JPEG block) is ultimately a blob of bytes that only matters because of these agreements.
 
-In the last chapter we built the mathematical plumbing: vectors, matrices, and transformations. In this chapter we build the physical plumbing: bits, bytes, words, integers, characters, and real numbers. By the end you will be able to read a hex dump of a file and tell the story of every byte — which ones are the size, which are the checksum, which are the data. That is the literacy every compressor engineer needs.
+In the last chapter we built the mathematical plumbing: vectors, matrices, and transformations. In this chapter we build the physical plumbing: bits, bytes, words, integers, characters, and real numbers. By the end you will be able to read a hex dump of a file and tell the story of every byte: which ones are the size, which are the checksum, which are the data. That is the literacy every compressor engineer needs.
 
 #recap[
-  Chapter 4 gave us the binary number system: bits, place value, and base conversion. Chapter 5 gave us Boolean algebra: the AND, OR, XOR, and NOT operations that circuits run on bits. Chapter 12 gave us vectors as ordered lists of numbers — the structure every image and audio sample is stored as. Now we collect those pieces into the question "what does a real computer memory actually look like?" and answer it carefully, from scratch.
+  Chapter 4 gave us the binary number system: bits, place value, and base conversion. Chapter 5 gave us Boolean algebra: the AND, OR, XOR, and NOT operations that circuits run on bits. Chapter 12 gave us vectors as ordered lists of numbers, the structure every image and audio sample is stored as. Now we collect those pieces into the question "what does a real computer memory actually look like?" and answer it carefully, from scratch.
 ]
 
 #objectives((
@@ -29,36 +29,36 @@ In the last chapter we built the mathematical plumbing: vectors, matrices, and t
 
 Before we talk about what the boxes hold, let us establish what they are.
 
-Picture a machine's RAM as a very long row of identically sized boxes, numbered starting from zero. Each box holds a fixed amount of information, and the number on each box is called its *address*. The address is just an index — box number 0, box number 1, box number 2, all the way up to however many boxes the machine has. A modern laptop with 16 GB of RAM has about 17.2 billion boxes.
+Picture a machine's RAM as a very long row of identically sized boxes, numbered starting from zero. Each box holds a fixed amount of information, and the number on each box is called its *address*. The address is just an index: box number 0, box number 1, box number 2, all the way up to however many boxes the machine has. A modern laptop with 16 GB of RAM has about 17.2 billion boxes.
 
 #definition("Bit and byte")[
-  A *bit* is the smallest possible unit of information: one binary digit, either $0$ or $1$. A *byte* is a group of eight consecutive bits. Every box in a machine's RAM holds exactly one byte. The address of a box is the integer index of that box in the long row. An *address space* of $2^32$ bytes can address about $4.3 times 10^9$ (4.3 billion) individual bytes — roughly 4 gigabytes — and that is exactly why 32-bit machines had a 4 GB RAM limit that caused so much trouble in the early 2000s.
+  A *bit* is the smallest possible unit of information: one binary digit, either $0$ or $1$. A *byte* is a group of eight consecutive bits. Every box in a machine's RAM holds exactly one byte. The address of a box is the integer index of that box in the long row. An *address space* of $2^32$ bytes can address about $4.3 times 10^9$ (4.3 billion) individual bytes, roughly 4 gigabytes, and that is exactly why 32-bit machines had a 4 GB RAM limit that caused so much trouble in the early 2000s.
 ]
 
 Eight bits per byte is not a law of physics. Early machines used bytes of 5, 6, or 9 bits. The 8-bit byte won partly because it is a power of two, which makes address arithmetic clean, and partly because the ASCII character encoding (which we will meet shortly) needs 7 bits, and 8 gives a comfortable margin. By the 1970s the 8-bit byte had won completely, and it is now so universal that the C language standard, the POSIX standard, and the IEEE 754 floating-point standard all assume it.
 
 #keyidea[
-  A computer's memory is a flat, numbered array of bytes. Every piece of data — an integer, a character, a pixel, a floating-point number, a compressed bitstream — is stored as some sequence of bytes at some starting address. The only question is: which bytes mean what?
+  A computer's memory is a flat, numbered array of bytes. Every piece of data (an integer, a character, a pixel, a floating-point number, a compressed bitstream) is stored as some sequence of bytes at some starting address. The only question is: which bytes mean what?
 ]
 
 #mathrecall[
-  Throughout this chapter we write byte values in *hexadecimal* (base 16), using the `0x` prefix — exactly the notation built in Chapter 4. Recall that one hex digit (0–9, then A–F for 10–15) encodes four bits, so two hex digits encode one byte: `0x41` means $4 times 16 + 1 = 65$, whose bits are `0100 0001`. Hex is just a compact, human-readable way of writing the same bits.
+  Throughout this chapter we write byte values in *hexadecimal* (base 16), using the `0x` prefix, exactly the notation built in Chapter 4. Recall that one hex digit (0–9, then A–F for 10–15) encodes four bits, so two hex digits encode one byte: `0x41` means $4 times 16 + 1 = 65$, whose bits are `0100 0001`. Hex is just a compact, human-readable way of writing the same bits.
 ]
 
 === Nibbles, words, and cache lines
 
 Beyond the byte, several groupings come up constantly enough to have names.
 
-- A *nibble* (also spelled *nybble*) is four bits — half a byte. One hex digit, 0–F, fits exactly in a nibble. You will mostly encounter nibbles when reading hex dumps.
+- A *nibble* (also spelled *nybble*) is four bits, half a byte. One hex digit, 0–F, fits exactly in a nibble. You will mostly encounter nibbles when reading hex dumps.
 - A *word* used to mean the natural size the CPU processes in one operation. On a 16-bit machine a word was 16 bits (2 bytes); on a 32-bit machine it was 32 bits (4 bytes); on today's 64-bit machines it is 64 bits (8 bytes). Unfortunately "word" still sometimes means 16 bits in older documentation. Always check.
 - A *doubleword* or *dword* is 32 bits (4 bytes); a *quadword* or *qword* is 64 bits (8 bytes). These terms appear constantly in binary format specifications.
-- A *cache line* is 64 bytes on most modern CPUs — the minimum amount of data that moves between RAM and the CPU's on-chip cache in a single transfer. Compressors that want to be fast try to access memory in units that respect cache line boundaries.
+- A *cache line* is 64 bytes on most modern CPUs: the minimum amount of data that moves between RAM and the CPU's on-chip cache in a single transfer. Compressors that want to be fast try to access memory in units that respect cache line boundaries.
 
 #fig([The memory hierarchy and unit sizes. A nibble is 4 bits (one hex digit), a byte is 8 bits, a word is 2–8 bytes depending on era, and a cache line groups 64 bytes. The flat row of addressed bytes is the only abstraction the hardware truly knows.],
 cetz.canvas({
   import cetz.draw: *
   let ht = 0.55
-  let labels = ("bit", "nibble", "byte", "word\n(64-bit)", "cache line")
+  let labels = ("bit", "nibble", "byte", "word (64-bit)", "cache line")
   let widths = (0.18, 0.38, 0.75, 2.0, 5.6)
   let cols = (rgb("#0b5394"), rgb("#0f766e"), rgb("#783f04"), rgb("#9a2617"), rgb("#5b3a86"))
   let sublabels = ("1 bit", "4 bits", "8 bits", "64 bits", "512 bits")
@@ -68,14 +68,16 @@ cetz.canvas({
     let x = startx
     rect((x, y + float(i) * 0.95), (x + widths.at(i), y + float(i) * 0.95 + ht),
       fill: cols.at(i).lighten(75%), stroke: 0.7pt + cols.at(i))
-    content((x + widths.at(i) / 2, y + float(i) * 0.95 + ht / 2),
-      text(size: 7.5pt, fill: cols.at(i))[#labels.at(i): #sublabels.at(i)])
+    // Place label to the right of the rect to avoid overflow for narrow rects
+    content((x + widths.at(i) + 0.12, y + float(i) * 0.95 + ht / 2),
+      anchor: "west",
+      text(size: 7.5pt, fill: cols.at(i))[#labels.at(i) - #sublabels.at(i)])
   }
 }))
 
 == Unsigned integers: the foundation
 
-The simplest thing a byte can represent is a non-negative whole number from 0 to 255. Using the binary place-value system from Chapter 4, 8 bits give us $2^8 = 256$ distinct patterns (from `00000000` through `11111111`), which we map to the integers 0 through 255. This is an *unsigned integer* — unsigned because there is no sign bit, so every pattern is positive or zero.
+The simplest thing a byte can represent is a non-negative whole number from 0 to 255. Using the binary place-value system from Chapter 4, 8 bits give us $2^8 = 256$ distinct patterns (from `00000000` through `11111111`), which we map to the integers 0 through 255. This is an *unsigned integer* (unsigned because there is no sign bit, so every pattern is positive or zero).
 
 === Unsigned ranges
 
@@ -88,7 +90,7 @@ cetz.canvas({
     ("8-bit (byte)", "0", "255", "256"),
     ("16-bit", "0", "65,535", "65,536"),
     ("32-bit", "0", "4,294,967,295", "≈4.3 billion"),
-    ("64-bit", "0", "18,446,744,073,709,551,615", "≈1.8 × 10¹⁹"),
+    ("64-bit", "0", "≈1.8 × 10¹⁹", "≈1.8 × 10¹⁹"),
   )
   let ht = 0.5
   let cols = (2.0, 0.6, 2.6, 2.0)
@@ -106,7 +108,8 @@ cetz.canvas({
     rect((0, y), (total_w, y + ht), fill: fill, stroke: 0.3pt + rgb("#d0d7de"))
     let cx2 = 0.1
     for ci in range(4) {
-      content((cx2 + cols.at(ci)/2, y + ht/2), text(size: 7.5pt)[#rows.at(ri).at(ci)])
+      content((cx2 + cols.at(ci)/2, y + ht/2),
+        box(width: (cols.at(ci) - 0.2) * 1cm, align(center, text(size: 7.5pt)[#rows.at(ri).at(ci)])))
       cx2 = cx2 + cols.at(ci)
     }
   }
@@ -114,16 +117,16 @@ cetz.canvas({
 
 === Overflow: when the count wraps
 
-What happens when you have the maximum 8-bit value, `11111111` = 255, and add 1? Ordinary addition would give `100000000` — nine bits — but the ninth bit has nowhere to go in an 8-bit register. It simply disappears. The result is `00000000` = 0. The counter wraps around. This is *overflow*, and it is not a bug in the hardware: it is defined behavior that programmers must account for.
+What happens when you have the maximum 8-bit value, `11111111` = 255, and add 1? Ordinary addition would give `100000000`, nine bits, but the ninth bit has nowhere to go in an 8-bit register. It simply disappears. The result is `00000000` = 0. The counter wraps around. This is *overflow*, and it is not a bug in the hardware: it is defined behavior that programmers must account for.
 
 #pitfall[
-  Overflow is silent in most programming languages. The expression `255 + 1` on a Python `int` gives `256`, because Python integers have unlimited size. But in C, on a *uint8\_t* (an 8-bit unsigned type), `255 + 1` gives `0`. In Java it gives `256` (because Java's `byte` is signed — more on that shortly). The compressor that treats a byte counter like a Python integer, then ships it in a 32-bit header field, will silently corrupt files as soon as a chunk exceeds 4 GB. This bug has burned real codecs. Always track the size of your integer types.
+  Overflow is silent in most programming languages. The expression `255 + 1` on a Python `int` gives `256`, because Python integers have unlimited size. But in C, on a *uint8\_t* (an 8-bit unsigned type), `255 + 1` gives `0`. In Java it gives `256` (because Java's `byte` is signed; more on that shortly). The compressor that treats a byte counter like a Python integer, then ships it in a 32-bit header field, will silently corrupt files as soon as a chunk exceeds 4 GB. This bug has burned real codecs. Always track the size of your integer types.
 ]
 
 #gopython("Integer types and sizes in Python")[
-  This is the book's first Python code. We taught Python nothing yet — that begins in earnest in Chapters 15–17 (the Python primer), where every feature is built from scratch. The `#gopython` boxes in this chapter are short previews you can safely skim; the main prose never depends on them. For now, just read the code as careful pseudocode with real syntax.
+  This is the book's first Python code. We taught Python nothing yet; that begins in earnest in Chapters 15–17 (the Python primer), where every feature is built from scratch. The `#gopython` boxes in this chapter are short previews you can safely skim; the main prose never depends on them. For now, just read the code as careful pseudocode with real syntax.
 
-  Python's built-in `int` has unlimited precision — it will happily compute $2^{10000}$ without overflowing. But when we pack integers into binary files (Chapter 17) or work with raw bytes, we need to think about fixed-width types. The `struct` module and the `int.to_bytes`/`int.from_bytes` methods do the conversion. (A *method* like `n.to_bytes(...)` is just a function attached to a value, written after a dot; the `f"..."` strings in later boxes are *f-strings*, where anything in `{ }` is replaced by its value — both are covered properly in Chapter 15.)
+  Python's built-in `int` has unlimited precision. It will happily compute $2^{10000}$ without overflowing. But when we pack integers into binary files (Chapter 17) or work with raw bytes, we need to think about fixed-width types. The `struct` module and the `int.to_bytes`/`int.from_bytes` methods do the conversion. (A *method* like `n.to_bytes(...)` is just a function attached to a value, written after a dot; the `f"..."` strings in later boxes are *f-strings*, where anything in `{ }` is replaced by its value. Both are covered properly in Chapter 15.)
 
   ```python
   # A one-byte unsigned integer
@@ -164,7 +167,7 @@ $200 = 11001000_2$, $100 = 01100100_2$
   1 1 0 0 1 0 0 0    (200)
 + 0 1 1 0 0 1 0 0    (100)
 ─────────────────
-1 0 0 1 0 1 1 0 0    (300 — needs 9 bits!)
+1 0 0 1 0 1 1 0 0    (300 - needs 9 bits!)
 ```
 
 The ninth bit (value 256) is lost. We are left with $0 0 1 0 1 1 0 0_2 = 44$. The overflow wrapped us: $200 + 100 equiv 44 space (mod 256)$.
@@ -172,7 +175,7 @@ The ninth bit (value 256) is lost. We are left with $0 0 1 0 1 1 0 0_2 = 44$. Th
 #checkpoint[
   A protocol header stores a 32-bit unsigned packet counter. After how many packets does it overflow and return to zero?
 ][
-  $2^{32} = 4{,}294{,}967{,}296$. At one million packets per second, the counter wraps after about 4,295 seconds — roughly 71 minutes. Protocols that run over a weekend without resetting, or that use faster networks, hit this wrap. That is why modern protocols like QUIC use 64-bit counters.
+  $2^{32} = 4{,}294{,}967{,}296$. At one million packets per second, the counter wraps after about 4,295 seconds, roughly 71 minutes. Protocols that run over a weekend without resetting, or that use faster networks, hit this wrap. That is why modern protocols like QUIC use 64-bit counters.
 ]
 
 == Signed integers: two's complement
@@ -199,9 +202,9 @@ To negate a number, use this two-step recipe: (1) flip every bit (0 becomes 1, 1
 
 $+5 = 00000101_2$
 
-Step 1 — flip bits: $11111010_2$
+Step 1 (flip bits): $11111010_2$
 
-Step 2 — add 1: $11111010_2 + 00000001_2 = 11111011_2$
+Step 2 (add 1): $11111010_2 + 00000001_2 = 11111011_2$
 
 Check: decode $11111011_2$ with the signed formula. The MSB is 1, so it contributes $-128$. The remaining bits $1111011_2$ give $64 + 32 + 16 + 8 + 2 + 1 = 123$. Total: $-128 + 123 = -5$. Correct.
 
@@ -210,7 +213,7 @@ Check: decode $11111011_2$ with the signed formula. The MSB is 1, so it contribu
 ]
 
 #proof[
-  Let $x$ be represented by the bit pattern $B$. "Flip all bits" produces $overline(B)$. Notice that $B + overline(B) = (2^n - 1)$ (all ones) (every bit position gives 0+1=1). So $overline(B) = 2^n - 1 - B$. Adding 1: $overline(B) + 1 = 2^n - B$. But modulo $2^n$ (which is what $n$-bit arithmetic does), $2^n - B equiv -B$. So the recipe gives the $n$-bit representation of $-x$. The exception $x = -2^{n-1}$ fails because $+2^{n-1}$ requires $n+1$ bits — it overflows. #h(1fr)
+  Let $x$ be represented by the bit pattern $B$. "Flip all bits" produces $overline(B)$. Notice that $B + overline(B) = (2^n - 1)$ (all ones) (every bit position gives 0+1=1). So $overline(B) = 2^n - 1 - B$. Adding 1: $overline(B) + 1 = 2^n - B$. But modulo $2^n$ (which is what $n$-bit arithmetic does), $2^n - B equiv -B$. So the recipe gives the $n$-bit representation of $-x$. The exception $x = -2^{n-1}$ fails because $+2^{n-1}$ requires $n+1$ bits, which overflows. #h(1fr)
 ]
 
 === Why subtraction is free
@@ -229,11 +232,11 @@ Let us watch it work on $7 - 5$ in 8 bits. First negate $5 = 00000101_2$: flip t
 The ninth bit falls off the end (exactly the overflow behaviour we saw for unsigned addition), leaving $00000010_2 = 2$. And $7 - 5 = 2$. The hardware did one ordinary addition and threw away the carry; it never knew or cared that the operands were "signed."
 
 #history[
-  The earliest electronic computers used sign-magnitude: one bit for the sign (0 = positive, 1 = negative) and the remaining bits for the magnitude. This meant you needed two different adders — one for positive+positive and one for positive+negative. It also gave you two representations of zero: $+0$ and $-0$, which forced software to always check both. IBM's System/360 (1964) adopted two's complement for its integer arithmetic, and by the time C was standardized in 1989, two's complement was the assumption everywhere. The C23 standard (ISO/IEC 9899:2023) made it mandatory, finally eliminating the theoretical possibility of sign-magnitude or ones'-complement C implementations.
+  The earliest electronic computers used sign-magnitude: one bit for the sign (0 = positive, 1 = negative) and the remaining bits for the magnitude. This meant you needed two different adders, one for positive+positive and one for positive+negative. It also gave you two representations of zero: $+0$ and $-0$, which forced software to always check both. IBM's System/360 (1964) adopted two's complement for its integer arithmetic, and by the time C was standardized in 1989, two's complement was the assumption everywhere. The C23 standard (ISO/IEC 9899:2023) made it mandatory, finally eliminating the theoretical possibility of sign-magnitude or ones'-complement C implementations.
 ]
 
 #gopython("Signed integers in Python and struct")[
-  Python's plain `int` is always signed and unlimited. When you need a fixed-size signed integer — for writing a binary header, say — use `struct.pack`:
+  Python's plain `int` is always signed and unlimited. When you need a fixed-size signed integer (for writing a binary header, say), use `struct.pack`:
 
   ```python
   import struct
@@ -261,7 +264,7 @@ cetz.canvas({
     ("int8\_t / byte", "8", "−128", "127"),
     ("int16\_t / short", "16", "−32,768", "32,767"),
     ("int32\_t / int", "32", "−2,147,483,648", "2,147,483,647"),
-    ("int64\_t / long", "64", "−9,223,372,036,854,775,808", "9,223,372,036,854,775,807"),
+    ("int64\_t / long", "64", "≈−9.2 × 10¹⁸", "≈9.2 × 10¹⁸"),
   )
   let ht = 0.5
   let cols = (2.1, 0.6, 2.4, 2.1)
@@ -279,7 +282,8 @@ cetz.canvas({
     rect((0, y), (total_w, y + ht), fill: fill, stroke: 0.3pt + rgb("#d0d7de"))
     let cx2 = 0.1
     for ci in range(4) {
-      content((cx2 + cols.at(ci)/2, y + ht/2), text(size: 7.2pt)[#rows.at(ri).at(ci)])
+      content((cx2 + cols.at(ci)/2, y + ht/2),
+        box(width: (cols.at(ci) - 0.2) * 1cm, align(center, text(size: 7.2pt)[#rows.at(ri).at(ci)])))
       cx2 = cx2 + cols.at(ci)
     }
   }
@@ -293,7 +297,7 @@ Numbers are useful, but we also want to store text. The obvious approach: agree 
 
 The *American Standard Code for Information Interchange*, finalized in 1963, assigns a 7-bit integer (0–127) to each of 128 characters: the 26 uppercase and 26 lowercase English letters, ten digits, 32 punctuation and symbol characters, and 33 *control characters* (like newline, carriage return, tab, and the bell that made a teletype machine ring).
 
-#fig([A compact ASCII table. Values 0–31 and 127 are control characters; 32 is space; 33–126 are printable. The letter 'A' is 65 (0x41), 'a' is 97 (0x61). Note: 'a' = 'A' + 32 — which is bit 5 set, so toggling bit 5 of any letter flips its case.],
+#fig([A compact ASCII table. Values 0–31 and 127 are control characters; 32 is space; 33–126 are printable. The letter 'A' is 65 (0x41), 'a' is 97 (0x61). Note: 'a' = 'A' + 32, which is bit 5 set, so toggling bit 5 of any letter flips its case.],
 cetz.canvas({
   import cetz.draw: *
   let pairs = (
@@ -309,24 +313,28 @@ cetz.canvas({
     ("0x7F", "DEL (127, delete)"),
   )
   let ht = 0.46
+  let col1_w = 1.4
+  let total_w = 7.2
   for i in range(10) {
     let y = -float(i) * ht
     let fill = if calc.rem(i, 2) == 0 { rgb("#f4f6f8") } else { white }
-    rect((0.0, y), (7.2, y + ht), fill: fill, stroke: 0.3pt + rgb("#d0d7de"))
-    content((0.7, y + ht/2), text(size: 7.5pt, weight: "bold", fill: rgb("#0b5394"))[#pairs.at(i).at(0)])
-    content((3.9, y + ht/2), text(size: 7.2pt)[#pairs.at(i).at(1)])
+    rect((0.0, y), (total_w, y + ht), fill: fill, stroke: 0.3pt + rgb("#d0d7de"))
+    content((col1_w / 2, y + ht/2),
+      box(width: (col1_w - 0.1) * 1cm, align(center, text(size: 7.5pt, weight: "bold", fill: rgb("#0b5394"))[#pairs.at(i).at(0)])))
+    content((col1_w + (total_w - col1_w) / 2, y + ht/2),
+      box(width: (total_w - col1_w - 0.2) * 1cm, align(center, text(size: 7.2pt)[#pairs.at(i).at(1)])))
   }
 }))
 
-ASCII was designed for English. It has no accented characters (é, ñ, ü), no Chinese or Japanese glyphs, no Arabic script, no emoji. For decades, each country made its own extension, mapping the values 128–255 to their local characters. The result was dozens of incompatible *code pages*: Windows-1252 for Western Europe, ISO-8859-5 for Cyrillic, Shift-JIS for Japanese. Opening a file created with one code page on a machine configured for another gave you garbage — the famous *mojibake* ("character transformation" in Japanese). The internet made this problem acute, and in 1991 the solution was born.
+ASCII was designed for English. It has no accented characters (é, ñ, ü), no Chinese or Japanese glyphs, no Arabic script, no emoji. For decades, each country made its own extension, mapping the values 128–255 to their local characters. The result was dozens of incompatible *code pages*: Windows-1252 for Western Europe, ISO-8859-5 for Cyrillic, Shift-JIS for Japanese. Opening a file created with one code page on a machine configured for another gave you garbage, the famous *mojibake* ("character transformation" in Japanese). The internet made this problem acute, and in 1991 the solution was born.
 
 #history[
-  The first ASCII standard was published on June 17, 1963, by the American Standards Association — now ANSI. The code was designed to be sorted in a useful order: digits before uppercase before lowercase, control characters at the start. The teleprinter convention that 'A' = 65 and 'a' = 97 (a difference of 32 = $2^5$) was a deliberate choice: toggling bit 5 flips case. This trick appears in real compressors and search engines to this day.
+  The first ASCII standard was published on June 17, 1963, by the American Standards Association (now ANSI). The code was designed to be sorted in a useful order: digits before uppercase before lowercase, control characters at the start. The teleprinter convention that 'A' = 65 and 'a' = 97 (a difference of 32 = $2^5$) was a deliberate choice: toggling bit 5 flips case. This trick appears in real compressors and search engines to this day.
 ]
 
 === Unicode and UTF-8: one encoding for every script on Earth
 
-*Unicode* is a standard maintained by the Unicode Consortium (formed 1991) that assigns a unique integer — called a *code point* — to every character in every human writing system. As of Unicode 16.0 (September 2024), the standard defines 154,998 characters covering 168 scripts, including historical scripts like Linear B and Cuneiform, mathematical symbols, and over 3,600 emoji. Code points are written as U+XXXX in hex; 'A' is U+0041, '€' is U+20AC, '😀' is U+1F600.
+*Unicode* is a standard maintained by the Unicode Consortium (formed 1991) that assigns a unique integer, called a *code point*, to every character in every human writing system. As of Unicode 16.0 (September 2024), the standard defines 154,998 characters covering 168 scripts, including historical scripts like Linear B and Cuneiform, mathematical symbols, and over 3,600 emoji. Code points are written as U+XXXX in hex; 'A' is U+0041, '€' is U+20AC, '😀' is U+1F600.
 
 Now, how do you store code points in bytes? The simplest approach is to use 4 bytes for every character (UTF-32). That works, but it wastes space: English text would balloon to four times its ASCII size, and most of the world's web traffic is in scripts that need only 1–3 bytes per character.
 
@@ -345,14 +353,14 @@ Now, how do you store code points in bytes? The simplest approach is to use 4 by
   - 3-byte: `1110xxxx 10xxxxxx 10xxxxxx` (4 + 6 + 6 = 16 bits; code points 0–65535)
   - 4-byte: `11110xxx 10xxxxxx 10xxxxxx 10xxxxxx` (3 + 6 + 6 + 6 = 21 bits; code points 0–1,114,111)
 
-  A byte starting with `0` is a complete 1-byte character. A byte starting with `11` begins a multi-byte sequence; the number of leading `1`s tells you the total length. A byte starting with `10` is a *continuation byte* — a middle piece of a multi-byte character. This means you can always find the start of any character, even if you begin reading in the middle of a stream, and you can never mistake an ASCII byte for part of a multi-byte sequence.
+  A byte starting with `0` is a complete 1-byte character. A byte starting with `11` begins a multi-byte sequence; the number of leading `1`s tells you the total length. A byte starting with `10` is a *continuation byte*, a middle piece of a multi-byte character. This means you can always find the start of any character, even if you begin reading in the middle of a stream, and you can never mistake an ASCII byte for part of a multi-byte sequence.
 
   Example: encode '€' = U+20AC = 8364 in decimal = `0010 0000 1010 1100` in binary (13 bits). Needs 3 bytes:
   - Take 4 + 6 + 6 bits: `0010`, `000010`, `101100`.
   - Prefix: `1110_0010`, `10_000010`, `10_101100` = `0xE2 0x82 0xAC`.
 ]
 
-UTF-8 became the dominant encoding on the web in 2008 and now accounts for over 98% of web pages. Every major operating system uses it as the default for new files. When a compressor reads text, it almost certainly encounters UTF-8 bytes — and a compressor that assumes ASCII (7-bit) will misclassify the high bytes of multi-byte characters, potentially degrading its model. PPM\* and the statistical models we will meet in Chapter 33 need to be Unicode-aware to work well on modern text.
+UTF-8 became the dominant encoding on the web in 2008 and now accounts for over 98% of web pages. Every major operating system uses it as the default for new files. When a compressor reads text, it almost certainly encounters UTF-8 bytes; a compressor that assumes ASCII (7-bit) will misclassify the high bytes of multi-byte characters, potentially degrading its model. PPM\* and the statistical models we will meet in Chapter 33 need to be Unicode-aware to work well on modern text.
 
 #gopython("Strings and bytes in Python")[
   Python 3 keeps strings (type `str`) and raw bytes (type `bytes`) rigorously separate. A `str` is a sequence of Unicode code points. A `bytes` is a sequence of integers 0–255. You convert between them with `.encode()` and `.decode()`:
@@ -377,21 +385,21 @@ UTF-8 became the dominant encoding on the web in 2008 and now accounts for over 
 
 === Why character encoding matters for compression
 
-If you feed a UTF-8 file to a compressor that thinks each byte is an independent symbol from a 256-symbol alphabet, it will work — but it will not model the structure of multi-byte characters. A context model that knows "a byte starting with `10` is always a continuation byte" can assign it high probability without wasting a bit on the thousands of byte values that can never appear there. The compression algorithms in Volumes II and III are byte-level; the neural and LLM-based methods in Volume IV can work at the code-point level and gain from Unicode structure. We will return to this in Chapter 33 (PPM) and Chapter 62 (LLMs).
+If you feed a UTF-8 file to a compressor that thinks each byte is an independent symbol from a 256-symbol alphabet, it will work, but it will not model the structure of multi-byte characters. A context model that knows "a byte starting with `10` is always a continuation byte" can assign it high probability without wasting a bit on the thousands of byte values that can never appear there. The compression algorithms in Volumes II and III are byte-level; the neural and LLM-based methods in Volume IV can work at the code-point level and gain from Unicode structure. We will return to this in Chapter 33 (PPM) and Chapter 62 (LLMs).
 
 == Floating-point numbers: real numbers in finite space
 
-Integers are fine for counts and indices, but most interesting data — audio samples, pixel intensities, scientific measurements, neural network weights — involves numbers that are not whole. We need a way to represent fractions in bits.
+Integers are fine for counts and indices, but most interesting data (audio samples, pixel intensities, scientific measurements, neural network weights) involves numbers that are not whole. We need a way to represent fractions in bits.
 
 === The naive approach and why it fails
 
 One approach: store a fixed number of bits for the integer part and a fixed number for the fractional part. This is called *fixed-point*. An 8.8 fixed-point number uses 8 bits for the integer part and 8 bits for the fraction, representing values in steps of $1/256 approx 0.004$. Fixed-point is still used in audio DSP and embedded systems where the range and precision requirements are known in advance. But it has a fatal limitation: it cannot represent both very small and very large numbers at the same time. A meteorologist needs to handle both the mass of a proton ($1.67 times 10^{-27}$ kg) and the mass of the Sun ($1.99 times 10^{30}$ kg) in the same program. Fixed-point cannot reach both ends.
 
-The solution used by essentially all modern computing is *floating-point*, which represents numbers the way a scientist writes them: in the form $m times b^e$, where $m$ is a *mantissa* (or *significand*), $b$ is a base, and $e$ is an *exponent*. Instead of fixing the decimal point, we let it *float* — hence the name.
+The solution used by essentially all modern computing is *floating-point*, which represents numbers the way a scientist writes them: in the form $m times b^e$, where $m$ is a *mantissa* (or *significand*), $b$ is a base, and $e$ is an *exponent*. Instead of fixing the decimal point, we let it *float* (hence the name).
 
 === IEEE 754: the standard that unified floating-point
 
-Before 1985, every computer manufacturer had its own floating-point format. Programs that ran correctly on an IBM machine gave wrong answers on a DEC machine. The nightmare ended with *IEEE 754-1985*, designed largely by William Kahan at UC Berkeley. It specified binary floating-point so precisely — right down to rounding rules for every operation — that a correctly implemented IEEE 754 program gives bit-for-bit identical results on any conforming machine. The 2008 revision (IEEE 754-2008) added decimal floating-point and half-precision; the 2019 revision is the current standard.
+Before 1985, every computer manufacturer had its own floating-point format. Programs that ran correctly on an IBM machine gave wrong answers on a DEC machine. The nightmare ended with *IEEE 754-1985*, designed largely by William Kahan at UC Berkeley. It specified binary floating-point so precisely (right down to rounding rules for every operation) that a correctly implemented IEEE 754 program gives bit-for-bit identical results on any conforming machine. The 2008 revision (IEEE 754-2008) added decimal floating-point and half-precision; the 2019 revision is the current standard.
 
 #algo(
   name: "IEEE 754 Binary Floating-Point",
@@ -420,16 +428,19 @@ cetz.canvas({
 
   // sign
   rect((0, 0), (w_sign, ht), fill: rgb("#9a2617").lighten(70%), stroke: 0.7pt + rgb("#9a2617"))
-  content((w_sign/2, ht/2), text(size: 7pt, fill: rgb("#9a2617"))[S])
+  content((w_sign/2, ht/2),
+    box(width: (w_sign - 0.05) * 1cm, align(center, text(size: 7pt, fill: rgb("#9a2617"))[S])))
 
   // exponent
   rect((w_sign, 0), (w_sign + w_exp, ht), fill: rgb("#0b5394").lighten(70%), stroke: 0.7pt + rgb("#0b5394"))
-  content((w_sign + w_exp/2, ht/2), text(size: 7pt, fill: rgb("#0b5394"))[Exponent (8 bits)])
+  content((w_sign + w_exp/2, ht/2),
+    box(width: (w_exp - 0.15) * 1cm, align(center, text(size: 7pt, fill: rgb("#0b5394"))[Exponent (8 bits)])))
 
   // fraction
   rect((w_sign + w_exp, 0), (w_sign + w_exp + w_frac, ht),
     fill: rgb("#0f766e").lighten(70%), stroke: 0.7pt + rgb("#0f766e"))
-  content((w_sign + w_exp + w_frac/2, ht/2), text(size: 7pt, fill: rgb("#0f766e"))[Fraction / Mantissa (23 bits)])
+  content((w_sign + w_exp + w_frac/2, ht/2),
+    box(width: (w_frac - 0.2) * 1cm, align(center, text(size: 7pt, fill: rgb("#0f766e"))[Fraction / Mantissa (23 bits)])))
 
   // bit labels
   let positions = ((0.0, "31"), (0.4, "30"), (2.4, "23"), (2.4, "22"), (7.2, "0"))
@@ -447,14 +458,14 @@ The three fields mean:
 
 - *Sign (1 bit)*: 0 = positive, 1 = negative. Always the most significant bit.
 - *Exponent (8 bits)*: stored in *biased* form with bias 127. The stored value $E$ represents the true exponent $e = E - 127$. Stored value 0 and 255 are special (see below); usable values are 1–254, giving true exponents $-126$ to $+127$.
-- *Fraction (23 bits)*: the binary digits *after* the leading 1. The full mantissa is $1.f_{22} f_{21} dots f_0$ — the "hidden bit" (the leading 1) is implicit and not stored, giving 24 bits of effective precision even though only 23 are stored.
+- *Fraction (23 bits)*: the binary digits *after* the leading 1. The full mantissa is $1.f_{22} f_{21} dots f_0$. The "hidden bit" (the leading 1) is implicit and not stored, giving 24 bits of effective precision even though only 23 are stored.
 
 The value of a *normal* float is:
 
 $ v = (-1)^S times 1.f times 2^(E - 127) $
 
 #gomaths("Bias in floating-point exponents")[
-  Why store the exponent biased? Because biased encoding lets us compare two floats as if they were unsigned integers. If we stored the exponent in two's complement, comparing $1.5 times 2^{-3}$ to $1.0 times 2^{+1}$ would require looking at the sign of the exponent, which is messy. With bias 127, the stored exponent is always non-negative, and a simple unsigned integer comparison of the full 32-bit value correctly orders all finite positive floats. (Negative floats are trickier — their sign bits make unsigned comparison wrong — but the key property holds for positive values.)
+  Why store the exponent biased? Because biased encoding lets us compare two floats as if they were unsigned integers. If we stored the exponent in two's complement, comparing $1.5 times 2^{-3}$ to $1.0 times 2^{+1}$ would require looking at the sign of the exponent, which is messy. With bias 127, the stored exponent is always non-negative, and a simple unsigned integer comparison of the full 32-bit value correctly orders all finite positive floats. (Negative floats are trickier: their sign bits make unsigned comparison wrong, but the key property holds for positive values.)
 
   Example: the number $3.14$ in binary is approximately $11.001001_2$, which we normalize to $1.1001001 times 2^1$. The sign bit is 0 (positive). The true exponent is 1, so the stored exponent is $1 + 127 = 128 = 10000000_2$. The fraction field is the 23 bits after the decimal point: $10010001111010111000011_2$ (rounded). Full bit pattern: `0 10000000 10010001111010111000011`.
 ]
@@ -471,7 +482,7 @@ The exponents 0 and 255 (all zeros and all ones) are reserved for special cases:
 #misconception[
   "Floating-point numbers can represent any decimal fraction."
 ][
-  They cannot. The fraction is stored in binary, and most decimal fractions are not exactly representable in binary. The famous example: $0.1$ in decimal. In binary, $0.1 = 0.000110011001100 dots_2$, repeating forever, the way $1/3 = 0.333 dots$ in decimal. The stored value is $0.1000000000000000055511151231257827021181583404541015625$ — close but not exact. This is why `0.1 + 0.2 != 0.3` in almost every programming language. For compression algorithms that process audio samples or scientific data, this matters: rounding errors accumulate, and a decompressor that uses slightly different arithmetic from the encoder can produce different results. The fix is careful design: use integers internally wherever possible, specify rounding modes, or use exact arithmetic libraries.
+  They cannot. The fraction is stored in binary, and most decimal fractions are not exactly representable in binary. The famous example: $0.1$ in decimal. In binary, $0.1 = 0.000110011001100 dots_2$, repeating forever, the way $1/3 = 0.333 dots$ in decimal. The stored value is $0.1000000000000000055511151231257827021181583404541015625$, which is close but not exact. This is why `0.1 + 0.2 != 0.3` in almost every programming language. For compression algorithms that process audio samples or scientific data, this matters: rounding errors accumulate, and a decompressor that uses slightly different arithmetic from the encoder can produce different results. The fix is careful design: use integers internally wherever possible, specify rounding modes, or use exact arithmetic libraries.
 ]
 
 === Common floating-point types
@@ -512,7 +523,7 @@ Beyond float32 and float64, two other formats deserve mention because they appea
 
 === Why floating-point matters for compression
 
-Media codecs store everything — DCT coefficients, wavelet coefficients, spectrograms — as integers after quantization, precisely to avoid floating-point rounding headaches. But the road from signal to integer goes through floating-point arithmetic, and the choices made there affect both compression ratio and reconstructed quality. Scientific data (Chapter 66) often comes in float32 or float64 and must be compressed with care. And neural network weights (Chapters 56–64) are arrays of floats that must themselves be compressed, quantized, and transmitted — a topic where the bit structure we just built is directly relevant.
+Media codecs store everything (DCT coefficients, wavelet coefficients, spectrograms) as integers after quantization, precisely to avoid floating-point rounding headaches. But the road from signal to integer goes through floating-point arithmetic, and the choices made there affect both compression ratio and reconstructed quality. Scientific data (Chapter 66) often comes in float32 or float64 and must be compressed with care. And neural network weights (Chapters 56–64) are arrays of floats that must themselves be compressed, quantized, and transmitted, a topic where the bit structure we just built is directly relevant.
 
 == Endianness: which byte comes first?
 
@@ -554,7 +565,7 @@ cetz.canvas({
 === Which machines use which?
 
 - *Little-endian*: Intel/AMD x86 and x86-64 (all modern PCs and laptops), ARM (in its default, configurable mode), RISC-V. In practice, the vast majority of modern hardware is little-endian.
-- *Big-endian*: IBM mainframes (z/Architecture), network protocols (hence "network byte order" = big-endian), old Motorola 68000 (classic Mac), Sun SPARC (classic workstations), PowerPC (big-endian mode). Most file formats that predate the x86 dominance — JPEG, PNG, AIFF, ZIP, many others — use big-endian for multi-byte fields.
+- *Big-endian*: IBM mainframes (z/Architecture), network protocols (hence "network byte order" = big-endian), old Motorola 68000 (classic Mac), Sun SPARC (classic workstations), PowerPC (big-endian mode). Most file formats that predate the x86 dominance (JPEG, PNG, AIFF, ZIP, many others) use big-endian for multi-byte fields.
 - *Bi-endian*: ARM can run in either mode; modern ARM systems usually run little-endian. MIPS and PowerPC are also bi-endian.
 
 The *POSIX* functions `htonl`/`htons`/`ntohl`/`ntohs` (host-to-network and network-to-host, for long and short) exist solely to swap bytes when needed, and `struct.pack` in Python lets you specify endianness with `"<"` (little) or `">"` (big).
@@ -577,7 +588,7 @@ From the WAVE audio format:
 
 > Data is stored in little-endian byte order.
 
-When you write a binary format parser — something every compressor needs — you must read the spec, get the endianness right, and use it consistently. Getting it wrong produces values that are byte-swapped, off by factors of 256 or 65536, and very hard to debug without a hex dump.
+When you write a binary format parser (and every compressor needs one), you must read the spec, get the endianness right, and use it consistently. Getting it wrong produces values that are byte-swapped, off by factors of 256 or 65536, and very hard to debug without a hex dump.
 
 #gopython("Endianness with struct.pack / struct.unpack")[
   ```python
@@ -655,7 +666,7 @@ Ten bytes of header, and we know the format, the method, the creation time, and 
 ]
 
 #tryit[
-  *A binary file inspector.* Before tinyzip can compress anything, it needs to read binary files byte-by-byte and display them. The tinyzip project proper begins in Chapter 15 (the package skeleton); for now, here is a self-contained utility that displays any file as a hex dump with a character sidebar — the standard tool every compressor developer reaches for when debugging a corrupted bitstream. Treat it as a warm-up you can run today, not yet an official project step.
+  *A binary file inspector.* Before tinyzip can compress anything, it needs to read binary files byte-by-byte and display them. The tinyzip project proper begins in Chapter 15 (the package skeleton); for now, here is a self-contained utility that displays any file as a hex dump with a character sidebar. It is the standard tool every compressor developer reaches for when debugging a corrupted bitstream. Treat it as a warm-up you can run today, not yet an official project step.
 
   ```python
   # tinyzip/hexdump.py
@@ -704,27 +715,27 @@ Every well-designed binary format starts with a fixed byte sequence that identif
 - zstd frames: `FD 2F B5 28` (the Zstandard magic number, little-endian)
 - Brotli streams: no fixed magic (it is designed to be embedded in other containers)
 
-The file command on Unix reads these magic bytes to identify file types — no extension needed. Many formats choose magic bytes that include `0x00` (a null byte), because text editors would reject a file with embedded null bytes as "binary," preventing accidental corruption by text-mode file transfer.
+The file command on Unix reads these magic bytes to identify file types, no extension needed. Many formats choose magic bytes that include `0x00` (a null byte), because text editors would reject a file with embedded null bytes as "binary," preventing accidental corruption by text-mode file transfer.
 
 === Length-prefixed fields and CRCs
 
 After the magic, most formats store fields as (length, data) pairs: first a fixed-size integer saying how many bytes of data follow, then the data itself. This lets a parser skip fields it does not understand without getting lost.
 
-Many formats also include a *checksum* — usually a CRC-32 (cyclic redundancy check) or Adler-32 — that lets the decompressor detect corruption. The checksum is a function of all the data bytes; if even one bit flips in transit, the checksum will almost certainly disagree with the stored value. We will implement CRC-32 in Chapter 30.
+Many formats also include a *checksum*, usually a CRC-32 (cyclic redundancy check) or Adler-32, that lets the decompressor detect corruption. The checksum is a function of all the data bytes; if even one bit flips in transit, the checksum will almost certainly disagree with the stored value. We will implement CRC-32 in Chapter 30.
 
 === Alignment and padding
 
-CPUs read multi-byte values fastest when their address is a multiple of their size — a 32-bit int fastest at an address divisible by 4, a 64-bit double fastest at a multiple of 8. Some binary formats insert *padding bytes* to keep fields aligned. Others (like DEFLATE) pack bits so tightly that alignment is intentionally sacrificed for size. Compression formats generally prefer compactness over alignment, because the format's own decoder controls memory access patterns anyway.
+CPUs read multi-byte values fastest when their address is a multiple of their size: a 32-bit int fastest at an address divisible by 4, a 64-bit double fastest at a multiple of 8. Some binary formats insert *padding bytes* to keep fields aligned. Others (like DEFLATE) pack bits so tightly that alignment is intentionally sacrificed for size. Compression formats generally prefer compactness over alignment, because the format's own decoder controls memory access patterns anyway.
 
 #checkpoint[
   You find a file starting with the bytes `FF D8 FF E0`. What type of file is it? What does the `FF D8` mean?
 ][
-  The magic bytes `FF D8 FF` identify a JPEG file. The third byte `FF` introduces an *EXIF* or *JFIF* application marker, and `E0` is the specific marker type `APP0` (JFIF application segment). So this is a standard JPEG file with JFIF metadata — which is the format most cameras and smartphones produce.
+  The magic bytes `FF D8 FF` identify a JPEG file. The third byte `FF` introduces an *EXIF* or *JFIF* application marker, and `E0` is the specific marker type `APP0` (JFIF application segment). So this is a standard JPEG file with JFIF metadata, the format most cameras and smartphones produce.
 ]
 
 == Bit packing, flags, and bitmasks
 
-One more pattern appears constantly in binary formats and compressor implementations: packing multiple small values into a single byte (or word) using *bit fields* and *bitmasks*. This is not just an efficiency trick — it is the primary language of protocol headers and codec flags.
+One more pattern appears constantly in binary formats and compressor implementations: packing multiple small values into a single byte (or word) using *bit fields* and *bitmasks*. It goes beyond a space-saving trick: this is the primary language of protocol headers and codec flags.
 
 === Bitmasks and bitwise operations
 
@@ -736,19 +747,19 @@ Chapter 5 introduced the Boolean operations AND, OR, XOR, and NOT. When applied 
   Examples with 8-bit values:
   - `00000001 << 3` = `00001000` = $1 times 2^3 = 8$
   - `10110100 >> 2` = `00101101` = $180 div 4 = 45$
-  - `10110100 & 00001111` = `00000100` (keep only the low 4 bits — the nibble)
+  - `10110100 & 00001111` = `00000100` (keep only the low 4 bits - the nibble)
   - `10110100 | 00001111` = `10111111` (set the low 4 bits to all ones)
-  - `10110100 ^ 11111111` = `01001011` (flip every bit — same as bitwise NOT)
+  - `10110100 ^ 11111111` = `01001011` (flip every bit - same as bitwise NOT)
 ]
 
 A *mask* is a bit pattern designed to isolate or set specific bits. The idiom `(value >> shift) & mask` extracts a field from a packed byte. For example, the gzip flags byte has six defined bit positions, each controlling a feature:
 
 ```
-Bit 0 (mask 0x01): FTEXT  — file is ASCII text
-Bit 1 (mask 0x02): FHCRC  — header checksum present
-Bit 2 (mask 0x04): FEXTRA — extra fields present
-Bit 3 (mask 0x08): FNAME  — original filename present
-Bit 4 (mask 0x10): FCOMMENT — comment present
+Bit 0 (mask 0x01): FTEXT  - file is ASCII text
+Bit 1 (mask 0x02): FHCRC  - header checksum present
+Bit 2 (mask 0x04): FEXTRA - extra fields present
+Bit 3 (mask 0x08): FNAME  - original filename present
+Bit 4 (mask 0x10): FCOMMENT - comment present
 Bits 5–7: reserved, must be zero
 ```
 
@@ -799,7 +810,7 @@ The byte `10100110` would decode as:
   print(f"Rebuilt: {rebuilt:#010b}")
   ```
 
-  This pattern — left-shift each field to its position, OR them together — appears in virtually every binary format encoder ever written. Master it and you can read or write any protocol on Earth.
+  This pattern (left-shift each field to its position, OR them together) appears in virtually every binary format encoder ever written. Master it and you can read or write any protocol on Earth.
 ]
 
 === Sign extension pitfall
@@ -807,7 +818,7 @@ The byte `10100110` would decode as:
 One notorious bug when extracting bit fields: *sign extension*. If you mask out a 4-bit signed value and store it in a Python `int` (which is always signed), the bits look positive. But if you cast to a C `int8_t` or try to interpret the high bit as a sign bit, the value appears negative. Always be explicit about whether a field is signed or unsigned, and test boundary values (the maximum and the one-negative value, e.g., the 4-bit values 7 and 8 = $-8$).
 
 #pitfall[
-  In Python, `(-42) >> 3` gives $-6$ (arithmetic right shift — fills with 1s to preserve the sign), not $+26$. This can surprise programmers coming from C, where signed right shift is implementation-defined. If you want a logical (unsigned) right shift in Python, either mask first: `(n & 0xFF) >> 3` for an 8-bit value, or use a `uint` type from the `ctypes` module. Compressors that shift bit fields must be careful here.
+  In Python, `(-42) >> 3` gives $-6$ (arithmetic right shift, filling with 1s to preserve the sign), not $+26$. This can surprise programmers coming from C, where signed right shift is implementation-defined. If you want a logical (unsigned) right shift in Python, either mask first: `(n & 0xFF) >> 3` for an 8-bit value, or use a `uint` type from the `ctypes` module. Compressors that shift bit fields must be careful here.
 ]
 
 == The whole picture: from signal to bytes
@@ -817,19 +828,19 @@ Let us trace the path from a real-world signal to the bytes we compress, tying t
 *Scenario*: you record your voice at 44.1 kHz, 16-bit stereo (the compact-disc standard).
 
 1. *Sampling*: the microphone produces a continuously varying voltage. An analog-to-digital converter samples it 44,100 times per second. Each sample is a number between $-1.0$ and $+1.0$.
-2. *Quantization*: each sample is rounded to the nearest 16-bit signed two's complement integer — one of 65,536 possible values from $-32768$ to $+32767$. This is the first loss of information; we will study quantization in detail in Chapter 39.
-3. *Packing*: stereo means two samples (left and right channel) per time step. At 44,100 samples/second × 2 channels × 2 bytes/sample, raw audio consumes $44100 times 2 times 2 = 176400$ bytes per second — about 10 MB per minute.
+2. *Quantization*: each sample is rounded to the nearest 16-bit signed two's complement integer, one of 65,536 possible values from $-32768$ to $+32767$. This is the first loss of information; we will study quantization in detail in Chapter 39.
+3. *Packing*: stereo means two samples (left and right channel) per time step. At 44,100 samples/second × 2 channels × 2 bytes/sample, raw audio consumes $44100 times 2 times 2 = 176400$ bytes per second, about 10 MB per minute.
 4. *Storage*: a WAVE file stores these bytes in little-endian order (the Windows/Intel convention), preceded by a header that tells the decoder the sample rate, bit depth, and number of channels.
 5. *Compression*: a lossless codec (FLAC, Chapter 50) or lossy codec (MP3/Opus, Chapters 47–49) reads those bytes and shrinks them. The codec's decoder must know the byte layout of the input precisely.
 
-Every step — the 16-bit signed integer, the two-byte little-endian order, the sample rate in the header — is one of the representations we studied today. A compressor that gets any of them wrong silently produces garbage.
+Every step (the 16-bit signed integer, the two-byte little-endian order, the sample rate in the header) is one of the representations we studied today. A compressor that gets any of them wrong silently produces garbage.
 
 #note[
   The choice of 44.1 kHz as the CD sampling rate is itself a compression story. The CD's architects digitized audio onto a modified video signal, and the video frame rate (25 Hz in Europe) times lines per frame times samples per line gave 44.1 kHz almost exactly. The slightly odd rate is a fossil from the transition between analog and digital video. History is full of these compression-driven decisions that got baked into standards forever.
 ]
 
 #takeaways((
-  [A computer's memory is a flat, addressed array of bytes. Every piece of data — integer, float, character, compressed bitstream — is a sequence of bytes at some address.],
+  [A computer's memory is a flat, addressed array of bytes. Every piece of data (integer, float, character, compressed bitstream) is a sequence of bytes at some address.],
   [*Unsigned integers* map $n$ bits to $2^n$ values (0 to $2^n-1$). Overflow wraps silently; always track your integer sizes.],
   [*Two's complement* represents signed integers by reinterpreting the high half of the unsigned range as negative. Negation is "flip bits, add 1." Subtraction uses the same hardware as addition.],
   [*ASCII* encodes 128 English characters in 7 bits. *Unicode* extends this to all human scripts; *UTF-8* encodes Unicode in 1–4 bytes per code point, is backward compatible with ASCII, and is the dominant encoding on the modern web.],
@@ -892,7 +903,7 @@ Every step — the 16-bit signed integer, the two-byte little-endian order, the 
 ]
 
 #solution("13.5")[
-  `0xE2` = `11100010` — starts with `1110`, so this is a 3-byte sequence. Pattern: `1110xxxx 10xxxxxx 10xxxxxx`. Payload bits: from `0xE2` = `0010`; from `0x82` = `000010`; from `0xAC` = `101100`. Concatenate: `0010 000010 101100` = `0010000010101100` = 0x20AC. That is U+20AC = `€`, the Euro sign.
+  `0xE2` = `11100010`, which starts with `1110`, so this is a 3-byte sequence. Pattern: `1110xxxx 10xxxxxx 10xxxxxx`. Payload bits: from `0xE2` = `0010`; from `0x82` = `000010`; from `0xAC` = `101100`. Concatenate: `0010 000010 101100` = `0010000010101100` = 0x20AC. That is U+20AC = `€`, the Euro sign.
 ]
 
 #exercise("13.6", 2)[
@@ -937,7 +948,7 @@ Every step — the 16-bit signed integer, the two-byte little-endian order, the 
 ]
 
 #solution("13.7")[
-  Little-endian: reassemble as `0x00000FFF` = $4095$. Big-endian: reassemble as `0xFF0F0000` = $4,278,517,760$. The same four bytes mean completely different numbers depending on endianness — a good reminder to always check the spec.
+  Little-endian: reassemble as `0x00000FFF` = $4095$. Big-endian: reassemble as `0xFF0F0000` = $4,278,517,760$. The same four bytes mean completely different numbers depending on endianness, a good reminder to always check the spec.
 ]
 
 #exercise("13.8", 3)[
@@ -1007,13 +1018,13 @@ Every step — the 16-bit signed integer, the two-byte little-endian order, the 
 
 == Further reading
 
-- #link("https://www.joelonsoftware.com/2003/10/08/the-absolute-minimum-every-software-developer-absolutely-positively-must-know-about-unicode-and-character-sets-no-excuses/")[Joel Spolsky, "The Absolute Minimum Every Software Developer Absolutely, Positively Must Know About Unicode and Character Sets" (2003)] — the best plain-English introduction to character encoding ever written.
-- #link("https://unicode.org/standard/standard.html")[The Unicode Standard, current version (Unicode 16.0, 2024)] — the authoritative reference for all character assignments, UTF-8/16/32 encoding rules, and normalization.
-- #link("https://ieeexplore.ieee.org/document/8766229")[IEEE 754-2019, *Standard for Floating-Point Arithmetic*] — the normative standard. Free to access through many university libraries.
-- #link("https://floating-point-gui.de/")[Michael Borgwardt, "What Every Programmer Should Know About Floating-Point Arithmetic"] — an excellent web reference on FP pitfalls, rounding, and what `0.1 + 0.2 != 0.3` really means.
-- #link("https://docs.python.org/3/library/struct.html")[Python `struct` module documentation] — the definitive reference for `struct.pack`/`unpack` format strings, covering all integer and float types and both endiannesses.
-- #link("https://commandlinefanatic.com/cgi-bin/showarticle.cgi?article=art001")[Joshua Davies, "How Computers Represent Numbers"] — a clear, deep walkthrough of integer and floating-point formats, suitable for anyone who wants more derivation than this chapter provides.
+- #link("https://www.joelonsoftware.com/2003/10/08/the-absolute-minimum-every-software-developer-absolutely-positively-must-know-about-unicode-and-character-sets-no-excuses/")[Joel Spolsky, "The Absolute Minimum Every Software Developer Absolutely, Positively Must Know About Unicode and Character Sets" (2003)]: the best plain-English introduction to character encoding ever written.
+- #link("https://unicode.org/standard/standard.html")[The Unicode Standard, current version (Unicode 16.0, 2024)]: the authoritative reference for all character assignments, UTF-8/16/32 encoding rules, and normalization.
+- #link("https://ieeexplore.ieee.org/document/8766229")[IEEE 754-2019, *Standard for Floating-Point Arithmetic*]: the normative standard. Free to access through many university libraries.
+- #link("https://floating-point-gui.de/")[Michael Borgwardt, "What Every Programmer Should Know About Floating-Point Arithmetic"]: an excellent web reference on FP pitfalls, rounding, and what `0.1 + 0.2 != 0.3` really means.
+- #link("https://docs.python.org/3/library/struct.html")[Python `struct` module documentation]: the definitive reference for `struct.pack`/`unpack` format strings, covering all integer and float types and both endiannesses.
+- #link("https://commandlinefanatic.com/cgi-bin/showarticle.cgi?article=art001")[Joshua Davies, "How Computers Represent Numbers"]: a clear, deep walkthrough of integer and floating-point formats, suitable for anyone who wants more derivation than this chapter provides.
 
 #bridge[
-  We now know what data *is* at the byte level: the agreements about integers, characters, floats, and byte order that let machines exchange meaning. But we have not yet asked: *how do we process* those bytes efficiently? Chapter 14 — Algorithms, Data Structures, and Complexity — builds the algorithmic toolkit that every compressor relies on: arrays, hash tables, trees, heaps, Big-O analysis, and the pseudocode notation we will use throughout the rest of the book. Once we have those, we will be fully equipped to build our first real compressor in Chapter 24.
+  We now know what data *is* at the byte level: the agreements about integers, characters, floats, and byte order that let machines exchange meaning. But we have not yet asked: *how do we process* those bytes efficiently? Chapter 14 (Algorithms, Data Structures, and Complexity) builds the algorithmic toolkit that every compressor relies on: arrays, hash tables, trees, heaps, Big-O analysis, and the pseudocode notation we will use throughout the rest of the book. Once we have those, we will be fully equipped to build our first real compressor in Chapter 24.
 ]

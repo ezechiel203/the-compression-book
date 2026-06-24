@@ -11,11 +11,11 @@
 ][Phil Katz, 1962–2000]
 
 Imagine you need to mail a book to a friend. You could tear out every page
-and mail each one individually — but the postage would be enormous. Or you
+and mail each one individually, but the postage would be enormous. Or you
 could notice that the same phrases appear over and over again ("the", "and",
 "compression"), write each phrase once at the start of the letter, give it a
 number, and then use those numbers to reconstruct the rest. You have just
-invented — in spirit — DEFLATE.
+invented DEFLATE, in spirit.
 
 DEFLATE is the glue that binds the two biggest ideas in lossless compression:
 dictionary coding (Chapter 28) and entropy coding (Chapter 24). It was designed
@@ -24,9 +24,8 @@ became the compression engine of ZIP, gzip, zlib, PNG, and HTTP. To this day,
 more data passes through DEFLATE than through any other compressor on Earth.
 
 This chapter dissects how DEFLATE works, shows you its three-layer envelope
-(zlib, gzip, ZIP), traces how PNG wraps it for images, and then — as Step 13
-of our running `tinyzip` project — assembles your own working
-gzip-class compressor.
+(zlib, gzip, ZIP), traces how PNG wraps it for images, and then assembles
+your own working gzip-class compressor (Step 13 of the running `tinyzip` project).
 
 #recap[
   In *Chapter 24* we built `huffman.py`, a canonical Huffman encoder that
@@ -45,7 +44,7 @@ gzip-class compressor.
   [Describe what zlib, gzip, ZIP, and PNG each add on top of DEFLATE.],
   [Explain how PNG's pre-filters dramatically improve compression before
    DEFLATE even sees the data.],
-  [Implement `deflate.py` — Step 13 of `tinyzip` — and verify round-trip
+  [Implement `deflate.py` (Step 13 of `tinyzip`) and verify round-trip
    correctness.],
 ))
 
@@ -59,7 +58,7 @@ abracadabra
 
 into a token stream that looks roughly like:
 - `LIT a`, `LIT b`, `LIT r`, `LIT a`, `LIT c`, `LIT a`, `LIT d`,
-  `MATCH(dist=7, len=4)` — meaning "go back 7 positions and copy 4 bytes."
+  `MATCH(dist=7, len=4)`: "go back 7 positions and copy 4 bytes."
 
 That token stream is much shorter than the original, because a single
 MATCH token replaced four bytes. But there is a catch: we still have to
@@ -112,7 +111,7 @@ LZ77 removes cross-phrase redundancy; Huffman removes per-symbol redundancy.
 Together they outperform either alone.
 
 #keyidea[
-  DEFLATE's two-stage approach — LZ77 then Huffman — is not just historical
+  DEFLATE's two-stage approach (LZ77 then Huffman) is not mere historical
   convenience. It attacks two *orthogonal* sources of redundancy. LZ77 handles
   *repetition* (the same phrase appearing multiple times). Huffman handles
   *frequency skew* (some bytes or match patterns being far more common than
@@ -124,16 +123,16 @@ Together they outperform either alone.
 A DEFLATE stream is divided into *blocks*. Each block begins with a 3-bit
 header:
 
-- 1 bit: BFINAL — is this the last block?
-- 2 bits: BTYPE — 00 = stored, 01 = fixed Huffman, 10 = dynamic Huffman,
+- 1 bit: BFINAL (is this the last block?)
+- 2 bits: BTYPE: 00 = stored, 01 = fixed Huffman, 10 = dynamic Huffman,
   11 = reserved (error).
 
 This block structure gives the compressor enormous flexibility.
 
 === Stored Blocks (BTYPE = 00)
 
-Sometimes the data is already incompressible — encrypted bytes, random data,
-or already-compressed files. Trying to compress random bytes with Huffman
+Sometimes the data is already incompressible (encrypted bytes, random data,
+or already-compressed files). Trying to compress random bytes with Huffman
 actually *expands* them slightly (because the Huffman table itself takes space).
 In that case, DEFLATE emits a *stored block*: the raw bytes, completely
 uncompressed, preceded by a 16-bit length and its one's complement (a simple
@@ -170,7 +169,7 @@ the block. The encoder:
 2. Builds two optimal Huffman trees from those counts (using the algorithm
    from Chapter 24).
 3. Converts each tree to its *code-length sequence* (just the bit-lengths,
-   not the actual codes — because canonical Huffman, Chapter 24, recovers
+   not the actual codes, because canonical Huffman, Chapter 24, recovers
    the codes from the lengths alone).
 4. Compresses the code-length sequences themselves with a *third* Huffman code
    (the "code-length code") to save space.
@@ -189,7 +188,7 @@ is one of the most elegant compression tricks in the standard.
 
 == The 32 KB Window: A Decision That Shaped the World
 
-LZ77 match finding is bounded by a *sliding window* — a buffer of recently
+LZ77 match finding is bounded by a *sliding window*, a buffer of recently
 seen bytes. The further back you can look, the longer the matches you can
 find. But a larger window requires:
 
@@ -204,8 +203,8 @@ DEFLATE distance code table (30 codes covering distances 1 to 32 768).
 
 The 32 KB window became a ceiling and a floor simultaneously. Files longer than
 32 KB can still compress well because patterns *within* a 32 KB window repeat
-frequently enough. But extremely long-range patterns — the same boilerplate
-text appearing 100 KB apart — are invisible to DEFLATE. This is one of DEFLATE's
+frequently enough. But extremely long-range patterns (the same boilerplate
+text appearing 100 KB apart) are invisible to DEFLATE. This is one of DEFLATE's
 chief structural weaknesses compared to LZMA (Chapter 31), which uses windows
 up to gigabytes.
 
@@ -216,15 +215,16 @@ up to gigabytes.
   DEFLATE specification in the public domain, deliberately forgoing patents.
   His PKZIP software distributed his ideas to millions of DOS users, and his
   decision to keep the algorithm unencumbered allowed DEFLATE to propagate into
-  gzip (1992), zlib (1995), PNG (1996), and HTTP — making it arguably the most
-  impactful single decision in the history of data compression. Phil Katz died
-  on April 14, 2000, at age 37, from complications of alcoholism.
+  gzip (1992), zlib (1995), PNG (1996), and HTTP. That decision to keep the
+  algorithm unencumbered is arguably the most impactful single choice in the
+  history of data compression. Phil Katz died on April 14, 2000, at age 37,
+  from complications of alcoholism.
 ]
 
 == Hash Chain Match Finding
 
 How does a DEFLATE encoder find the best match in 32 KB of previous data
-efficiently? A naive search would take $O(n times w)$ time — for each new
+efficiently? A naive search would take $O(n times w)$ time: for each new
 byte, scan all 32 KB. That's far too slow.
 
 The standard solution is a *hash chain*. The encoder maintains:
@@ -238,7 +238,7 @@ When processing position $i$, the encoder:
 
 1. Computes the hash of the 3-byte string at position $i$.
 2. Looks up the hash table to find the *most recent* position $j$ that had
-   the same hash (i.e., the same 3 bytes — a potential match).
+   the same hash (i.e., the same 3 bytes, which is a potential match).
 3. Follows the chain back from $j$ to find older positions with the same hash,
    testing each to find the longest actual match.
 4. Stops after checking a configurable number of positions (the "max chain
@@ -289,14 +289,14 @@ extra computation.
 
     rect((3.5, 1.5), (6.5, 2.5), fill: rgb("#d4edda"), stroke: 0.7pt)
     content((5.0, 2.1), text(size: 7.5pt)[LZ77])
-    content((5.0, 1.7), text(size: 7pt)[hash-chain, 32 KB])
+    content((5.0, 1.7), box(width: 2.4cm, align(center, text(size: 7pt)[hash-chain, 32 KB])))
 
     line((6.5, 2.0), (7.5, 2.0), mark: (end: ">"))
     content((7.0, 2.3), text(size: 7pt)[tokens])
 
     rect((7.5, 1.5), (10.5, 2.5), fill: rgb("#fff3cd"), stroke: 0.7pt)
     content((9.0, 2.1), text(size: 7.5pt)[Huffman])
-    content((9.0, 1.7), text(size: 7pt)[lit/len + dist codes])
+    content((9.0, 1.7), box(width: 2.4cm, align(center, text(size: 7pt)[lit/len + dist])))
 
     line((10.5, 2.0), (11.5, 2.0), mark: (end: ">"))
 
@@ -305,7 +305,7 @@ extra computation.
 
     // Block header
     rect((3.5, 0.3), (10.5, 1.0), fill: rgb("#f0f0f0"), stroke: (dash: "dashed", paint: gray, thickness: 0.5pt))
-    content((7.0, 0.65), text(size: 7.5pt)[Block header (3 bits): BFINAL + BTYPE (stored / fixed / dynamic)])
+    content((7.0, 0.65), box(width: 6.0cm, inset: 2pt, align(center, text(size: 7pt)[Block header (3 bits): BFINAL + BTYPE (stored / fixed / dynamic)])))
   })
 )
 
@@ -363,22 +363,22 @@ to read the directory when extracting.
 
 Each file in a ZIP archive can be independently stored or DEFLATE-compressed.
 Because files are compressed separately, you cannot exploit repetition across
-files — a trade-off accepted for the ability to extract individual files
+files. This is a trade-off: you gain the ability to extract individual files
 without decompressing the whole archive.
 
 === PNG (RFC 2083 / ISO 15948)
 
 PNG uses zlib (not raw DEFLATE) to compress pixel data. But before zlib even
-sees the bytes, PNG applies a *filter* to each row of pixels. This is the
-secret weapon that makes PNG dramatically better than a naive "compress the raw
-pixels" approach — and it deserves its own section.
+sees the bytes, PNG applies a *filter* to each row of pixels. This pre-filter
+is what makes PNG dramatically better than a naive "compress the raw
+pixels" approach. It deserves its own section.
 
 == PNG Filters: Turning Pixels into Residuals
 
 A natural image is highly spatially correlated. The color of pixel $(x, y)$
 is usually very close to the colors of its neighbors. Raw pixel values span
-0–255 with a nearly uniform distribution — hard to compress. But *differences*
-between neighboring pixels cluster tightly around zero — easy to compress.
+0–255 with a nearly uniform distribution, which is hard to compress. *Differences*
+between neighboring pixels, however, cluster tightly around zero, which compresses easily.
 
 PNG applies one of five *pre-filters* to each row, converting pixel values
 to prediction residuals before passing them to zlib:
@@ -519,15 +519,15 @@ Let's compress a tiny 6-byte string, `"banana"`, step by step through DEFLATE.
 
 *Step 1: LZ77 tokenization.* (Recall Chapter 28.)
 
-Position 0: `b` — no match yet. Emit LIT `b`.
-Position 1: `a` — no match of length >= 3. Emit LIT `a`.
-Position 2: `n` — no match. Emit LIT `n`.
-Position 3: `a` — match at position 1 (`a`), but length only 1. LZ77 requires
+Position 0: `b` - no match yet. Emit LIT `b`.
+Position 1: `a` - no match of length >= 3. Emit LIT `a`.
+Position 2: `n` - no match. Emit LIT `n`.
+Position 3: `a` - match at position 1 (`a`), but length only 1. LZ77 requires
 minimum match length 3. Emit LIT `a`.
-Position 4: `n` — match at position 2 (`n`), length 1. Emit LIT `n`.
-Position 5: `a` — match at position 1 (`a`), length 1. Emit LIT `a`.
+Position 4: `n` - match at position 2 (`n`), length 1. Emit LIT `n`.
+Position 5: `a` - match at position 1 (`a`), length 1. Emit LIT `a`.
 
-Hmm — "banana" has no length-3 repeating substrings, so no matches fire.
+"Banana" has no length-3 repeating substrings, so no matches fire.
 Token stream: `LIT b, LIT a, LIT n, LIT a, LIT n, LIT a, EOB`.
 
 *Step 2: Huffman coding (using fixed codes for simplicity).*
@@ -580,11 +580,11 @@ in the LZ77 match-finding strategy; the decoder is always the same.
   [LZ77-only (Chapter 28)], [44 200], [2.32x], [No Huffman; byte-aligned tokens],
 )
 
-Notice: the combination of LZ77 + Huffman (DEFLATE level 6) beats either
-alone by a meaningful margin. And *zopfli* — a 2013 Google project that finds
-the *optimal* (not greedy) LZ77 parse — squeezes out a further 5% at the cost
-of being roughly 100 times slower to encode. The same bit stream format; just
-better choices of where to place match boundaries.
+The combination of LZ77 + Huffman (DEFLATE level 6) beats either stage alone
+by a meaningful margin. *Zopfli*, a 2013 Google project that finds the
+*optimal* (rather than greedy) LZ77 parse, squeezes out a further 5% at the
+cost of being roughly 100 times slower to encode. The bit stream format is
+identical; what changes is the choice of where to place match boundaries.
 
 #algo(
   name: "DEFLATE",
@@ -631,13 +631,13 @@ better choices of where to place match boundaries.
   the entropy from ~7 bits/byte to ~3 bits/byte before DEFLATE sees a byte.
 ]
 
-== Step 13 — tinyzip's DEFLATE Module
+== Step 13: tinyzip's DEFLATE Module
 
 Chapter 28 gave us `lz77.py` with `parse()` and a `Token` dataclass
 (`is_match`, `literal`, `distance`, `length`). Chapter 24 gave us `huffman.py`
 with `build_tree()`, `code_lengths()`, and `canonical_codes()`. Chapter 17 gave
 us `bitio.py` with `BitWriter` and `BitReader`. It's time to snap them all
-together — importing each by its exact name, renaming nothing.
+together, importing each by its exact name, renaming nothing.
 
 #pyrecall[
   `Counter` (from the `collections` module, Chapter 16) is a `dict` purpose-built
@@ -646,7 +646,7 @@ together — importing each by its exact name, renaming nothing.
   appears, which is exactly the frequency table `build_tree()` consumes.
 ]
 
-#project("Step 13 · deflate.py — LZ77 + Huffman → method=\"deflate\"")[
+#project("Step 13 · deflate.py: LZ77 + Huffman → method=\"deflate\"")[
 
 This step adds `tinyzip/deflate.py`. We implement a simplified but correct
 DEFLATE-class compressor: it uses the token stream from `lz77.parse()` and
@@ -658,7 +658,7 @@ compression quality and perfectly round-trips.
 
 ```python
 """
-tinyzip/deflate.py  —  Step 13
+tinyzip/deflate.py  -  Step 13
 LZ77 + Huffman = deflate-class compression.
 method identifier: "deflate"
 
@@ -858,14 +858,14 @@ python -m tinyzip.deflate
 You should see output like (exact byte counts depend on the LZ77 parse and the
 naive table serialization):
 ```
-    11 ->     36 bytes  (0.31x)  ok    # "abracadabra" — too small to compress
+    11 ->     36 bytes  (0.31x)  ok    # "abracadabra" - too small to compress
   3960 ->    142 bytes  (27.89x) ok    # repeated sentence
   1000 ->     25 bytes  (40.00x) ok    # all-zero bytes
    600 ->     52 bytes  (11.54x) ok    # repeated "hello world"
 All self-tests passed.
 ```
 
-Note the first sample *expands* — as we computed by hand earlier, very short
+Note the first sample *expands*. As we computed by hand earlier, very short
 or random inputs always expand under DEFLATE (the two transmitted Huffman
 tables alone cost more than the saved bits). The repeated sentences and null
 bytes compress dramatically.
@@ -889,7 +889,7 @@ Now `python -m tinyzip compress myfile.txt --method deflate` works end-to-end.
 ]
 
 #gopython("Dataclasses and the Token Type")[
-  In `lz77.py` from Chapter 28, `Token` is a Python *dataclass* — a class
+  In `lz77.py` from Chapter 28, `Token` is a Python *dataclass*: a class
   that automatically generates `__init__`, `__repr__`, and `__eq__` from
   field annotations. Its exact shape (identical to Chapter 28) is:
 
@@ -908,8 +908,8 @@ Now `python -m tinyzip compress myfile.txt --method deflate` works end-to-end.
   `tok.distance`, `tok.length`. The `@dataclass` decorator is shorthand for
   writing the boilerplate `__init__` yourself. Our `deflate.py` checks
   `tok.is_match` to decide whether to emit a literal symbol or a
-  length-plus-distance pair — exactly the fields Chapter 28 defined, reused
-  without renaming.
+  length-plus-distance pair. These are exactly the fields Chapter 28 defined,
+  reused without renaming.
 ]
 
 == Compression Effectiveness: Before and After
@@ -923,13 +923,13 @@ running scoreboard on our standard 100 KB English text sample:
   [Arithmetic coding (Ch 26)], [55 200], [1.86x], [Closer to entropy; still no LZ77],
   [rANS (Ch 27)], [55 100], [1.86x], [Same entropy, faster encode],
   [LZ77 only (Ch 28)], [44 200], [2.32x], [Match finder, byte-aligned output],
-  [DEFLATE — level 1 (Ch 30)], [52 300], [1.96x], [LZ77+Huffman; fast chain],
-  [DEFLATE — level 6 (Ch 30)], [39 800], [2.57x], [Default; lazy matching],
+  [DEFLATE, level 1 (Ch 30)], [52 300], [1.96x], [LZ77+Huffman; fast chain],
+  [DEFLATE, level 6 (Ch 30)], [39 800], [2.57x], [Default; lazy matching],
 )
 
 The jump from LZ77 alone (44 200 bytes) to DEFLATE level 6 (39 800 bytes)
-shows the Huffman stage removing ~10% more — by squeezing fractional bits
-from each match token that LZ77 left byte-aligned. And DEFLATE level 6 beats
+shows the Huffman stage removing ~10% more, by squeezing fractional bits
+from each match token that LZ77 left byte-aligned. DEFLATE level 6 also beats
 Huffman-only by 31%, because LZ77 removes repetition that Huffman cannot touch.
 The combination wins.
 
@@ -938,15 +938,15 @@ The combination wins.
 The following numbers give a sense of DEFLATE's real-world footprint as of 2026:
 
 - *HTTP traffic:* According to the HTTP Archive's 2025 Web Almanac, over 80%
-  of all HTTP responses are served with a content encoding — and of those,
+  of all HTTP responses are served with a content encoding. Of those,
   gzip accounts for roughly 60%, Brotli 35%, and zstd under 5% (though zstd
   is growing fast as CDN support expands). DEFLATE (inside gzip) still
   carries the majority of the web's compressed bytes.
 - *ZIP archives:* The ZIP format (DEFLATE method 8) is the default archive
   format on Windows, macOS, and most Linux distros for user-facing archives.
   Billions of ZIP files exist.
-- *PNG images:* Every PNG file — every screenshot on every platform, every
-  Wikipedia image marked lossless, every UI mockup — uses DEFLATE internally.
+- *PNG images:* Every PNG file uses DEFLATE internally: every screenshot on
+  every platform, every Wikipedia image marked lossless, every UI mockup.
   PNG is the 3rd most common image format on the web (after JPEG and AVIF
   in 2025/2026).
 - *libdeflate:* The fastest DEFLATE decoder, libdeflate (Eric Biggers),
@@ -958,8 +958,8 @@ The following numbers give a sense of DEFLATE's real-world footprint as of 2026:
   to pre-compress static web assets.
 
 #aside[
-  The zlib library — the canonical DEFLATE implementation, written by
-  Jean-loup Gailly and Mark Adler — was released in May 1995. It is arguably
+  The zlib library, the canonical DEFLATE implementation written by
+  Jean-loup Gailly and Mark Adler, was released in May 1995. It is arguably
   the single most widely deployed piece of compression software in history:
   it ships in Python's standard library, in every major web server, in the
   Linux kernel, in iOS, Android, and virtually every embedded system. The
@@ -1004,11 +1004,11 @@ DEFLATE is excellent but not always the right tool:
 
 == Further Reading
 
-- #link("https://www.rfc-editor.org/rfc/rfc1951.txt")[RFC 1951 — DEFLATE Compressed Data Format] (Peter Deutsch, 1996).
+- #link("https://www.rfc-editor.org/rfc/rfc1951.txt")[RFC 1951: DEFLATE Compressed Data Format] (Peter Deutsch, 1996).
   The authoritative specification. Short and readable.
-- #link("https://www.rfc-editor.org/rfc/rfc1952.txt")[RFC 1952 — gzip format] (Deutsch, 1996).
+- #link("https://www.rfc-editor.org/rfc/rfc1952.txt")[RFC 1952: gzip format] (Deutsch, 1996).
   Specifies the gzip wrapper around DEFLATE.
-- #link("https://www.rfc-editor.org/rfc/rfc1950.txt")[RFC 1950 — zlib format] (Deutsch & Gailly, 1996).
+- #link("https://www.rfc-editor.org/rfc/rfc1950.txt")[RFC 1950: zlib format] (Deutsch & Gailly, 1996).
   The zlib wrapper with Adler-32.
 - #link("https://www.w3.org/TR/png/")[PNG Specification 1.2] (W3C, 2004).
   The definitive PNG reference; especially section 9 on filter algorithms.
@@ -1026,14 +1026,15 @@ DEFLATE is excellent but not always the right tool:
    Huffman (fast, no table transmission), and dynamic Huffman (optimal per-block).],
   [The 32 KB sliding window was a deliberate 1991 engineering tradeoff; it
    limits long-range matches but kept DEFLATE fast on contemporary hardware.],
-  [Hash chains make LZ77 match finding O(n·c) instead of O(n·w), enabling
-   practical encoding speeds with tunable quality levels.],
+  [Hash chains reduce LZ77 match finding from O(n·w) to O(n·c), which is
+   what makes practical encoding speeds with tunable quality levels possible.],
   [zlib, gzip, ZIP, and PNG are four different wrappers around the same
    DEFLATE engine; they differ in headers, checksums, and container structure.],
   [PNG's per-row prediction filters (Sub, Up, Average, Paeth) can halve pixel
-   entropy before DEFLATE sees a byte — the biggest reason PNG is good at images.],
-  [Phil Katz placed DEFLATE in the public domain, enabling its spread into
-   every corner of computing; contrast with LZW (Chapter 29), which was
+   entropy before DEFLATE sees a byte. That pre-filtering is the biggest reason
+   PNG is good at images.],
+  [Phil Katz placed DEFLATE in the public domain; that decision let it spread
+   into every corner of computing. Contrast with LZW (Chapter 29), which was
    patented and created the GIF licensing crisis.],
   [DEFLATE remains the world's most deployed compressor by traffic volume,
    even in 2026; for higher ratios use LZMA (Chapter 31) or zstd (Chapter 32).],
@@ -1066,7 +1067,7 @@ DEFLATE is excellent but not always the right tool:
   According to RFC 1952, if `FNAME` is set, the original filename appears
   immediately after the 10-byte fixed gzip header (and after any extra fields
   if `FEXTRA` is also set). The filename is stored as a null-terminated C
-  string — raw ISO-8859-1 bytes followed by a `0x00` byte. The decoder reads
+  string: raw ISO-8859-1 bytes followed by a `0x00` byte. The decoder reads
   bytes until the null and may use the filename to restore the original file
   name on extraction.
 ]
@@ -1088,9 +1089,9 @@ DEFLATE is excellent but not always the right tool:
     `t h e   c a t   s a t   o n  `.
   - Position 15: "the " matches position 0, length 4.
     → MATCH(dist=15, len=4).
-  - Position 19: "mat" — 'm' at 19 is new, emit LIT m.
-  - Position 20: "at" — only 2 chars; too short. Emit LIT a.
-  - Position 21: "t" — LIT t.
+  - Position 19: "mat" - 'm' at 19 is new, emit LIT m.
+  - Position 20: "at" - only 2 chars; too short. Emit LIT a.
+  - Position 21: "t" - LIT t.
 
   Full stream: `LIT(t) LIT(h) LIT(e) LIT( ) LIT(c) LIT(a) LIT(t) LIT( )
   LIT(s) LIT(a) LIT(t) LIT( ) LIT(o) LIT(n) LIT( ) MATCH(15,4) LIT(m)
@@ -1117,7 +1118,7 @@ DEFLATE is excellent but not always the right tool:
   $|C - p| = |95 - 115| = 20$.
   Minimum is $|B - p| = 5$, so predictor picks $hat(P) = B = 110$.
   Residual $= P - hat(P) = 108 - 110 = -2 equiv 254 space (mod 256)$.
-  The byte `254` is written to the filtered row. (Decoded as $110 + 254 mod 256 = 108$ — correct.)
+  The byte `254` is written to the filtered row. (Decoded as $110 + 254 mod 256 = 108$, which recovers the original pixel value.)
 ]
 
 #exercise("30.5", 2)[
@@ -1137,7 +1138,7 @@ DEFLATE is excellent but not always the right tool:
   region (e.g., pixel values ~220), the Up predictor gives a residual of
   ~190 (large), while the Sub predictor uses the left neighbor (still dark)
   and gives a residual of ~190 too. In this case, No-filter may actually be
-  the best choice — the residuals are large regardless, so we save the overhead
+  the best choice. The residuals are large regardless, so we save the overhead
   of the filter computation. Paeth handles the transition best when the edge
   is diagonal, because it picks $C$ (upper-left, from the dark side) only
   when no other neighbor is closer to the gradient estimate.
@@ -1158,7 +1159,7 @@ DEFLATE is excellent but not always the right tool:
   not transmitted.
 
   Advantages: (1) Canonical codes are uniquely determined by lengths, so no
-  code values need to be transmitted — saving up to 12 bits per symbol. (2)
+  code values need to be transmitted, saving up to 12 bits per symbol. (2)
   Run-length coding of the length sequence reduces the table overhead from
   ~300 bytes to ~50–100 bytes. (3) Code-length ordering (the HCLEN table)
   lets the most common code lengths be represented in just 3 bits each.
@@ -1224,9 +1225,9 @@ DEFLATE is excellent but not always the right tool:
 #bridge[
   DEFLATE is the most-deployed compressor ever, but its 32 KB window and
   Huffman entropy stage leave real compression on the table. In *Chapter 31*
-  we meet LZMA — the engine of 7-Zip and `.xz` tarballs — which trades
-  speed for a window measured in *gigabytes*, a range coder instead of
-  Huffman, and per-byte context models that Huffman cannot match. We'll also
-  examine the 2024 xz-utils backdoor: a supply-chain attack hidden in a
-  compression library that nearly compromised the world's Linux servers.
+  we meet LZMA, the engine of 7-Zip and `.xz` tarballs. It trades speed for
+  a window measured in *gigabytes*, a range coder instead of Huffman, and
+  per-byte context models that Huffman cannot match. We'll also examine the
+  2024 xz-utils backdoor: a supply-chain attack hidden in a compression
+  library that nearly compromised the world's Linux servers.
 ]

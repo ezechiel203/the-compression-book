@@ -3,9 +3,9 @@
 #show: book.with(
   title: "The Compression Book",
   subtitle: "A Complete History and Technical Treatise on Data Compression",
-  author: "Compiled by a Multi-Agent Research Workflow",
+  author: "Alexandre Betry, M.D., M.Sc. C.S.",
   date: "June 2026 Edition",
-  volume: "Volume III — Lossy and Perceptual Media Compression",
+  volume: "Volume III - Lossy and Perceptual Media Compression",
 )
 
 #pagebreak(weak: true)

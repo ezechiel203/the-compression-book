@@ -60,11 +60,11 @@ main-vol{1..5}.typ per-volume document entry points
 web/site/          the built website (HTML, CSS, PDFs)
 ```
 
-## How it was made
+## About
 
-Authored by a multi-agent research workflow (mixed Opus/Sonnet drafting in throttled batches,
-followed by a full Opus audit/expand pass over every chapter for the *nothing-unexplained*
-invariant, cross-chapter articulation, and `tinyzip` consistency), typeset with Typst.
+Written and typeset by Alexandre Betry (M.D., M.Sc. C.S.) using Typst. The guiding rule
+throughout is that nothing is used before it is explained, so the book builds the reader up
+from a 9th-grade starting point to working expertise, one chapter at a time.
 
 ## License
 

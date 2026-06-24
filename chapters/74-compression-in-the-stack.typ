@@ -4,14 +4,14 @@
 = Compression in the Stack
 
 #epigraph[
-  "The network is the computer — and compression is the oil that keeps it running."
+  "The network is the computer, and compression is the oil that keeps it running."
 ][Jim Gray, Microsoft Research, circa 2000]
 
 Here is something that might surprise you: compression is not a thing you ever
 consciously choose to turn on. You didn't tick a box when you opened this book's
 PDF, you didn't configure anything when your phone downloaded its last app update,
 and you certainly didn't flip a switch before your browser fetched a web page this
-morning. Compression was already there — invisible, automatic, working at every
+morning. Compression was already there: invisible, automatic, working at every
 layer of the stack simultaneously.
 
 What does "the stack" mean? Engineers use that word to describe the layers
@@ -20,17 +20,17 @@ to the moment it arrives in your eyes or ears. A web page, for example,
 travels through a database, a server application, an HTTP response, a CDN
 edge node, a TLS session, a TCP stream, a router, a Wi-Fi radio, an operating
 system, a browser, and finally a display. Compression is silently active at
-several of those layers all at once — body content compressed by Brotli,
+several of those layers all at once: body content compressed by Brotli,
 headers compressed by QPACK, filesystem blocks compressed by Btrfs,
 swap pages compressed by zram in RAM.
 
-In Chapters 28 through 36 you learned the algorithms — LZ77, Huffman,
-Brotli, zstd, the BWT. In Chapter 73 you saw how to engineer them to run
+In Chapters 28 through 36 you learned the algorithms (LZ77, Huffman,
+Brotli, zstd, the BWT). In Chapter 73 you saw how to engineer them to run
 fast. This chapter zooms out from the algorithm and asks: where in real
 deployed systems does compression actually live, who put it there, and what
 does it buy? By the end you will be able to answer a systems-design interview
 question like "how does compression work end-to-end in a CDN" with real
-precision — and you will know which layer is doing what and why.
+precision, and you will know which layer is doing what and why.
 
 #recap[
   In *Chapter 28* we built the LZ77 sliding-window match finder; in *Chapter 30*
@@ -64,7 +64,7 @@ Host: example.com
 Accept-Encoding: gzip, deflate, br, zstd
 ```
 
-That fourth line — `Accept-Encoding` — is the browser announcing to the
+That fourth line, `Accept-Encoding`, is the browser announcing to the
 server: "I can decode gzip, deflate, Brotli (br), or Zstandard (zstd).
 Pick one." The server looks at that list, picks the best algorithm it
 supports, compresses the response body, and replies:
@@ -98,8 +98,8 @@ delivered compressed content since the 1990s.
   HTTP/1.0 and standardized in RFC 1952 (1996). For nearly two decades
   it was the only compression option any web server or browser actually
   used in practice. Deflate (`Content-Encoding: deflate`) was also
-  defined but was notoriously broken — different servers had subtly
-  incompatible implementations of what "deflate" even meant — so browsers
+  defined but was notoriously broken (different servers had subtly
+  incompatible implementations of what "deflate" even meant), so browsers
   learned to ignore it. If you look at server logs from 2005 or 2010, you
   will see gzip everywhere and almost nothing else.
 ]
@@ -110,7 +110,7 @@ Today there are three algorithms that real browsers and servers negotiate:
 gzip, Brotli, and Zstandard. Let us meet each one.
 
 *gzip* (RFC 1952, 1996) is the veteran. Under the hood it is DEFLATE
-with a two-byte magic number and a checksum wrapped around it — the same
+with a two-byte magic number and a checksum wrapped around it: the same
 DEFLATE we implemented in Chapter 30. Every browser, every server, every
 CDN in the world supports it. Its weakness is age: it was designed for
 1990s CPUs and 1990s network speeds, and modern alternatives can compress
@@ -119,8 +119,8 @@ CDN in the world supports it. Its weakness is age: it was designed for
 *Brotli* (RFC 7932, July 2016) was designed at Google by Jyrki Alakuijala
 and Zoltán Szabadka, originally in 2013 to shrink font files (`.woff2`)
 for the web. They noticed something gzip does not exploit: a huge fraction
-of web content — HTML tags, CSS property names, JavaScript keywords, common
-words in any language — recurs in *exactly the same byte sequences* across
+of web content (HTML tags, CSS property names, JavaScript keywords, common
+words in any language) recurs in *exactly the same byte sequences* across
 billions of web pages. So they built a *static dictionary* of roughly 13,500
 common strings (122 kilobytes of lookup table) and baked it permanently into
 the algorithm. Every Brotli decoder on earth already knows the word
@@ -137,23 +137,23 @@ budget for web content.
   it costs only 2. A *static dictionary* is exactly that pre-agreed codebook,
   permanently built into both the compressor and the decompressor. Because
   you never have to transmit the dictionary itself, every byte saved is
-  pure win — there is no startup cost. The downside: the dictionary only
+  pure win: there is no startup cost. The downside: the dictionary only
   helps if the actual data contains those exact strings, which is why
   Brotli's dictionary was carefully chosen from a crawl of the real web.
 ]
 
 *Zstandard* (RFC 8878, February 2021) was written by Yann Collet at Facebook
 (now Meta) and open-sourced in August 2016. You already know its internals
-from *Chapter 32* (The Modern Frontier) — it combines LZ77 matching with the
+from *Chapter 32* (The Modern Frontier); it combines LZ77 matching with the
 ANS entropy coder we built in *Chapter 27*, and
 as Chapter 73 showed, it decompresses at multi-gigabyte-per-second rates.
 For HTTP it sits between gzip and Brotli on ratio (roughly 10–12% better than
-gzip, a little behind Brotli) but compresses *much* faster — ideal for
+gzip, a little behind Brotli) but compresses *much* faster, which makes it ideal for
 dynamic pages that are generated per-request and cannot be pre-compressed.
 Chrome added zstd to `Accept-Encoding` in Chrome 123 (March 2024);
 Firefox followed in version 126 (May 2024). By mid-2026, according to
 the HTTP Archive Web Almanac, CDNs handled roughly 46% of requests with
-Brotli, 42% with gzip, and 12% with Zstandard — and the Zstandard share
+Brotli, 42% with gzip, and 12% with Zstandard. The Zstandard share
 is rising fast.
 
 #algo(
@@ -168,7 +168,7 @@ is rising fast.
   The negotiation is stateless: each request independently advertises what
   the client supports; each response independently declares what was applied.
   A CDN can serve pre-compressed Brotli to Chrome while serving gzip to an
-  older device that doesn't support Brotli — all from the same origin file.
+  older device that doesn't support Brotli, all from the same origin file.
 ]
 
 === Pre-compression vs. On-the-Fly Compression
@@ -180,8 +180,8 @@ pre-compressed `/app.js.br` from disk and streams it. This is fast and
 allows using the slowest, highest-quality Brotli level (level 11),
 because the CPU cost is paid once during build, not per request.
 
-For *dynamic* content — a user's news feed, a search result page, an API
-response — the server must compress in real time, because the bytes are
+For *dynamic* content (a user's news feed, a search result page, an API
+response), the server must compress in real time, because the bytes are
 different for every user. Here Brotli's slow encoder at high quality becomes
 a liability, because level-11 Brotli can be 50–100× slower than gzip.
 The common practice is to use Brotli at level 4–6 for dynamic content
@@ -192,7 +192,7 @@ ratio at much higher speed.
   *Rule of thumb for web compression:* use maximum-quality Brotli for
   static assets (build once, serve forever); use Zstandard or medium-quality
   Brotli for dynamic content (must compress in milliseconds per request).
-  Never serve uncompressed text — even gzip is a dramatic win over nothing.
+  Never serve uncompressed text; even gzip is a dramatic win over nothing.
 ]
 
 === The Compression Dictionary Transport: The 2024–2025 Frontier
@@ -200,10 +200,10 @@ ratio at much higher speed.
 In 2024–2025 the IETF standardized two companion documents that make Brotli
 and Zstandard even more powerful for the web:
 
-- *RFC 9841 — Shared Brotli Compressed Data Format* (2025): defines a
+- *RFC 9841 (Shared Brotli Compressed Data Format, 2025)*: defines a
   variant of Brotli that accepts an *external* dictionary, not just the built-in
   one. The dictionary can be anything both client and server have agreed on.
-- *RFC 9842 — Compression Dictionary Transport* (2025): defines the HTTP headers
+- *RFC 9842 (Compression Dictionary Transport, 2025)*: defines the HTTP headers
   to negotiate which dictionary to use. A server can designate `/framework-v3.js`
   as a dictionary; when it ships `/framework-v3.1.js`, the delta can be encoded
   relative to the previous version, achieving ratios close to binary diffing.
@@ -212,7 +212,7 @@ and Zstandard even more powerful for the web:
 The new content-encoding tokens are `dcb` (dictionary-compressed Brotli) and
 `dcz` (dictionary-compressed Zstandard). For versioned web app bundles that
 change only slightly between deploys, savings of 60–80% over ordinary Brotli
-have been reported — essentially applying the binary diffing ideas from
+have been reported. This is essentially the binary diffing idea from
 Chapter 71 directly inside the HTTP layer.
 
 #checkpoint[
@@ -229,8 +229,8 @@ Chapter 71 directly inside the HTTP layer.
 == Compressing Headers: HPACK and QPACK
 
 So far we have compressed the *body* of HTTP responses. But HTTP also has
-*headers* — those lines like `Content-Type`, `Set-Cookie`, `Authorization`,
-`Cache-Control` — and for many requests, headers are larger than the body.
+*headers* (those lines like `Content-Type`, `Set-Cookie`, `Authorization`,
+`Cache-Control`), and for many requests, headers are larger than the body.
 An API call that returns `{"ok": true}` has maybe 10 bytes of body but
 600 bytes of headers. `Content-Encoding` only covers the body.
 
@@ -239,11 +239,11 @@ An API call that returns `{"ok": true}` has maybe 10 bytes of body but
 HTTP/1.1 sends headers as plain ASCII text, request after request. A site
 that needs 20 HTTP requests to load a page sends the same cookie header
 20 times. The same `Accept-Language: en-US,en;q=0.9` header, byte for byte,
-on every single request. This redundancy is glaring — but HTTP/1.1 has no
+on every single request. This redundancy is glaring, yet HTTP/1.1 has no
 mechanism to compress it.
 
 There was a proposal called SPDY (Google, 2012) that used zlib deflate on
-headers — and it had to be *removed* because of a compression-based side-channel
+headers, but it had to be *removed* because of a compression-based side-channel
 attack called *CRIME* (Compression Ratio Info-leak Made Easy, 2012). When
 an attacker can inject data into a compressed stream alongside a secret (like
 a cookie), measuring how much the compressed output *shrinks* leaks information
@@ -256,7 +256,7 @@ real cookie sitting in the same compressed buffer, so LZ77 replaces the
 duplicate with a short back-reference and the response gets a byte or two
 *smaller*. If the attacker injects `token=X` (a wrong guess), there is no
 match and the output stays larger. By watching the encrypted response *length*
-shrink or not, the attacker reads the secret out one character at a time —
+shrink or not, the attacker reads the secret out one character at a time,
 without ever decrypting anything. Compressing headers alongside secret data
 turned out to be dangerous.
 
@@ -272,14 +272,14 @@ dictionary-based scheme with two tables:
 *The static table* is a pre-defined list of 61 common header name+value
 pairs, numbered 1–61: entry 2 is `:method: GET`, entry 6 is `:scheme: https`,
 entry 32 is `content-type: application/json`. A whole header can be
-represented as a single 1-byte index. No compression at all is needed —
+represented as a single 1-byte index. No compression is needed at all:
 the receiver already knows what that byte means.
 
 *The dynamic table* is a per-connection list that grows as new headers
 are transmitted. The first time the server sends `set-cookie: session=abc123`,
 HPACK adds it to the dynamic table. The *second* time that same header
 appears (even in a different response), the server sends only the dynamic
-table index — one or two bytes instead of dozens.
+table index, one or two bytes instead of dozens.
 
 The design avoids CRIME because HPACK uses *explicit indexing*, not
 context-based compression. An attacker watching compressed output sees
@@ -290,10 +290,10 @@ before RFC 7541 was published in May 2015.
 #algo(
   name: "HPACK",
   year: "2015",
-  authors: "Roberto Peon, Hervé Ruellan — RFC 7541",
+  authors: "Roberto Peon, Hervé Ruellan (RFC 7541)",
   aim: "Compress HTTP/2 headers using a stateful indexed table, avoiding the CRIME vulnerability that broke DEFLATE-based header compression.",
   strengths: "Very low overhead per header on subsequent requests; resistant to compression side-channels; simple to implement.",
-  weaknesses: "Stateful — the encoder and decoder must maintain synchronized dynamic tables, requiring reliable ordered delivery (TCP); breaks under packet reordering.",
+  weaknesses: "Stateful: the encoder and decoder must maintain synchronized dynamic tables, requiring reliable ordered delivery (TCP); breaks under packet reordering.",
   superseded: "zlib-compressed headers (SPDY, removed due to CRIME).",
 )[
   Because HPACK is stateful and requires ordered delivery, it is
@@ -321,7 +321,7 @@ before RFC 7541 was published in May 2015.
 
 HTTP/3 runs over QUIC (a UDP-based transport), and QUIC allows multiple
 independent *streams* that can arrive in any order. This is a major
-advantage — no head-of-line blocking, where a lost packet on one stream
+advantage: no head-of-line blocking, where a lost packet on one stream
 stalls all other streams as TCP would do. But it breaks HPACK entirely.
 HPACK assumes the sender's and receiver's dynamic tables evolve in the same
 order, because TCP guarantees in-order delivery. On QUIC, stream 5 might
@@ -357,29 +357,29 @@ different reasons.*
     rect((0,0), (3.8, 6.5), fill: rgb("#eef4fb"), stroke: 0.5pt + rgb("#0b5394"), radius: 3pt)
     content((1.9, 6.2), text(weight: "bold", size: 9pt)[HTTP/2 over TCP])
     rect((0.2, 4.6), (3.6, 5.9), fill: white, stroke: 0.4pt, radius: 2pt)
-    content((1.9, 5.4), text(size: 8.5pt)[HPACK dynamic table])
-    content((1.9, 5.0), text(size: 8pt, style: "italic")[state shared by all streams])
+    content((1.9, 5.4), box(width: 3.0cm, inset: 2pt, align(center, text(size: 8.5pt)[HPACK dynamic table])))
+    content((1.9, 5.0), box(width: 3.0cm, inset: 2pt, align(center, text(size: 8pt, style: "italic")[state shared by all streams])))
     rect((0.2, 3.0), (3.6, 4.4), fill: rgb("#f6f8fa"), stroke: 0.4pt, radius: 2pt)
-    content((1.9, 3.9), text(size: 8.5pt)[Stream 1 (ordered)])
-    content((1.9, 3.5), text(size: 8pt)[headers → HPACK indices])
+    content((1.9, 3.9), box(width: 3.0cm, inset: 2pt, align(center, text(size: 8.5pt)[Stream 1 (ordered)])))
+    content((1.9, 3.5), box(width: 3.0cm, inset: 2pt, align(center, text(size: 8pt)[headers → HPACK indices])))
     rect((0.2, 1.4), (3.6, 2.8), fill: rgb("#f6f8fa"), stroke: 0.4pt, radius: 2pt)
-    content((1.9, 2.3), text(size: 8.5pt)[Stream 2 (ordered)])
-    content((1.9, 1.9), text(size: 8pt)[headers → HPACK indices])
-    content((1.9, 0.7), text(size: 8pt)[Single TCP connection — ordered])
+    content((1.9, 2.3), box(width: 3.0cm, inset: 2pt, align(center, text(size: 8.5pt)[Stream 2 (ordered)])))
+    content((1.9, 1.9), box(width: 3.0cm, inset: 2pt, align(center, text(size: 8pt)[headers → HPACK indices])))
+    content((1.9, 0.7), box(width: 3.4cm, inset: 2pt, align(center, text(size: 8pt)[Single TCP connection (ordered)])))
 
     // HTTP/3 column
     rect((4.4,0), (8.8, 6.5), fill: rgb("#f4fbf7"), stroke: 0.5pt + rgb("#0b6e4f"), radius: 3pt)
     content((6.6, 6.2), text(weight: "bold", size: 9pt)[HTTP/3 over QUIC])
     rect((4.6, 4.6), (8.6, 5.9), fill: white, stroke: 0.4pt, radius: 2pt)
-    content((6.6, 5.4), text(size: 8.5pt)[QPACK encoder stream])
-    content((6.6, 5.0), text(size: 8pt, style: "italic")[table updates out-of-band])
+    content((6.6, 5.4), box(width: 3.6cm, inset: 2pt, align(center, text(size: 8.5pt)[QPACK encoder stream])))
+    content((6.6, 5.0), box(width: 3.6cm, inset: 2pt, align(center, text(size: 8pt, style: "italic")[table updates out-of-band])))
     rect((4.6, 3.0), (8.6, 4.4), fill: rgb("#f6f8fa"), stroke: 0.4pt, radius: 2pt)
-    content((6.6, 3.9), text(size: 8.5pt)[Data stream A (may arrive first)])
-    content((6.6, 3.5), text(size: 8pt)[headers w/ required-insert-count])
+    content((6.6, 3.9), box(width: 3.6cm, inset: 2pt, align(center, text(size: 8pt)[Data stream A (may arrive first)])))
+    content((6.6, 3.5), box(width: 3.6cm, inset: 2pt, align(center, text(size: 8pt)[headers w/ required-insert-count])))
     rect((4.6, 1.4), (8.6, 2.8), fill: rgb("#f6f8fa"), stroke: 0.4pt, radius: 2pt)
-    content((6.6, 2.3), text(size: 8.5pt)[Data stream B (may arrive first)])
-    content((6.6, 1.9), text(size: 8pt)[headers w/ required-insert-count])
-    content((6.6, 0.7), text(size: 8pt)[QUIC — unordered streams])
+    content((6.6, 2.3), box(width: 3.6cm, inset: 2pt, align(center, text(size: 8pt)[Data stream B (may arrive first)])))
+    content((6.6, 1.9), box(width: 3.6cm, inset: 2pt, align(center, text(size: 8pt)[headers w/ required-insert-count])))
+    content((6.6, 0.7), text(size: 8pt)[QUIC: unordered streams])
   })
 )
 
@@ -403,7 +403,7 @@ not the whole file). Three algorithms are available:
 - *zlib* (levels 1–9): the oldest, using DEFLATE. Reasonable ratio,
   slow compression, slowest decompression. Good for archives that you
   read infrequently.
-- *LZO*: extremely fast — often close to raw memcpy throughput — but
+- *LZO*: extremely fast (often close to raw memcpy throughput) but
   the worst ratio of the three. Good for temporary files or swap.
 - *zstd* (levels −15 to 15; added in Linux 4.14, 2017): the
   best of both worlds. Levels 1–3 are near-real-time and still
@@ -431,7 +431,7 @@ The practical effect of Btrfs zstd on a typical desktop installation:
 )
 
 #keyidea[
-  Compression on a modern NVMe SSD often *improves* read throughput —
+  Compression on a modern NVMe SSD often *improves* read throughput:
   the CPU can decompress data faster than the SSD can feed it. The
   bottleneck shifts from storage bandwidth to compute. Compression thus
   effectively expands both capacity *and* speed simultaneously.
@@ -448,7 +448,7 @@ within the pool) and is inherited by all files in that dataset.
 
 Available algorithms in OpenZFS:
 
-- *lz4* (default since OpenZFS 2.0): blazingly fast — 800 MB/s compression,
+- *lz4* (default since OpenZFS 2.0): extremely fast - 800 MB/s compression,
   4.5 GB/s decompression per thread. Ratio is lower than zstd but the
   speed overhead is essentially zero on modern hardware.
 - *zstd* (multiple levels, added 2020): dramatically better ratio for
@@ -505,7 +505,7 @@ that is just as useful: compress swap memory in RAM itself.
 === Why Swap Exists and Why It Hurts
 
 When a program needs more RAM than the machine physically has, the operating
-system moves the least-recently-used pages of memory to *swap* — a region
+system moves the least-recently-used pages of memory to *swap*, a region
 on disk set aside for this purpose. Accessing a swapped-out page is
 agonizingly slow: a disk access takes microseconds to milliseconds, while
 RAM access takes nanoseconds. Applications become sluggish or unresponsive.
@@ -514,7 +514,7 @@ On mobile phones and embedded systems (where there may be no swap disk
 at all), running out of RAM simply kills the least-important process.
 
 *zram* and *zswap* are two Linux kernel features that solve this by
-compressing swapped-out pages and keeping them in RAM — no disk write required.
+compressing swapped-out pages and keeping them in RAM. No disk write required.
 
 === zram: A Compressed Block Device in RAM
 
@@ -526,7 +526,7 @@ the kernel compresses it (using LZO, LZ4, or zstd) before writing it to
 the in-RAM pool.
 
 The result: a page that occupied 4 KB of RAM uncompressed might compress
-to 1.5 KB — so 4 KB of physical RAM holds the equivalent of over 10 KB
+to 1.5 KB, so 4 KB of physical RAM holds the equivalent of over 10 KB
 of swapped-out data. For typical workloads (browser tabs, text editors,
 system services), RAM-resident text and heap data compresses at 2–4×,
 meaning zram effectively expands usable RAM by 50–75%.
@@ -543,7 +543,7 @@ zswap takes a different approach. Rather than *replacing* disk swap, it
 acts as a *cache* in front of it. When a page is about to be written to
 disk swap, zswap intercepts it, compresses it, and holds it in a pool
 of RAM. If the page is accessed again soon, it is decompressed from the
-RAM cache — no disk I/O at all. Only if the RAM cache fills up does zswap
+RAM cache with no disk I/O. Only if the RAM cache fills up does zswap
 evict compressed pages to actual disk swap.
 
 zswap is therefore a hybrid: RAM holds the hot compressed pages, disk
@@ -557,29 +557,29 @@ with only a few percent of RAM overhead for the compressed pool.
     import cetz.draw: *
     // Application RAM box
     rect((0, 5.5), (9, 7), fill: rgb("#eef4fb"), stroke: 0.4pt + rgb("#0b5394"), radius: 3pt)
-    content((4.5, 6.4), text(weight: "bold", size: 9pt)[Physical RAM — active pages (uncompressed)])
+    content((4.5, 6.4), box(width: 8.6cm, inset: 2pt, align(center, text(weight: "bold", size: 9pt)[Physical RAM: active pages (uncompressed)])))
     // Arrow down-left (zram path)
     line((2.0, 5.5), (2.0, 4.0), mark: (end: ">"), stroke: 0.8pt)
     content((0.6, 4.75), text(size: 8pt)[swap out])
     // zram box
     rect((0.2, 2.7), (3.8, 4.0), fill: rgb("#f4fbf7"), stroke: 0.6pt + rgb("#0b6e4f"), radius: 3pt)
-    content((2.0, 3.5), text(weight: "bold", size: 8.5pt)[zram pool (in RAM)])
-    content((2.0, 3.1), text(size: 8pt)[pages compressed w/ LZ4/zstd])
+    content((2.0, 3.5), box(width: 3.2cm, inset: 2pt, align(center, text(weight: "bold", size: 8.5pt)[zram pool (in RAM)])))
+    content((2.0, 3.1), box(width: 3.2cm, inset: 2pt, align(center, text(size: 8pt)[pages compressed w/ LZ4/zstd])))
     content((2.0, 2.2), text(size: 8pt)[No disk write. 2–4× expansion.])
     // Arrow down-right (zswap path)
     line((7.0, 5.5), (7.0, 4.0), mark: (end: ">"), stroke: 0.8pt)
     content((7.8, 4.75), text(size: 8pt)[swap out])
     // zswap box
     rect((5.2, 2.7), (8.8, 4.0), fill: rgb("#fbf7ef"), stroke: 0.6pt + rgb("#783f04"), radius: 3pt)
-    content((7.0, 3.5), text(weight: "bold", size: 8.5pt)[zswap cache (in RAM)])
-    content((7.0, 3.1), text(size: 8pt)[compressed hot pages])
+    content((7.0, 3.5), box(width: 3.2cm, inset: 2pt, align(center, text(weight: "bold", size: 8.5pt)[zswap cache (in RAM)])))
+    content((7.0, 3.1), box(width: 3.2cm, inset: 2pt, align(center, text(size: 8pt)[compressed hot pages])))
     // Arrow from zswap to disk
     line((7.0, 2.7), (7.0, 1.5), mark: (end: ">"), stroke: 0.8pt)
     content((7.8, 2.1), text(size: 8pt)[evict])
     // Disk box
     rect((5.2, 0.5), (8.8, 1.5), fill: rgb("#f6f8fa"), stroke: 0.4pt, radius: 2pt)
-    content((7.0, 1.1), text(size: 8pt)[Disk swap (uncompressed)])
-    content((7.0, 0.7), text(size: 8pt)[cold pages only])
+    content((7.0, 1.1), box(width: 3.2cm, inset: 2pt, align(center, text(size: 8pt)[Disk swap (uncompressed)])))
+    content((7.0, 0.7), box(width: 3.2cm, inset: 2pt, align(center, text(size: 8pt)[cold pages only])))
   })
 )
 
@@ -628,7 +628,7 @@ and it is shaped by a fundamental choice in how data is stored.
 
 A traditional database like MySQL or PostgreSQL stores data *row by row*.
 A table with columns `(id, name, salary, department)` writes each row
-— all four values for one person — as a contiguous group on disk. This
+(all four values for one person) as a contiguous group on disk. This
 is efficient for finding or updating one person's record.
 
 But consider a query like "what is the average salary across the company?"
@@ -638,11 +638,11 @@ for every row to get to the one it wants. This is wasteful.
 
 *Column-oriented* (columnar) databases store each column separately.
 All salary values are together, all department strings are together.
-The "average salary" query reads only the salary column — perhaps 10% of
+The "average salary" query reads only the salary column, perhaps 10% of
 the total data. And crucially for compression: a column contains values
 of a *single type*, often with a *narrow range* and *many repeats*.
 A department column might have only five distinct values across a million
-rows — that compresses to almost nothing.
+rows, and that compresses to almost nothing.
 
 === Compression Techniques at the Column Level
 
@@ -660,7 +660,7 @@ integers plus three short strings.
 *Run-length encoding (RLE)* follows. If the column is sorted (as many
 analytical tables are), the integer IDs appear in long runs: a million
 rows of `0`, then 500,000 rows of `1`. RLE stores this as
-`(0, count=1 000 000), (1, count=500 000)` — two pairs instead of
+`(0, count=1 000 000), (1, count=500 000)`: two pairs instead of
 1.5 million entries.
 
 *Bit-packing* squeezes integer columns. If every value in a column fits
@@ -681,15 +681,15 @@ columns.
   Columnar compression is a lesson in *knowing your data*. General-purpose
   codecs like gzip work on opaque byte streams and have no idea that a
   column contains integers, strings, or timestamps. A columnar encoder
-  exploits type information, sort order, and cardinality — knowledge that
-  a generic compressor simply does not have. The result is ratios that
+  exploits type information, sort order, and cardinality, which a
+  generic compressor simply does not have. The result is ratios that
   generic codecs cannot match even at their best levels.
 ]
 
 === PostgreSQL and MySQL: Row-Level Page Compression
 
 For row-oriented databases, compression is applied at the *page* level
-(a page is typically 8 KB — the quantum the database reads from disk).
+(a page is typically 8 KB, the unit the database reads from disk).
 Each 8 KB page holds a mix of different columns from different rows, which
 is harder to compress than a homogeneous column.
 
@@ -698,7 +698,7 @@ PostgreSQL's transparent compression mechanism is called *TOAST*
 large text field or a binary blob) exceeds about 2 KB, PostgreSQL
 automatically compresses it using a fast LZ-family algorithm (PGLZ, based
 on LZ77). PostgreSQL 14 (2021) added a per-column `COMPRESSION` option
-letting you choose between `pglz` and `lz4` — the latter is significantly
+letting you choose between `pglz` and `lz4`, the latter being significantly
 faster at moderate ratio cost.
 
 MySQL's InnoDB engine supports page compression: an entire 8 KB or 16 KB
@@ -712,8 +712,8 @@ For time-series data (metrics, sensor readings, monitoring), Facebook's
 *Gorilla* storage system (Pelkonen et al., VLDB 2015) introduced two
 elegant tricks:
 
-*Timestamp compression:* timestamps in a time series are nearly regular —
-a Prometheus metric sampled every 15 seconds has timestamps 15000, 15000,
+*Timestamp compression:* timestamps in a time series are nearly regular.
+A Prometheus metric sampled every 15 seconds has timestamps 15000, 15000,
 15000, ... apart. Store the first timestamp, then the interval (15 s), then
 the *deviation from that interval* (usually zero or ±1). Most deviations
 fit in 1–2 bits. Gorilla calls this *delta-of-delta* encoding.
@@ -727,7 +727,7 @@ XOR results fit in 12 bits.
   Recall two tools from earlier: *XOR* (the `^` bitwise operator, *Chapter 5*
   and *Chapter 17*) outputs a `1` only where two bits *differ*, so XOR-ing two
   nearly-equal numbers yields mostly `0` bits. And a *float64* (*Chapter 13*)
-  is just 64 fixed bits — sign, exponent, mantissa. Two readings like
+  is just 64 fixed bits (sign, exponent, mantissa). Two readings like
   `21.0` and `21.1` differ only deep in the mantissa, so their XOR is `0`
   except for a short burst of bits in the middle: exactly the redundancy
   Gorilla harvests.
@@ -739,7 +739,7 @@ perfect reconstruction.
 #algo(
   name: "Gorilla Time-Series Compression",
   year: "2015",
-  authors: "Tuomas Pelkonen et al., Facebook — VLDB 2015",
+  authors: "Tuomas Pelkonen et al., Facebook (VLDB 2015)",
   aim: "Compress in-memory time-series (metric name + timestamp + float value) to drastically reduce monitoring-system memory.",
   strengths: "Extremely fast encode/decode; tailored for the specific statistics of metric data; lossless.",
   weaknesses: "Tightly coupled to the timestamp + float data model; performs poorly on irregular or string-valued series.",
@@ -752,19 +752,19 @@ perfect reconstruction.
 
 == The CDN Edge: Where Compression and Caching Meet
 
-All of the above — body compression, header compression, filesystem
-compression — converges at the CDN edge, which is perhaps the most
-important place in the stack to understand.
+Body compression, header compression, and filesystem compression all
+converge at the CDN edge, which is perhaps the most important place
+in the stack to understand.
 
 === What a CDN Edge Does
 
 A *Content Delivery Network* (CDN) places servers (called *edge nodes* or
-*PoPs* — Points of Presence) geographically close to end users: in data
+*PoPs*, Points of Presence) geographically close to end users: in data
 centres in São Paulo, Tokyo, Frankfurt, Lagos, and hundreds of other cities.
 When a user in Frankfurt requests `example.com/app.js`, the CDN intercepts
 the request at the Frankfurt edge node instead of routing it all the way to
 the origin server in Virginia. If the Frankfurt node has a cached copy,
-it serves it immediately — no transcontinental round-trip.
+it serves it immediately, with no transcontinental round-trip.
 
 Compression interacts with CDN caching in a subtle way: the CDN typically
 caches content in a *compressed form*. When it receives the response from
@@ -786,7 +786,7 @@ For static assets (JavaScript bundles, CSS files, font files), the CDN
 performs *pre-compression* at cache-fill time: when an asset first enters
 the cache, the CDN compresses it at the highest quality setting (Brotli
 level 11, Zstandard level 19) and stores the result. All subsequent requests
-for that asset get the pre-compressed bytes served from memory — no
+for that asset get the pre-compressed bytes served from memory, with no
 compression work at serve time. The CPU cost of slow high-quality compression
 is paid once; the bandwidth savings multiply across thousands of cache hits.
 
@@ -812,14 +812,14 @@ for each version, automating what would otherwise require a custom software
 update protocol.
 
 #misconception[
-  "Gzip is fine — it compresses the HTML, nothing else matters."
+  "Gzip is fine - it compresses the HTML, nothing else matters."
 ][
   A modern web page load involves dozens to hundreds of HTTP requests
   for HTML, CSS, JavaScript, fonts, API responses, images, and more.
   Headers on those requests can total more bytes than small response bodies.
   Compression improvements compound across every resource in the page.
   Switching from gzip to Brotli on a site with 200 subrequests per page
-  load gives savings on every one of them — the cumulative impact on
+  load gives savings on every one of them. The cumulative impact on
   page-load time and bandwidth is significant, especially on slow mobile
   connections.
 ]
@@ -840,41 +840,41 @@ web page from a CDN-fronted site, to make the layers concrete.
 
 You type `https://example.com/` and press Enter.
 
-*Step 1 — DNS and TCP/QUIC setup.* Your browser resolves the domain name
+*Step 1: DNS and TCP/QUIC setup.* Your browser resolves the domain name
 and connects to the nearest CDN edge node. If the edge supports HTTP/3,
 a QUIC connection is established.
 
-*Step 2 — HTTP/3 request.* The browser sends a `GET /` request.
+*Step 2: HTTP/3 request.* The browser sends a `GET /` request.
 The request headers (`:method: GET`, `:path: /`, etc.) are compressed
 by QPACK using the static table: the common headers become a handful
 of single-byte indices. The request might be 600 bytes of raw headers
 but only 80 bytes on the wire.
 
-*Step 3 — CDN serves pre-compressed HTML.* The edge node has the HTML
+*Step 3: CDN serves pre-compressed HTML.* The edge node has the HTML
 cached in Brotli-compressed form. It sends `Content-Encoding: br`.
 The response headers are also QPACK-compressed. The HTML body, 25 KB
 uncompressed, arrives as 7 KB of Brotli.
 
-*Step 4 — Browser parses HTML, makes sub-requests.* Dozens of requests
+*Step 4: Browser parses HTML, makes sub-requests.* Dozens of requests
 follow: for `app.js`, `styles.css`, fonts, images. Each request/response
 goes through the same QPACK header compression and body Content-Encoding
 compression. Images arrive as JPEG or WebP (already compressed; no
 `Content-Encoding` applied, since double-compressing would waste CPU).
 
-*Step 5 — OS and filesystem.* When the browser's disk cache writes
+*Step 5: OS and filesystem.* When the browser's disk cache writes
 the downloaded files to disk, if the filesystem is Btrfs with zstd,
-it may compress the cache files further — though most web content
-is already compressed and Btrfs's autodetect mode will skip trying
-to compress Brotli or JPEG output.
+it may compress the cache files further. Most web content is already
+compressed, so Btrfs's autodetect mode will skip trying to compress
+Brotli or JPEG output.
 
-*Step 6 — RAM pressure.* If many browser tabs are open, the OS may
+*Step 6: RAM pressure.* If many browser tabs are open, the OS may
 move some tab processes' memory pages to the zram compressed pool,
 silently recovering physical RAM without writing to disk.
 
 In total, the uncompressed HTML + JS + CSS for a complex page might
 be 5 MB; what actually crossed the network wire is closer to 1.5 MB,
 and the system is using perhaps 3 MB of RAM instead of 8 MB for
-cached pages. Compression did not "help" in one place — it ran
+cached pages. Compression did not "help" in one place; it ran
 simultaneously at six layers without the user knowing any of it.
 
 #fig(
@@ -882,7 +882,7 @@ simultaneously at six layers without the user knowing any of it.
   cetz.canvas({
     import cetz.draw: *
     let layers = (
-      ("Application layer (browser/app)", "No compression here — logic only", rgb("#f6f8fa")),
+      ("Application layer (browser/app)", "No compression here: logic only", rgb("#f6f8fa")),
       ("HTTP/3 headers", "QPACK compression (static + dynamic table)", rgb("#eef4fb")),
       ("HTTP/3 body", "Content-Encoding: br / zstd / gzip", rgb("#eef4fb")),
       ("CDN edge", "Pre-compressed cache; transcoding; dict transport", rgb("#f4fbf7")),
@@ -905,11 +905,11 @@ simultaneously at six layers without the user knowing any of it.
 == Why Not Compress Everything at Every Layer?
 
 A natural question: if compression is free money at every layer, why not
-add it everywhere? The answer is cost — not money, but CPU, latency, and
+add it everywhere? The answer is cost: not money, but CPU, latency, and
 correctness.
 
 *Already-compressed data does not compress further.* JPEG, MP4, ZIP,
-gzip — all of these are already compressed output. Wrapping them in
+and gzip are all already compressed output. Wrapping them in
 another compressor wastes CPU to produce output slightly *larger* than
 the input (because the compressed output looks random). Btrfs's autodetect
 mode and CDN logic both check for this.
@@ -932,7 +932,7 @@ were designed with this threat model in mind.
 must be unwrapped when debugging. A network capture that looks garbled may
 be Brotli-compressed; a file that looks corrupt may be Btrfs-compressed.
 Every sysadmin has stared in confusion at bytes that turned out to be
-harmless — just compressed.
+harmless, just compressed.
 
 #pitfall[
   Never compress data that is already compressed. Calling `gzip` on a
@@ -980,7 +980,7 @@ harmless — just compressed.
 #solution("74.2")[
   HPACK maintains a dynamic table that both encoder and decoder must update
   in strict sequence. HTTP/3 uses QUIC, which delivers independent streams
-  out of order — a stream carrying a reference to dynamic table entry 20 may
+  out of order: a stream carrying a reference to dynamic table entry 20 may
   arrive before the stream that inserted entry 20. This creates a
   decoding deadlock: the decoder cannot process the block until the entry
   exists, but with HPACK there is no mechanism to signal this dependency.
@@ -1033,8 +1033,8 @@ harmless — just compressed.
 
   *RAM is better:* for a workload involving large matrix operations or
   random-access traversal of huge datasets that do not compress well
-  (e.g., already-compressed model weights). The decompression latency —
-  even if just nanoseconds — is measurable when the CPU is performing
+  (e.g., already-compressed model weights). The decompression latency,
+  even if just nanoseconds, is measurable when the CPU is performing
   millions of cache misses per second. More physical RAM has zero
   decompression cost.
 ]
@@ -1146,21 +1146,21 @@ harmless — just compressed.
 
 == Further Reading
 
-#link("https://datatracker.ietf.org/doc/rfc7541/")[RFC 7541 — HPACK: Header Compression for HTTP/2 (2015)]:
+#link("https://datatracker.ietf.org/doc/rfc7541/")[RFC 7541: HPACK Header Compression for HTTP/2 (2015)]:
 The complete specification for HPACK. Section 2 (the compression model) is
 worth reading in full; it explains the static table, dynamic table, and
 the deliberate avoidance of context-based compression for security.
 
-#link("https://datatracker.ietf.org/doc/rfc9204/")[RFC 9204 — QPACK: Field Compression for HTTP/3 (2022)]:
+#link("https://datatracker.ietf.org/doc/rfc9204/")[RFC 9204: QPACK Field Compression for HTTP/3 (2022)]:
 The QPACK specification. Compare the required-insert-count mechanism with
 HPACK's simpler model to see exactly what changes when you move from
 ordered TCP to unordered QUIC.
 
-#link("https://datatracker.ietf.org/doc/rfc9842/")[RFC 9842 — Compression Dictionary Transport (2025)]:
+#link("https://datatracker.ietf.org/doc/rfc9842/")[RFC 9842: Compression Dictionary Transport (2025)]:
 Defines the HTTP headers for negotiating shared Brotli and Zstandard
 dictionaries. Read alongside RFC 9841 for the shared Brotli data format.
 
-#link("https://www.debugbear.com/blog/shared-compression-dictionaries")[DebugBear — The Ultimate Guide to Shared Compression Dictionaries (2024)]:
+#link("https://www.debugbear.com/blog/shared-compression-dictionaries")[DebugBear: The Ultimate Guide to Shared Compression Dictionaries (2024)]:
 A practitioner's walkthrough of deploying dictionary compression on a
 real CDN, with measured bandwidth savings.
 
@@ -1169,11 +1169,11 @@ The authoritative guide to Btrfs compression algorithms, levels, mount
 options, and the autodetect heuristic. Includes per-algorithm benchmarks
 on various storage hardware.
 
-#link("https://openzfs.github.io/openzfs-docs/Performance%20and%20Tuning/Workload%20Tuning.html")[OpenZFS — Workload Tuning Guide]:
+#link("https://openzfs.github.io/openzfs-docs/Performance%20and%20Tuning/Workload%20Tuning.html")[OpenZFS Workload Tuning Guide]:
 Practical guidance on choosing between lz4 and zstd for ZFS datasets,
 including the case for always enabling at least `compression=lz4`.
 
-#link("https://datazone.de/en/aktuelles/zfs-komprimierung-speichereffizienz-performance/")[DATAZONE — ZFS Compression in Practice: LZ4 vs. ZSTD vs. ZSTD-Fast]:
+#link("https://datazone.de/en/aktuelles/zfs-komprimierung-speichereffizienz-performance/")[DATAZONE: ZFS Compression in Practice: LZ4 vs. ZSTD vs. ZSTD-Fast]:
 A detailed benchmark comparing LZ4, zstd, and zstd-fast on real NAS
 workloads, with throughput and ratio measurements.
 
@@ -1182,13 +1182,13 @@ The original Gorilla paper by Pelkonen et al., describing the delta-of-delta
 timestamp compression and XOR float compression that became industry standard
 for monitoring systems.
 
-#link("https://almanac.httparchive.org/en/2025/cdn")[HTTP Archive Web Almanac 2025 — CDN chapter]:
+#link("https://almanac.httparchive.org/en/2025/cdn")[HTTP Archive Web Almanac 2025, CDN chapter]:
 Real-world adoption statistics for gzip, Brotli, and Zstandard across
 the top million websites, broken down by CDN provider. A ground-truth view
 of what is actually deployed.
 
 #bridge[
-  We now know *where* compression runs — at every layer of the stack,
+  We now know *where* compression runs: at every layer of the stack,
   simultaneously and invisibly. But knowing that Brotli is "better" than
   gzip or that zstd is "faster" raises an uncomfortable question: how do we
   actually *measure* that? What does "better" mean when one codec has higher

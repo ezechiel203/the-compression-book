@@ -32,18 +32,18 @@ a careful reading of publicly available evidence.
   (Volume II) built the classical lossless stack: Huffman, arithmetic, ANS, LZ77,
   DEFLATE, and BWT. *Chapters 37–55* (Volume III) covered lossy media: DCT
   (Chapter 38), JPEG (Chapter 42), Opus (Chapter 49), HEVC (Chapter 53), and the
-  open video codecs including AV1 (Chapter 54) — all resting on the rate–distortion
+  open video codecs including AV1 (Chapter 54), all resting on the rate–distortion
   theory of *Chapter 21*. *Chapters 56–65* (Volume IV) tackled the neural and AI
   era: learned image compression (Chapters 57–58), LLM-as-compressor (Chapter 62),
   neural audio codecs (Chapter 60), and model quantization (Chapter 63).
   *Chapters 66–78* (Volume V) explored specialized domains and the social
-  landscape of the field. Now we pull it all together into a single honest
+  history of the field. Now we pull it all together into a single honest
   picture of where things stand today.
 ]
 
 #objectives((
   "Name the dominant production codecs in each category (general-purpose, image, audio, video) as of June 2026 and explain what makes each one the current leader.",
-  "Describe three genuinely emerging techniques — learned codecs, BitNet-style weight compression, and KV-cache compression — and give an honest status for each.",
+  "Describe three genuinely emerging techniques (learned codecs, BitNet-style weight compression, and KV-cache compression) and give an honest status for each.",
   "Apply the hype-vs-deployed test to a claim about compression to decide whether it belongs in a product meeting or a research paper.",
   "Read a compression benchmark or press release and identify what is being measured, what is being omitted, and whether the comparison is fair.",
 ))
@@ -52,7 +52,7 @@ a careful reading of publicly available evidence.
 
 Before we look at the cutting edge, let us anchor ourselves in the present. The
 word "deployed" means: a library or format that runs in production on devices
-you have already used today — your phone, your browser, a data-centre that
+you have already used today: your phone, your browser, a data-centre that
 served you a video last night. The bar is not "published" or "benchmarked" or
 "merged into a GitHub repository." The bar is: *running at scale, right now.*
 
@@ -67,7 +67,7 @@ from scratch in Chapter 27), and a _trained dictionary_ feature that lets you
 pre-build a shared dictionary from a corpus of similar files and distribute it
 as a tiny side-file.
 
-What makes zstd interesting is not just its absolute numbers but its range. At
+What makes zstd interesting is its range. At
 level 1 it is competitive with LZ4 in speed while beating gzip on ratio. At
 level 22 it is competitive with bzip2 and even touches LZMA territory. That
 single library handles everything from real-time network traffic to cold-storage
@@ -102,7 +102,7 @@ Brotli unless hardware or tooling forces it.
   zstd's internal entropy coder uses the tANS (table ANS) variant we described
   in Chapter 27. The match-finder uses a hash-chain + binary-tree hybrid for
   higher levels. The trained dictionary feature is grounded in the Cover algorithm
-  for selecting representative substrings — the same idea as the dictionary
+  for selecting representative substrings, the same idea as the dictionary
   seeding in Chapter 32.
 ]
 
@@ -119,10 +119,10 @@ The image format war of 2020–2025 has ended, with two survivors and one wildca
 *JPEG* (Chapter 42) is still 73% of all images served on the web in June 2026.
 That number will be true five years from now too. JPEG is embedded in a billion
 devices, understood by every image-processing library ever written, and perfectly
-adequate for photographs. It will not be "replaced" — it will be gradually
+adequate for photographs. It will not be "replaced"; it will be gradually
 marginalised for new content as better formats accumulate browser support.
 
-*AVIF* — the AV1 Image File Format — reached near-universality in 2025. Safari 17
+*AVIF* (the AV1 Image File Format) reached near-universality in 2025. Safari 17
 finally shipped AVIF decoding, and as of April 2026 all four major browser
 engines (Chrome, Firefox, Safari, Edge) support it, covering over 93% of global
 browser usage. The AVIF v1.2.0 specification published in November 2025. At
@@ -169,6 +169,7 @@ which would push global coverage to 85–90% overnight.
     line((max-w * 0.9, -0.2), (max-w * 0.9, (formats.len()) * (bar-h + gap) - gap + 0.2),
       stroke: (dash: "dashed", paint: red.lighten(30%), thickness: 0.7pt))
     content((max-w * 0.9, (formats.len()) * (bar-h + gap) - gap + 0.45),
+      anchor: "east",
       text(size: 7pt, fill: red.darken(20%))[90% threshold])
   })
 )
@@ -205,7 +206,7 @@ content predominantly uses HEVC encoders. The patent licensing situation (Chapte
 platforms pay the licensing fees because the alternatives were not ready.
 
 *AV1* is the growth story. Netflix reported in December 2025 that 30% of its
-streams use AV1 — up from essentially zero in 2020. Apple added hardware AV1
+streams use AV1, up from near zero in 2020. Apple added hardware AV1
 decoding in the M3 and A17 Pro chips (late 2023), removing the last major
 barrier to mainstream adoption on Apple devices. YouTube launched AV1 for popular
 live streams in 2025. A March 2026 white paper from Hanwha Vision examined
@@ -220,7 +221,7 @@ will typically have three encoding ladders in production at once.
 #misconception[AV1 has replaced H.265 for 4K streaming.][In June 2026, HEVC still dominates 4K hardware recording and broadcast delivery. AV1 is taking market share for OTT streaming to AV1-capable devices. The two codecs coexist on different delivery pipelines; neither has "won."]
 
 *VVC / H.266* was standardized in 2020 and offers roughly 30–50% improvement
-over HEVC. It has made essentially no impact on the market, for the same reason
+over HEVC. It has made no real impact on the market, for the same reason
 HEVC struggled: patent licensing. The MPEG-LA pool, the Via Licensing pool, and
 the Access Advance pool all claimed essential patents, creating the same three-way
 impasse that delayed HEVC. As of mid-2026 VVC has found niche use in broadcast
@@ -244,15 +245,15 @@ Discord, and virtually every browser-based voice call. In December 2025, the Opu
 team released *Opus 1.6*, which extends the neural features first added in 1.5:
 
 - A new *bandwidth extension (BWE)* neural module that generates high-frequency
-  content (8–20 kHz) from wideband speech (0–8 kHz) with no side information —
-  pure synthesis from a small neural predictor. The result is perceptually richer
+  content (8–20 kHz) from wideband speech (0–8 kHz) with no side information,
+  using pure synthesis from a small neural predictor. The result is perceptually richer
   audio at no additional bitrate.
 - *Opus HD* support at 96 kHz sampling rates.
 - Improved *DRED* (Deep Redundancy), which embeds a compressed fallback
   representation for concealing packet loss.
 
-This hybrid architecture — classical codec internals, neural post-processing
-— is representative of the near-term convergence path for audio. The IETF has
+This hybrid architecture (classical codec internals with neural post-processing)
+is representative of the near-term convergence path for audio. The IETF has
 an active *mlcodec* working group specifically tasked with standardizing
 machine-learning codec extensions to Opus.
 
@@ -260,8 +261,8 @@ Pure neural audio codecs (EnCodec from Meta, SoundStream from Google, LPCNet for
 speech) are now production-deployed in specific verticals. Meta uses EnCodec for
 Voicebox and other internal audio generation. Neural codecs can match or exceed
 Opus quality at half the bitrate for speech, at the cost of significantly more
-compute on the encoder side. For devices with DSP hardware — which describes
-every recent phone — the decode cost is acceptable. For battery-constrained IoT
+compute on the encoder side. For devices with DSP hardware (which describes
+every recent phone), the decode cost is acceptable. For battery-constrained IoT
 audio devices, classical Opus remains the right answer.
 
 === General-Purpose Lossless: The Role of Brotli and Beyond
@@ -294,7 +295,7 @@ being mainstream.
 
 === Learned Image Compression: Research-Grade But Gaining Traction
 
-The line of work begun by Ballé et al. (ICLR 2017 — we studied it in Chapter 57)
+The line of work begun by Ballé et al. (ICLR 2017, studied in Chapter 57)
 has matured enormously. Modern learned image codecs (the Cheng 2020 anchor,
 ELIC, and their successors) consistently beat AVIF at equal PSNR and match or
 exceed JPEG XL at high-fidelity targets on benchmark images.
@@ -310,7 +311,7 @@ exceed JPEG XL at high-fidelity targets on benchmark images.
 
 On photographic
 content, the best learned codecs achieve the same visual quality as JPEG at
-roughly 60–70% lower file size — well beyond what any classical codec achieves.
+roughly 60–70% lower file size, well beyond what any classical codec achieves.
 
 Why is this not deployed yet? Three reasons:
 
@@ -326,10 +327,10 @@ Why is this not deployed yet? Three reasons:
    final standard status but the committee process is moving.
 
 #aside[
-  Fabrice Bellard — whom we met in Chapter 2 as the author of QEMU and FFmpeg —
+  Fabrice Bellard (whom we met in Chapter 2 as the author of QEMU and FFmpeg)
   published his `ts_zip` neural compressor in the early 2020s as a research
-  curiosity. By 2026 the same *principle* — use a powerful model to predict the
-  next byte or token, then arithmetic-code the residual — has been validated
+  curiosity. By 2026 the same *principle* - use a powerful model to predict the
+  next byte or token, then arithmetic-code the residual - has been validated
   academically by Delétang et al. (ICLR 2024). The practical speed barrier
   is what keeps it out of production.
 ]
@@ -342,17 +343,17 @@ wrong, not just blurry. A classical codec at 0.05 bits-per-pixel produces
 block-artifact nightmares. (_Bits-per-pixel_, or bpp, is the image analogue of
 the bits-per-byte we used for text: total compressed bits divided by the number
 of pixels. Uncompressed 8-bit colour is 24 bpp; good JPEG sits near 1–2 bpp;
-0.05 bpp means roughly one bit for every twenty pixels — almost nothing to work
+0.05 bpp means roughly one bit for every twenty pixels, almost nothing to work
 with.) A learned codec produces smooth but hallucinated
-content — faces with impossible symmetry, text that becomes plausible nonsense.
+content: faces with impossible symmetry, text that becomes plausible nonsense.
 
 *Generative* or *perceptual* codecs (HiFiC, Mentzer et al., and their
-2024–2026 successors — the topic of Chapter 58) lean into this. Rather than trying to reconstruct the
+2024–2026 successors, the topic of Chapter 58) lean into this. Rather than trying to reconstruct the
 exact original, they synthesize a *plausible* image that passes perceptual
 metrics and human evaluation. HiFiC at 0.15 bits-per-pixel can produce images
 that human raters prefer to JPEG at twice the bitrate. The cost: the decoder is
 a large generative model (typically a GAN or diffusion model), and the
-reconstruction is *not* the original — it is a hallucination that looks better.
+reconstruction is *not* the original; it is a hallucination that looks better.
 
 This is a genuine paradigm shift, not hype: the goal of compression has been,
 since Shannon, to recover the exact source or an approximation within a
@@ -370,8 +371,8 @@ it may be the best option.
 
 === LLMs as Compressors: Theoretically Beautiful, Practically Slow
 
-We devoted Chapter 62 to this topic. The core result — that a language model's
-perplexity score on a dataset is equivalent to a compression ratio — is clean
+We devoted Chapter 62 to this topic. The core result, that a language model's
+perplexity score on a dataset is equivalent to a compression ratio, is clean
 and has been experimentally confirmed (Delétang et al., "Language Modeling Is
 Compression," ICLR 2024). GPT-4 can, in principle, compress English text below
 1 bit/character, far better than any classical compressor.
@@ -385,9 +386,9 @@ Compression," ICLR 2024). GPT-4 can, in principle, compress English text below
   exactly the "expected code length" a perfect coder would pay. Perplexity is
   simply $2^H$: the model is "as confused as if it were guessing uniformly among
   $2^H$ equally likely tokens." A model with perplexity 8 is, on average, as
-  unsure as someone picking blindly from 8 options — which is $log_2 8 = 3$ bits
-  of surprise per token. So *lower perplexity means lower cross-entropy means
-  fewer bits to code the text* — perplexity and compression ratio are two faces
+  unsure as someone picking blindly from 8 options (that is, $log_2 8 = 3$ bits
+  of surprise per token). So *lower perplexity means lower cross-entropy means
+  fewer bits to code the text*: perplexity and compression ratio are two faces
   of the same number.
 ]
 
@@ -395,7 +396,7 @@ In June 2026 this is still a laboratory result. The fundamental speed problem
 has not been solved: to compress 1 MB of text with an LLM as the arithmetic-
 coding model, you must make on the order of 4 million autoregressive token
 predictions. At current inference throughput, that takes minutes per megabyte on
-a modern GPU — three to four orders of magnitude slower than zstd. Bellard's
+a modern GPU, three to four orders of magnitude slower than zstd. Bellard's
 `ts_zip` achieves sub-1-bit-per-character compression on text but runs at kilobytes
 per second. For archival compression of data that will be stored for decades and
 decompressed rarely, this speed may be acceptable in niche applications. For
@@ -431,7 +432,7 @@ efficiency because activation quantization previously required careful calibrati
 #mathrecall[
   A *Hadamard transform* (Chapter 63) is a fixed, cheap orthogonal "mixing"
   matrix built entirely from $+1$ and $-1$ entries. Multiplying a vector by it
-  spreads each component evenly across all the others — so a single huge outlier
+  spreads each component evenly across all the others. A single huge outlier
   value gets smeared into many moderate values that quantize cleanly, and the
   transform is exactly undone afterwards because it is its own inverse (up to a
   scale). It is the same "rotate to tame outliers" trick that PolarQuant and the
@@ -439,7 +440,7 @@ efficiency because activation quantization previously required careful calibrati
 ]
 
 The production story: 4-bit weight quantization (GPTQ, AWQ, and friends) is fully
-deployed. It is how most consumer and edge LLM inference actually runs today —
+deployed. It is how most consumer and edge LLM inference actually runs today:
 llama.cpp, Ollama, and similar tools default to 4-bit quantized weights. The
 1-bit/1.58-bit regime is genuinely emerging: real research, promising results,
 but not yet the deployment default.
@@ -451,7 +452,7 @@ KV-cache problem. Every token in a long prompt requires storing a key vector
 and a value vector for every attention head in every layer. For a model with
 32 layers and 32 heads using 128-dimensional vectors in FP16, each token
 costs $2 times 32 times 32 times 128 times 2 "bytes" = 524 "KB"$ of KV
-storage. A context window of 128,000 tokens then needs 64 GB — more than fits
+storage. A context window of 128,000 tokens then needs 64 GB, more than fits
 in any consumer GPU's VRAM.
 
 #gomaths("Memory arithmetic for KV caches")[
@@ -472,7 +473,7 @@ in any consumer GPU's VRAM.
   $ 128,000 times 512 "KB" = 64 "GB" $
 
   That is the entire VRAM of four high-end consumer GPUs. At 4-bit quantization
-  (dividing by 4), it drops to 16 GB — one GPU's VRAM, which is why INT4 KV
+  (dividing by 4), it drops to 16 GB, one GPU's VRAM, which is why INT4 KV
   quantization is the current production baseline.
 ]
 
@@ -498,7 +499,7 @@ DeepSeek-V3 (December 2024) and DeepSeek-R1. MLA jointly projects keys and
 values into a small shared latent vector; only that latent is stored in the
 KV cache. DeepSeek-V2 reports 93% KV cache reduction compared to standard
 multi-head attention, with no quality loss. This is compression built into the
-attention mechanism itself — not a post-hoc workaround but an architectural
+attention mechanism itself, not a post-hoc workaround but an architectural
 choice.
 
 #algo(
@@ -521,9 +522,9 @@ choice.
 
 == The Hype-versus-Deployed Ledger
 
-Now we can build the ledger. The left column is "deployed and boring" — things
+Now we can build the ledger. The left column is "deployed and boring": things
 that ship in production, receive no press coverage because they work, and will
-still be running in five years. The right column is "hyped but not there yet" —
+still be running in five years. The right column is "hyped but not there yet":
 real techniques with real research behind them, not fraud, but not production.
 
 #figure(
@@ -545,7 +546,7 @@ real techniques with real research behind them, not fraud, but not production.
     [Parquet/Gorilla for analytics], [Universal neural lossless compression],
     [CRAM for genomics], [Reference-free neural genomic compression at speed],
   ),
-  caption: [The hype-versus-deployed ledger, June 2026. Both columns represent real work; the right column is not fraud — it is research.],
+  caption: [The hype-versus-deployed ledger, June 2026. Both columns represent real work; the right column is not fraud: it is research.],
 )
 
 === An Honest Worked Example: Reading a Benchmark
@@ -626,8 +627,8 @@ before it?) matters as much as ratio.
   zstd-19              ratio=3.23x  enc=5 MB/s    dec=1,050 MB/s  size=47,108 B
   ```
 
-  Notice that zstd decode speed is roughly equal at level 3 and level 19 —
-  the level only affects the encoder's search effort, not the compressed
+  Notice that zstd decode speed is roughly equal at level 3 and level 19.
+  The level only affects the encoder's search effort, not the compressed
   format. This is a design property called _asymmetric compression_: you
   pay once to encode slowly, then decompress quickly forever.
 ]
@@ -656,11 +657,11 @@ Let us end with an observation that the scoreboards above do not capture.
 For the first half-century of compression research, the question was:
 _given a fixed statistical model of the data, how efficiently can we code the
 symbols?_ That was Shannon's original question, and it produced Huffman coding,
-arithmetic coding, and ANS — all beautiful answers.
+arithmetic coding, and ANS: all beautiful answers.
 
 For the second half-century, the question shifted to:
 _how do we build better models?_ That is what PPM, CTW, BWT, and context mixing
-all did — they built progressively better models of the data distribution so the
+all did. They built progressively better models of the data distribution so the
 coder had less residual to spend bits on.
 
 Now, in 2026, the question has shifted again. For images and video, the question
@@ -674,7 +675,7 @@ without the model forgetting the beginning?_
 All of these questions are compression questions. But the "model" in the
 model-plus-coder pair is now a neural network with billions of parameters,
 not a Markov chain or a suffix array. The mathematical structure is the same
-as what Shannon described in 1948 — send only the surprise. The engineering
+as what Shannon described in 1948: send only the surprise. The engineering
 is entirely different.
 
 #keyidea[
@@ -683,8 +684,8 @@ is entirely different.
   The chapters in this volume have built exactly that dual fluency.
 ]
 
-This also means the deployment gap has widened. Classical codecs — zstd, HEVC,
-Opus, AVIF — deploy on tiny embedded chips because their algorithms are simple
+This also means the deployment gap has widened. Classical codecs (zstd, HEVC,
+Opus, AVIF) deploy on tiny embedded chips because their algorithms are simple
 enough to implement in hardware or optimized C code. Neural codecs require
 substantial compute. The gap between "best possible compression" and "compression
 that runs on your refrigerator's chip" is larger in 2026 than it has ever been.
@@ -697,7 +698,7 @@ That gap is an engineering frontier that will define the next decade.
   for fifteen years until CPUs were fast enough to make arithmetic coding
   worth the implementation cost. ANS was published by Duda in 2009 and did not
   appear in production codecs until zstd (2015) and JPEG XL's Brotli-derived
-  coder. The speed gap between theory and practice always closes — but it
+  coder. The speed gap between theory and practice always closes, but it
   closes on a timeline of years to decades, not months.
 ]
 
@@ -739,7 +740,7 @@ That gap is an engineering frontier that will define the next decade.
   `zstd -19` produces 47,108 bytes from 152,089 bytes.
   Bits per byte $= (47108 times 8) / 152089 approx 2.48$ bits per byte (character).
   English entropy is estimated at 1.0–1.5 bits/character. The gap is about
-  1 to 1.5 bits per character — there is still roughly a factor of 1.7–2.5×
+  1 to 1.5 bits per character. There is still roughly a factor of 1.7–2.5×
   left on the table for text, which explains why LLM-based compressors can
   outperform zstd on text even though they lose badly on speed.
 ]
@@ -752,8 +753,8 @@ That gap is an engineering frontier that will define the next decade.
 ]
 #solution("79.3")[
   MLA applies low-rank factorization to the key-value projection matrices. If
-  the attention mechanism's effective rank — the number of dimensions that
-  actually carry useful information — is much smaller than the full $H times d$
+  the attention mechanism's effective rank (the number of dimensions that
+  actually carry useful information) is much smaller than the full $H times d$
   dimensionality, a low-rank bottleneck loses little information. Rate-distortion
   theory tells us there exists an optimal trade-off between the bitrate
   (memory used for the KV cache) and the distortion (quality degradation); MLA
@@ -837,7 +838,7 @@ That gap is an engineering frontier that will define the next decade.
   $512$ values. Ratio = $512 / 655360 approx 0.078%$, i.e. ~99.9% reduction
   (this is a theoretical minimum; in practice MLA stores the latent plus a
   small set of decoupled rope keys, landing near the 93% reported in the paper).
-  At 93% reduction: $82 "GB" times 0.07 approx 5.7 "GB"$ — fits on a single
+  At 93% reduction: $82 "GB" times 0.07 approx 5.7 "GB"$, which fits on a single
   consumer GPU.
 ]
 
@@ -862,7 +863,7 @@ That gap is an engineering frontier that will define the next decade.
 #bridge[
   *Chapter 80* steps back from the current snapshot and asks: what problems
   remain genuinely unsolved? We will examine the open challenges in compression
-  theory — the gap between Shannon's entropy and what we can actually achieve
+  theory: the gap between Shannon's entropy and what we can actually achieve
   in practice, the unsolved problem of universal compression of arbitrary data
   structures, and the deep question of whether generative decoding is "cheating"
   or a legitimate extension of rate-distortion theory. If this chapter was the

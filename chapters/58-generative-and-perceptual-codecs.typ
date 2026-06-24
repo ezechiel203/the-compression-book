@@ -8,20 +8,20 @@
 ][Anonymous research engineer, circa 2020]
 
 Picture two images side by side on your screen. On the left is a face compressed by a conventional
-codec at 0.1 bits per pixel — a bitrate so stingy that every block of skin has smeared into a
-soap-opera blur, and the hair looks like it was sculpted from melted butter. On the right is the
+codec at 0.1 bits per pixel (a bitrate so stingy that every block of skin has smeared into a
+soap-opera blur, and the hair looks like it was sculpted from melted butter). On the right is the
 same person's face at the same file size, reconstructed by a generative codec. Every strand of hair
 is crisp. The pores look real. The eyes have that wet glint that says "alive." You would bet money
 the right image was the original.
 
 Here is the catch: it wasn't. The hair on the right was invented. The pores were dreamed up by a
 neural network that asked itself, "Given this blurry code, what would a plausible human face look
-like?" It guessed correctly — impressively so — but it guessed.
+like?" It guessed correctly, impressively, but it guessed.
 
-That one observation unlocks everything in this chapter. We are leaving the world where a codec
-tries to reproduce pixels faithfully, and entering one where a codec tries to reproduce
-*experience* faithfully, even if it has to make things up. This shift is philosophically radical,
-practically powerful, and ethically thorny, all at once.
+That one observation opens everything in this chapter. We are leaving the world where a codec
+tries to reproduce pixels faithfully and entering one where a codec tries to reproduce
+*experience* faithfully, even if it has to make things up. The shift is philosophically radical,
+practically powerful, and ethically thorny.
 
 #recap[
   In Chapter 56 we learned the machine-learning vocabulary: neurons, gradient descent,
@@ -29,7 +29,7 @@ practically powerful, and ethically thorny, all at once.
   built the first learned image codecs by plugging an autoencoder into a rate–distortion loss,
   using quantization-as-noise to make the whole pipeline differentiable, and adding a hyperprior
   to transmit side information about the latent's local statistics. Those codecs were trained to
-  minimize *mean squared error* — which means they tried to be as pixel-accurate as possible.
+  minimize *mean squared error*, which means they tried to be as pixel-accurate as possible.
   This chapter asks what happens when you train for *perceptual quality* instead, and why that
   change opens up a whole new category of compressor.
 ]
@@ -48,16 +48,16 @@ practically powerful, and ethically thorny, all at once.
 
 To understand why generative codecs exist, you first need to feel the problem they solve.
 
-Suppose you are compressing a portrait at a very aggressive ratio — 50:1, say. Most of the
+Suppose you are compressing a portrait at a very aggressive ratio, 50:1, say. Most of the
 detail is gone; only a skeleton of information survives in the bitstream. When the decoder
 reconstructs the image, it must fill in all those missing pixels *somehow*. The classical answer,
 baked into every MSE-trained model, is: *average over all plausible completions*.
 
 Think of it this way. At some location in the image, the missing pixel might reasonably be any
-shade from light grey to dark grey. The MSE-optimal reconstruction picks the middle grey —
+shade from light grey to dark grey. The MSE-optimal reconstruction picks the middle grey,
 exactly the average. The result: every uncertain region becomes smooth and grey. This is why
 heavily compressed images look greasy and soft. The decoder is not being lazy; it is doing
-exactly what MSE asks — minimizing the expected squared difference between possible
+exactly what MSE asks: minimizing the expected squared difference between possible
 reconstructions. The mathematical average of many different sharp textures is an
 indistinct blur.
 
@@ -74,8 +74,8 @@ for mean squared error when the reconstruction is uncertain.
 
   The problem appears when the decoder is uncertain: suppose pixel $i$ could plausibly be 80 or
   120 (on a 0–255 scale). If the decoder outputs 100 (the average), it incurs error $(100-80)^2
-  = 400$ or $(100-120)^2 = 400$ — a middle-of-the-road penalty. If it guesses boldly and outputs
-  80, it scores 0 on the 80-case but 1600 on the 120-case — much worse on average. So MSE
+  = 400$ or $(100-120)^2 = 400$, a middle-of-the-road penalty. If it guesses boldly and outputs
+  80, it scores 0 on the 80-case but 1600 on the 120-case, which is much worse on average. So MSE
   *punishes boldness* and rewards bland averaging. Applied across millions of pixels, this produces
   the characteristic smooth blur.
 
@@ -84,11 +84,11 @@ for mean squared error when the reconstruction is uncertain.
   $ "PSNR" = 10 log_10 ((255^2)/"MSE") " dB" $
 
   Higher PSNR sounds better, but a blurry reconstruction can have higher PSNR than a sharp one
-  that invented slightly wrong details — another sign that PSNR misses perceptual quality.
+  that invented slightly wrong details. That is another sign that PSNR misses perceptual quality.
 ]
 
 Human vision is not an MSE meter. It is exquisitely sensitive to edges, textures, and whether
-something looks *like* a known material (hair, wood, fabric) — but quite insensitive to whether
+something looks *like* a known material (hair, wood, fabric), but quite insensitive to whether
 each pixel is exactly right. A codec that invents plausible hair texture may fool the eye even
 though its MSE is terrible. A codec that blurs everything to the correct average may score well
 on PSNR while looking dreadful.
@@ -101,7 +101,7 @@ rate–distortion curve into a *three-dimensional* surface that adds perception 
 
 #definition("Perceptual quality (Blau–Michaeli)")[
   A codec has perfect perceptual quality if its reconstructed images are statistically
-  indistinguishable from natural images — that is, the *distribution* of reconstructions matches
+  indistinguishable from natural images: the *distribution* of reconstructions matches
   the *distribution* of real photographs, not just pixel-by-pixel similarity to a specific original.
   Perceptual quality is measured by the divergence between these two distributions.
 ]
@@ -115,7 +115,7 @@ rate–distortion curve into a *three-dimensional* surface that adds perception 
 
 #proof[
   The intuition: zero distortion means $hat(x) = x$ exactly, so the reconstruction distribution is
-  just the source distribution — perfect perception too. But as the bitrate drops, $hat(x)$ must
+  just the source distribution, giving perfect perception too. But as the bitrate drops, $hat(x)$ must
   deviate from $x$. It can deviate in a way that stays pixel-close (low distortion, possibly blurry)
   or in a way that stays distribution-close (high perceptual quality, possibly inventing details).
   At any fixed $R$, these pull in opposite directions. Blau and Michaeli prove this formally using
@@ -125,7 +125,7 @@ rate–distortion curve into a *three-dimensional* surface that adds perception 
 ]
 
 This theorem has two startling corollaries. First, the blurry MSE codecs we criticized are not
-badly designed — they are faithfully implementing a choice to minimize distortion, at the cost of
+badly designed. They are faithfully implementing a choice to minimize distortion, at the cost of
 perception. Second, a perceptually perfect codec is *not* trying to reproduce your specific image.
 It is trying to generate a plausible member of the set "images that look like this kind of scene."
 It may show you a face with different freckles. That is the trade you are making.
@@ -133,7 +133,7 @@ It may show you a face with different freckles. That is the trade you are making
 #keyidea[
   The rate–distortion–perception tradeoff is a law of nature, not a limitation of any particular
   algorithm. At low bitrates, you must choose: pixel accuracy or visual realism. Generative codecs
-  choose realism. MSE codecs choose accuracy. Both are valid — for different use cases.
+  choose realism. MSE codecs choose accuracy. Both are valid, for different use cases.
 ]
 
 #fig(
@@ -145,10 +145,10 @@ It may show you a face with different freckles. That is the trade you are making
     // Axes
     line((0,0),(5,0), mark: (end: ">"), name: "xax")
     line((0,0),(0,4), mark: (end: ">"), name: "yax")
-    content((5.3, 0))[Distortion $D$]
-    content((0, 4.3))[Perception $P$]
-    content((-0.8, 2.0), angle: 90deg)[better →]
-    content((2.5, -0.5))[← better]
+    content((5.3, 0))[#text(size: 9pt)[Distortion $D$]]
+    content((0, 4.3))[#text(size: 9pt)[Perception $P$]]
+    content((-0.8, 2.0), angle: 90deg)[#text(size: 9pt)[better →]]
+    content((2.5, -0.5))[#text(size: 9pt)[← better]]
     // The tradeoff frontier curve
     bezier((0.3, 3.7),(2.5,2.5),(4.5,0.5),
            stroke: (paint: rgb("#0b5394"), thickness: 2pt))
@@ -184,7 +184,7 @@ now a landmark in the field.
 HiFiC's key insight is that if you want the decoder to produce realistic-looking images, you
 should explicitly train it against a *critic that knows what real images look like*. In machine
 learning, this critic is called a *discriminator*, and the training setup is called a *generative
-adversarial network* (GAN) — introduced in Chapter 56.
+adversarial network* (GAN), introduced in Chapter 56.
 
 Here is how the training loop works in HiFiC:
 
@@ -192,20 +192,20 @@ Here is how the training loop works in HiFiC:
    just like Ballé's models from Chapter 57).
 
 2. *The decoder* (also called the generator in GAN terminology) takes $hat(y)$ and produces a
-   reconstruction $hat(x)$. At first, $hat(x)$ looks blurry — the decoder knows nothing about
+   reconstruction $hat(x)$. At first $hat(x)$ looks blurry, since the decoder knows nothing about
    realistic textures yet.
 
 3. *The discriminator* is shown two kinds of images: real photographs from the training set, and
    the decoder's reconstructions. Its job is to label each one as "real" or "fake."
 
 4. The training loss has three parts, all minimized jointly:
-   - *Rate term*: how many bits does the code $hat(y)$ take? (Same as before — minimize
+   - *Rate term*: how many bits does the code $hat(y)$ take? (Same as before: minimize
      bitrate.)
    - *Distortion term*: how different is $hat(x)$ from $x$ in pixel space? (A small MSE penalty
      to keep it tethered to reality.)
    - *GAN term*: how well does the decoder fool the discriminator into calling its output "real"?
 
-Over thousands of training steps, the decoder learns that blurry averages fool nobody — the
+Over thousands of training steps, the decoder learns that blurry averages fool nobody: the
 discriminator immediately flags them as fake. It is forced to invent convincing texture, or the
 GAN loss penalizes it. The distortion term keeps it from inventing textures that are
 *completely* wrong for the scene. The result is a decoder that hallucinates plausible detail
@@ -218,7 +218,7 @@ with remarkable accuracy.
   aim: "Lossy image compression optimizing perceptual quality via GAN training, achieving high visual fidelity at bitrates where MSE codecs produce blur.",
   complexity: "Encoder: ~0.5–1 s per image (GPU). Decoder: ~0.1–0.5 s per image (GPU). Training: days on many GPUs. Significantly slower than classical codecs.",
   strengths: "Dramatically better perceptual quality than any MSE codec at low bitrates; human studies show it is preferred over BPG at half the bitrate; architecture is flexible and extends to higher resolutions.",
-  weaknesses: "Pixels are not faithfully reproduced — details are invented. Unacceptable for forensic, medical, or archival uses. Slower than classical decoders. Training is expensive and brittle.",
+  weaknesses: "Pixels are not faithfully reproduced; details are invented. Unacceptable for forensic, medical, or archival uses. Slower than classical decoders. Training is expensive and brittle.",
   superseded: "Diffusion-based decoders (PerCo, StableCodec) achieve even higher realism at ultra-low bitrates. OneDC (2025) offers 40%+ bitrate reduction over prior diffusion codecs at 20x faster decoding.",
 )[
   HiFiC builds on the Ballé hyperprior architecture (Chapter 57) for the encoder/entropy model.
@@ -236,7 +236,7 @@ with remarkable accuracy.
 
 === What the Human Studies Found
 
-The NeurIPS 2020 paper included careful human preference studies — arguably the most important
+The NeurIPS 2020 paper included careful human preference studies, arguably the most important
 part of the work, because perceptual quality is fundamentally a human judgment.
 
 The key result: *HiFiC at 0.237 bits per pixel (bpp) was preferred by human raters over BPG
@@ -249,7 +249,7 @@ severe blocking artifacts. MSE codecs produced wax-museum skin. HiFiC produced f
 frequently described as "photographic," even though they had never existed as actual photographs.
 
 #gopython("Lambda Expressions and Default Arguments")[
-  In the code below, you will see `lambda: ...` — a way to write a tiny, nameless function inline.
+  In the code below, you will see `lambda: ...`, a way to write a tiny, nameless function inline.
   You will also see *default argument values* in function definitions like `def foo(x, lam=0.01)`,
   which means `lam` is optional; the caller can pass a value or leave it at the default.
 
@@ -274,7 +274,7 @@ Let's look at a simplified Python sketch of the HiFiC loss computation, to make 
 objective concrete:
 
 ```python
-# Conceptual sketch — not a full training loop, just the loss structure.
+# Conceptual sketch - not a full training loop, just the loss structure.
 # Real implementations use PyTorch autograd; this shows the idea.
 
 def hific_loss(
@@ -313,7 +313,7 @@ HiFiC uses what is called a *patch discriminator* (sometimes called PatchGAN). I
 looking at an entire image and saying "real or fake?", the discriminator examines overlapping
 $70 times 70$-pixel patches and classifies each patch. This has two advantages.
 
-First, textures and fine details live at the patch scale — asking about a whole image can miss
+First, textures and fine details live at the patch scale. Asking about a whole image can miss
 subtle texture artifacts. Second, training on patches provides many more training examples per
 image, which stabilizes the GAN training.
 
@@ -326,7 +326,7 @@ adversarial tug-of-war is what forces the decoder to produce increasingly convin
   Why doesn't HiFiC simply use a much higher MSE weight (`lam_dist`) to keep reconstructions
   closer to the original pixels?
 ][
-  A high MSE weight drags the decoder back toward blurry averaging — the behavior we are
+  A high MSE weight drags the decoder back toward blurry averaging, the behavior we are
   trying to escape. The whole point is that low MSE weight forces the decoder to fill in
   missing detail using generative priors rather than pixel averages. Too much MSE weight
   and you are back to a conventional MSE-trained codec with a small GAN nudge that barely helps.
@@ -337,9 +337,9 @@ adversarial tug-of-war is what forces the decoder to produce increasingly convin
 By 2022, researchers had noticed that GAN-trained decoders, while impressive, had a ceiling.
 At very low bitrates (below about 0.05 bpp), the compressed code contained so little information
 that even the best GAN decoder had little to anchor on. Reconstructions sometimes lost semantic
-structure entirely — a face might keep its texture but lose the shape of the nose.
+structure entirely: a face might keep its texture but lose the shape of the nose.
 
-The new idea: replace the GAN decoder with a *diffusion model* — the same architecture that had
+The new idea was to replace the GAN decoder with a *diffusion model*, the same architecture that had
 just transformed image generation. Diffusion models (introduced in Chapter 56) generate images
 by starting from random noise and iteratively removing that noise, guided by a conditioning signal.
 For compression, the conditioning signal is the compressed code.
@@ -350,11 +350,11 @@ Careil, Muckley, Verbeek, and Lathuilière is the landmark paper for this approa
 === How PerCo Works: Semantic Code + Diffusion Prior
 
 PerCo operates in two steps. First, an encoder compresses the input image into a tiny code
-at extremely low bitrates — as few as 0.003 bpp. This code cannot possibly encode every pixel;
+at extremely low bitrates, as few as 0.003 bpp. This code cannot possibly encode every pixel;
 instead it encodes the *semantic gist* of the image: the broad layout of shapes, major colors,
 coarse identity information.
 
-The code is produced using *vector quantization* of VAE features — the image is passed through
+The code is produced using *vector quantization* of VAE features. The image is passed through
 a variational autoencoder (Chapter 56), the resulting latent is vector-quantized (snapped to a
 small codebook of learned discrete symbols), and the codebook indices are entropy-coded and
 transmitted.
@@ -362,14 +362,14 @@ transmitted.
 At the decoder, PerCo conditions a pre-trained *text-to-image diffusion model* (specifically
 a version of Stable Diffusion) on the received code. The diffusion model then *generates* a
 full-resolution image that matches the semantic code. In multiple denoising steps it fills in
-all the texture, lighting, fine detail — everything the code is too small to specify.
+all the texture, lighting, and fine detail that the code is too small to specify.
 
 #algo(
   name: "PerCo (Perceptual Compression via Conditioned Diffusion)",
   year: "2024",
   authors: "Careil, Muckley, Verbeek, Lathuilière (Meta AI / Inria)",
   aim: "Ultra-low-bitrate image compression (0.003–0.1 bpp) using a semantic encoder and a conditioned pre-trained diffusion model as decoder.",
-  complexity: "Encoder: moderate (VAE encode + VQ). Decoder: slow — requires 20–50 denoising steps, each a forward pass through a large diffusion model. Orders of magnitude slower than any classical or GAN-based codec.",
+  complexity: "Encoder: moderate (VAE encode + VQ). Decoder: slow, requiring 20–50 denoising steps, each a forward pass through a large diffusion model. Orders of magnitude slower than any classical or GAN-based codec.",
   strengths: "Achieves plausible reconstructions at bitrates where every other codec fails completely. Leverages powerful generative priors from internet-scale pretraining. Semantically coherent even at 0.003 bpp.",
   weaknesses: "Very slow decoding. Reconstructions can differ substantially from the original in pixel content, especially at the lowest bitrates. Fine detail is generated, not preserved. Requires a large pre-trained diffusion model at the decoder.",
   superseded: "StableCodec (ICCV 2025) achieves similar perceptual quality with one-step decoding, approximately 20x faster. OneDC (NeurIPS 2025) provides 40%+ further bitrate reduction.",
@@ -384,7 +384,7 @@ all the texture, lighting, fine detail — everything the code is too small to s
 === The Denoising Process as a Decoder
 
 To see why diffusion decoding is so powerful at ultra-low bitrates, think about what information
-is in a 0.003 bpp code. At that rate, a 512×512 image is coded in roughly *800 bits* — about
+is in a 0.003 bpp code. At that rate, a 512×512 image is coded in roughly *800 bits*, about
 100 bytes. That is enough to store, say, the rough layout of a face: "eyes here, mouth here,
 hair color approximately brown, skin tone approximately medium." It cannot store the exact shape
 of every eyelash.
@@ -394,7 +394,7 @@ and the code saying 'brown-haired face with eyes here,' what should the image lo
 20–50 steps, it has assembled a photo-realistic face that matches the layout code but has invented
 every fine detail from the model's prior over faces.
 
-This is genuinely impressive — but it means the *specific person's eyelashes* were not preserved.
+This is genuinely impressive, but it means the *specific person's eyelashes* were not preserved.
 What was preserved is "someone who looks like this person." At 0.003 bpp, that may be the best
 any system can do.
 
@@ -408,7 +408,7 @@ any system can do.
   $ hat(z) = e_k "where" k = arg min_j norm(z - e_j) $
 
   #mathrecall[$arg min_j$ (Chapter 39) means "the index $j$ that makes the following expression
-  smallest" — we keep the *position* of the nearest codeword, not the distance itself.
+  smallest": we keep the *position* of the nearest codeword, not the distance itself.
   $norm(dot.c)$ is the vector length (Chapter 12), so $norm(z - e_j)$ is how far apart the two
   vectors are.]
 
@@ -417,7 +417,7 @@ any system can do.
 
   *Example:* codebook size $K = 1024$, latent dimension $= 256$. Each code takes
   $log_2 1024 = 10$ bits, instead of $256 times 32 = 8192$ bits for a 32-bit float vector.
-  That's an 819× compression of the latent — at the cost of some approximation.
+  That's an 819× compression of the latent, at the cost of some approximation.
 
   VQ is heavily used in modern image and audio codecs (VQ-VAE, EnCodec) because it produces
   naturally discrete codes that can be entropy-coded and transmitted exactly.
@@ -465,7 +465,7 @@ Let's trace through the numbers to feel what ultra-low bitrate really means.
 
 *Image:* 512 × 512 pixels, RGB. Raw size: $512 times 512 times 3 times 8 = 6{,}291{,}456$ bits = 786 KB.
 
-*PerCo target:* 0.003 bpp. That's $0.003 times 512 times 512 = 786$ bits — about *98 bytes*.
+*PerCo target:* 0.003 bpp. That's $0.003 times 512 times 512 = 786$ bits, about *98 bytes*.
 The compressed file is 8,000× smaller than the raw image.
 
 To put 98 bytes in perspective: the JPEG header alone is larger than that. A single line of
@@ -474,7 +474,7 @@ The trick is that those 98 bytes say "face, rough position of features, approxim
 and the diffusion model's massive pre-trained knowledge of what faces look like fills in the rest.
 
 *For comparison:* conventional JPEG at this bitrate produces a $32 times 32$ thumbnail stretched
-to $512 times 512$ — indistinguishable mush. BPG (H.265-based) fails similarly. PerCo produces
+to $512 times 512$: indistinguishable mush. BPG (H.265-based) fails similarly. PerCo produces
 something your eye reads as a plausible portrait.
 
 == The 2025 Push: One-Step Distillation
@@ -493,7 +493,7 @@ to mimic the output of the slow multi-step diffusion "teacher" in a *single forw
 is the most polished of the 2025 one-step systems. Its architecture:
 
 1. A *latent codec* compresses the image into a noisy latent representation (not quite the full
-   latent of a diffusion model — a careful partial encoding that preserves enough for one-step
+   latent of a diffusion model, but a careful partial encoding that preserves enough for one-step
    decoding).
 2. A *one-step diffusion decoder*, distilled from a multi-step teacher, reconstructs the full
    image in a single forward pass.
@@ -513,7 +513,7 @@ codecs while achieving 20× faster decoding.
 #history[
   The speed problem for generative codecs has a parallel in classical codec history: the early
   H.264 encoders took many seconds per frame; hardware acceleration eventually made them
-  real-time. Neural codec advocates argue the same will happen here — dedicated neural
+  real-time. Neural codec advocates argue the same will happen here: dedicated neural
   processing units (NPUs) will accelerate diffusion decoding just as video DSPs accelerated
   motion compensation. As of 2026, this is still a hope more than a reality for most deployment
   targets, but smartphone NPU capabilities are improving rapidly.
@@ -529,11 +529,10 @@ remains out of reach on general hardware as of mid-2026.
 
 == The Hallucinated Detail Debate
 
-Every engineer who has seen a perceptual codec demo has the same reaction: "That's impressive —
-but is it honest?" This question is not merely philosophical. It has sharp practical consequences.
+Every engineer who has seen a perceptual codec demo has the same reaction: "That's impressive, but is it honest?" This question is not merely philosophical. It has sharp practical consequences.
 
 #misconception[
-  Perceptual codecs are just better versions of regular lossy codecs — same idea, better quality.
+  Perceptual codecs are just better versions of regular lossy codecs, same idea, better quality.
 ][
   There is a fundamental difference. A lossy JPEG loses detail by omission: it blurs or rounds
   things that were there. A GAN or diffusion codec loses detail by *substitution*: it replaces
@@ -554,7 +553,7 @@ background textures causes no harm if it looks cinematic. The viewer never had a
 ground truth anyway.
 
 *Satellite and aerial imagery for public view:* A perceptual codec that renders plausible
-foliage and building facades at low bitrates is fine for orientational purposes — checking
+foliage and building facades at low bitrates is fine for orientational purposes, such as checking
 which side of a city you're looking at.
 
 === Where Hallucination Is Dangerous
@@ -591,7 +590,7 @@ substitute for the photons that actually arrived at the telescope.
 
 === The Hallucination Index
 
-Some researchers have proposed a *hallucination index* — a number measuring how much a
+Some researchers have proposed a *hallucination index*, a number measuring how much a
 perceptual codec's output deviates from what the original image would have looked like
 under an ideal lossless system. Computing it requires access to the original (to compare),
 which limits its use in deployed systems. But it is a useful framework: any deployment of a
@@ -612,7 +611,7 @@ faithfully reproduced and which were generated.
 == JPEG AI: Standardizing the Neural Codec
 
 While academia produced impressive research systems, the practical adoption of neural image
-codecs in real products requires standardization — an agreed-upon bitstream format so that any
+codecs in real products requires standardization: an agreed-upon bitstream format so that any
 conforming encoder and decoder interoperate. This is what JPEG did for DCT-based compression
 in 1992, and what the industry needed for learned codecs.
 
@@ -626,7 +625,7 @@ image coding. Its history:
   ISO/IEC/ITU International Standard.
 
 The standard specifies a bitstream format, conformance tests, and a reference software decoder,
-but — unlike JPEG — it does not prescribe the specific neural network architecture of the encoder.
+but, unlike JPEG, it does not prescribe the specific neural network architecture of the encoder.
 Encoders can use any architecture that produces a conforming bitstream; only the decoder profile
 is standardized. This design acknowledges that neural codec architectures will keep improving.
 
@@ -651,8 +650,8 @@ mode is a significant departure from all previous image standards.
 == A Python Sketch of Perception-Aware Training
 
 Let us look at a more complete Python sketch that shows how the three-loss training objective
-is assembled. This is conceptual — a real implementation uses PyTorch with autograd and GPU
-tensors — but the structure is identical.
+is assembled. This is conceptual. A real implementation uses PyTorch with autograd and GPU
+tensors, but the structure is identical.
 
 ```python
 """
@@ -747,7 +746,7 @@ def training_step_sketch(
 ```
 
 The most important thing to read in this code: `lam_dist = 0.075` is very small. If we set it
-to 10.0 instead, the training would optimize almost entirely for pixel accuracy — and we'd get
+to 10.0 instead, the training would optimize almost entirely for pixel accuracy, and we'd get
 a standard MSE codec with a GAN term that barely matters. The small distortion weight is what
 forces the perceptual magic to emerge.
 
@@ -764,7 +763,7 @@ label. For compression, we want to guide it by the *compressed code* instead.
 $tilde$ reads "is distributed as"; $cal(N)$ is the *normal* (bell-curve) distribution from
 Chapter 9; $0$ is its mean and $I$ (the identity matrix, Chapter 12) says every coordinate is
 independent with variance $1$. In plain terms: each number in $z_T$ is an independent draw from
-a standard bell curve — pure static.]
+a standard bell curve, pure static.]
 
 #note[
   Three pieces of neural-network plumbing appear below for the first time. A *U-Net* is the
@@ -773,7 +772,7 @@ a standard bell curve — pure static.]
   lost. *Cross-attention* is the mechanism by which a guiding signal (normally a text prompt,
   here the compressed code) is injected into the U-Net: at each layer, the network "looks at" the
   conditioning vectors and lets them steer what it draws. *DDIM* (Denoising Diffusion Implicit
-  Models) is simply a *deterministic* recipe for the denoising steps — given the same starting
+  Models) is simply a *deterministic* recipe for the denoising steps: given the same starting
   noise and the same code, it always produces the same image, which a codec needs.
 ]
 
@@ -783,7 +782,7 @@ PerCo does this by:
 2. Replacing the text embedding with the code embedding in every cross-attention layer of the
    U-Net denoiser.
 3. Running the standard DDIM (Denoising Diffusion Implicit Models) sampling loop, which is
-   deterministic given the code — the same code always produces the same reconstruction, which
+   deterministic given the code: the same code always produces the same reconstruction, which
    is important for a codec (you need a defined decoding).
 
 ```python
@@ -819,7 +818,7 @@ def perco_decode(
     return pixels
 ```
 
-The `ddim_step` function is deterministic — given the same noise prediction and timestep,
+The `ddim_step` function is deterministic: given the same noise prediction and timestep,
 it always produces the same next latent. This ensures that the same compressed code always
 decodes to the same image, which is a requirement for any compression system.
 
@@ -853,7 +852,7 @@ decodes to the same image, which is a requirement for any compression system.
 Because perceptual quality is not measurable by PSNR, perceptual codecs use different metrics.
 
 *LPIPS* (Learned Perceptual Image Patch Similarity) was introduced by Zhang et al. in 2018.
-It measures how different two images look to a *VGG or AlexNet network* — a network trained
+It measures how different two images look to a *VGG or AlexNet network*, one trained
 on image classification that has learned, along the way, which visual features matter. Two images
 that look similar to humans tend to have similar intermediate neural activations. LPIPS is the
 average distance between those activations over image patches. Lower LPIPS = more perceptually
@@ -944,7 +943,7 @@ this field.
 Even with one-step distillation, diffusion-based decoders are order-of-magnitude slower than
 classical codecs. Decoding a 4K frame with H.265 on a modern CPU takes a few milliseconds.
 Decoding with a neural diffusion codec takes seconds to minutes without specialized hardware.
-GAN-based decoders (like HiFiC) are faster — roughly 100ms per megapixel on a GPU — but still
+GAN-based decoders (like HiFiC) are faster, roughly 100ms per megapixel on a GPU, but still
 far from the microsecond-level decode that hardware video decoders achieve.
 
 === Hardware
@@ -958,18 +957,18 @@ layers, normalization, iterative sampling) are not yet as efficiently accelerate
 
 JPEG AI becoming an ISO standard (2025) is a critical first step, but standard ≠ deployment.
 It took HEVC (H.265) about five years from standardization (2013) to widespread use in mobile
-cameras. JPEG AI faces the same ramp. Moreover, JPEG AI defines only still-image compression;
+cameras. JPEG AI faces the same ramp. And JPEG AI covers only still-image compression;
 neural video codec standardization is further behind.
 
 === Floating-Point Reproducibility
 
 Neural codecs face a subtle engineering problem that classical codecs do not: *floating-point
 arithmetic is not identical across hardware*. The same neural network, run on an NVIDIA GPU
-versus an AMD GPU versus Apple Silicon, may produce slightly different intermediate values —
-which can mean different quantization decisions, which can corrupt the decoded bitstream. Classical
+versus an AMD GPU versus Apple Silicon, may produce slightly different intermediate values,
+which can mean different quantization decisions and corrupt the decoded bitstream. Classical
 codecs use integer arithmetic that is perfectly reproducible everywhere.
 
-This is not an unsolvable problem — it requires careful engineering of the network to avoid
+This is not an unsolvable problem. It requires careful engineering of the network to avoid
 operations sensitive to floating-point order, and some systems use fixed-point inference. But
 it adds significant engineering cost and is a real barrier to bit-exact interoperability.
 
@@ -977,9 +976,9 @@ it adds significant engineering cost and is a real barrier to bit-exact interope
   A streaming platform says it wants to switch to a perceptual codec to save bandwidth. What
   are the three most important questions you should ask before recommending it?
 ][
-  (1) What are the use cases — does any content require pixel fidelity (documentaries, news,
-  archival footage)? (2) What hardware decodes the stream — can all target devices run neural
-  inference at the required speed? (3) What is the deployment timeline — is this for a
+  (1) What are the use cases: does any content require pixel fidelity (documentaries, news,
+  archival footage)? (2) What hardware decodes the stream, and can all target devices run neural
+  inference at the required speed? (3) What is the deployment timeline: is this for a
   proprietary pipeline (where format compatibility is controlled) or a public bitstream (where
   standardization matters)?
 ]
@@ -995,14 +994,14 @@ ways more like a text-to-image model that has been given a very specific prompt 
 traditional "inverse transform." The code is a latent description, not a reversible transform.
 
 It also has practical consequences. The same pre-trained diffusion backbone that powers
-Stable Diffusion or DALL-E can be reused as a compression decoder — you get the world's most
+Stable Diffusion or DALL-E can be reused as a compression decoder. You get the world's most
 powerful image prior "for free" by piggybacking on models that were trained on billions of
 images. The compression encoder only needs to produce a code that steers this prior correctly.
 
 This is genuinely new in the history of compression. For seventy years, compression research
 built custom representations: Huffman trees, DCT bases, wavelet filters, LZ dictionaries, Ballé
 autoencoders. All of these were designed and optimized specifically for compression. Diffusion
-codecs instead *borrow* from the general-purpose AI world — the decoder is a general image
+codecs instead *borrow* from the general-purpose AI world. The decoder is a general image
 generator that was trained for entirely different purposes, repurposed as a codec component.
 
 Whether this convergence of generative AI and codec engineering continues to produce gains, or
@@ -1010,14 +1009,14 @@ whether there are fundamental limits on how much realism can be squeezed from a 
 is one of the open questions that will define the field through the late 2020s.
 
 #takeaways((
-  "The rate–distortion–perception tradeoff (Blau & Michaeli, 2019) proves that at low bitrates, pixel accuracy and perceptual realism are in fundamental tension — you cannot maximize both.",
-  "MSE-trained codecs produce blur at low bitrates because averaging over uncertain pixels is the mathematically correct way to minimize squared error — but humans hate blur.",
+  "The rate–distortion–perception tradeoff (Blau & Michaeli, 2019) proves that at low bitrates, pixel accuracy and perceptual realism are in fundamental tension: you cannot maximize both.",
+  "MSE-trained codecs produce blur at low bitrates because averaging over uncertain pixels is the mathematically correct way to minimize squared error, but humans hate blur.",
   "HiFiC (NeurIPS 2020) solved this by adding a GAN discriminator loss that penalizes the decoder for producing any image a critic can distinguish from a real photograph.",
   "PerCo (ICLR 2024) pushed further: at ultra-low bitrates below 0.01 bpp, a diffusion model guided by the compressed code regenerates a plausible image, inventing all fine detail.",
   "StableCodec and OneDC (2025) distilled multi-step diffusion into a single forward pass, cutting decoding time by roughly 20x while preserving perceptual quality.",
-  "Hallucinated detail is not a bug — it is a design choice. Perceptual codecs are excellent for consumer media and dangerous for forensic, medical, or archival applications.",
+  "Hallucinated detail is not a bug; it is a design choice. Perceptual codecs are excellent for consumer media and dangerous for forensic, medical, or archival applications.",
   "JPEG AI became an ISO/IEC/ITU International Standard in February 2025, the first standard for end-to-end learned image coding, with ~30% gains over VVC.",
-  "Deployment barriers — speed, hardware, floating-point reproducibility, standardization — mean perceptual codecs remain research systems for most applications as of 2026.",
+  "Deployment barriers (speed, hardware, floating-point reproducibility, standardization) mean perceptual codecs remain research systems for most applications as of 2026.",
 ))
 
 == Exercises
@@ -1028,12 +1027,12 @@ is one of the open questions that will define the field through the late 2020s.
   uncertain completions in your answer.
 ]
 #solution("58.1")[
-  At low bitrates, many pixels cannot be stored precisely — the decoder has uncertainty about
+  At low bitrates, many pixels cannot be stored precisely; the decoder has uncertainty about
   each pixel's true value. MSE is minimized by outputting the *expected value* (average) of all
   plausible pixel values, because averaging reduces the average squared error. When the true
   pixel could be anywhere from light to dark grey, outputting middle grey is mathematically
   optimal for MSE. Applied across millions of pixels, this produces smooth, blurry averages
-  instead of sharp textures — not a bug, but the correct solution to the wrong problem.
+  instead of sharp textures. Not a bug, but the correct solution to the wrong problem.
 ]
 
 #exercise("58.2", 1)[
@@ -1043,9 +1042,9 @@ is one of the open questions that will define the field through the late 2020s.
 ]
 #solution("58.2")[
   Consider a portrait compressed at 0.05 bpp. *Scenario A:* The MSE-optimal decoder outputs
-  the pixel-average face — correct mean color, low MSE, but indistinct blur for every feature.
-  *Scenario B:* A GAN decoder invents sharp-looking eyes, crisp hair, realistic pores —
-  high MSE because each invented pixel differs from the original, but humans rate it as
+  the pixel-average face, with correct mean color and low MSE, but indistinct blur for every feature.
+  *Scenario B:* A GAN decoder invents sharp-looking eyes, crisp hair, and realistic pores.
+  MSE is high because each invented pixel differs from the original, but humans rate it as
   "photographic." The GAN output has higher distortion (more MSE) but better perceptual
   quality (looks more like a real face). Blau–Michaeli predicts exactly this: at this bitrate,
   you cannot have both.
@@ -1054,14 +1053,14 @@ is one of the open questions that will define the field through the late 2020s.
 #exercise("58.3", 2)[
   In the HiFiC loss function $cal(L) = R + lambda_"dist" D + lambda_"GAN" cal(L)_"GAN"$,
   the paper uses $lambda_"dist" = 0.075$ and $lambda_"GAN" = 1.0$. What would happen to the
-  reconstruction quality — in terms of both PSNR and perceptual quality — if you swapped these
+  reconstruction quality, in terms of both PSNR and perceptual quality, if you swapped these
   values, using $lambda_"dist" = 1.0$ and $lambda_"GAN" = 0.075$? Justify your answer using
   the rate–distortion–perception tradeoff.
 ]
 #solution("58.3")[
   With $lambda_"dist" = 1.0$ (large), the distortion term dominates. The decoder would be
   trained primarily to minimize pixel MSE, producing blurry but pixel-accurate reconstructions
-  — high PSNR, poor perceptual quality (similar to a standard MSE codec). The GAN term with
+  High PSNR results, but poor perceptual quality (similar to a standard MSE codec). The GAN term with
   $lambda_"GAN" = 0.075$ would be too weak to force realistic texture generation. The
   perception–distortion tradeoff implies that pushing toward low distortion pulls you away from
   high perceptual quality: by weighting distortion heavily, we slide along the tradeoff curve
@@ -1079,7 +1078,7 @@ is one of the open questions that will define the field through the late 2020s.
   (b) $786 / 8 approx 98$ bytes.
   (c) With $K = 1024$ codebook entries, each index takes $log_2 1024 = 10$ bits.
   A $16 times 16$ grid has $256$ latent positions, so total bits $= 256 times 10 = 2560$ bits.
-  That is larger than 786 bits — indicating that either the grid is much smaller, the codebook
+  That is larger than 786 bits, indicating that either the grid is much smaller, the codebook
   is much smaller, or (more likely) entropy coding of the indices reduces the cost well below
   10 bits each if the index distribution is skewed. Realistic PerCo systems use additional
   entropy coding that achieves average code lengths far below $log_2 K$ for likely indices.
@@ -1092,14 +1091,14 @@ is one of the open questions that will define the field through the late 2020s.
 ]
 #solution("58.5")[
   LPIPS (Learned Perceptual Image Patch Similarity) compares a specific reconstruction to its
-  specific original by measuring distance in VGG/AlexNet feature space — it is a
-  *reference-based*, per-image metric. It answers: "Does this reconstruction look like this
+  specific original by measuring distance in VGG/AlexNet feature space. It is a
+  *reference-based*, per-image metric that answers: "Does this reconstruction look like this
   original?" FID (Fréchet Inception Distance) compares the *distribution* of reconstructed
-  images to the *distribution* of real images across an entire test set — it is a
-  *distribution-level* metric. It answers: "Do all the reconstructions, taken together, look
+  images to the *distribution* of real images across an entire test set. It is a
+  *distribution-level* metric that asks: "Do all the reconstructions, taken together, look
   like real photographs?" For (a), LPIPS is appropriate. For (b), FID is appropriate. A
   generative codec can have poor LPIPS (each reconstruction differs from its original) but
-  good FID (the set of reconstructions looks natural) — this is normal and expected.
+  good FID (the set of reconstructions looks natural); this is normal and expected.
 ]
 
 #exercise("58.6", 3)[
@@ -1111,10 +1110,10 @@ is one of the open questions that will define the field through the late 2020s.
 #solution("58.6")[
   *Pros of perceptual compression in radiology:* Storage cost reduction could be enormous
   (hospitals store millions of images); bandwidth savings for telemedicine; faster transfers.
-  *Cons and dangers:* (1) Hallucinated detail is the core risk — a diffusion decoder could
+  *Cons and dangers:* (1) Hallucinated detail is the core risk. A diffusion decoder could
   remove a real nodule or invent one, directly affecting diagnosis. (2) Medical imaging is
   regulated: DICOM standards and FDA guidelines require that archived images faithfully represent
-  the original acquisition. (3) Legal liability — if a missed diagnosis is later linked to a
+  the original acquisition. (3) Legal liability: if a missed diagnosis is later linked to a
   perceptual codec altering an image, the liability would be severe. (4) Diffusion decoders
   are non-deterministic in stochastic sampling modes; bit-exact reproducibility (required for
   medicolegal purposes) requires additional engineering. *Conclusion:* Perceptual codecs are
@@ -1186,25 +1185,25 @@ is one of the open questions that will define the field through the late 2020s.
 
 == Further Reading
 
-- #link("https://arxiv.org/abs/2006.09965")[Mentzer et al. (2020). *High-Fidelity Generative Image Compression.* NeurIPS 2020. arXiv:2006.09965] — The HiFiC paper; required reading.
-- #link("https://hific.github.io/")[HiFiC Project Page] — Interactive comparison tool; try it before reading the math.
-- #link("https://arxiv.org/abs/2310.19817")[Careil et al. (2024). *Towards Image Compression with Perfect Realism at Ultra-Low Bitrates.* ICLR 2024.] — The PerCo paper introducing diffusion decoders for compression.
-- #link("https://arxiv.org/abs/2506.21977")[Zhang et al. (2025). *StableCodec: Taming One-Step Diffusion for Extreme Image Compression.* ICCV 2025.] — One-step distillation for fast decoding.
-- #link("https://arxiv.org/abs/2505.16687")[OneDC (2025). *One-Step Diffusion-Based Image Compression with Semantic Distillation.* arXiv:2505.16687.] — OneDC system; 40% bitrate reduction over prior diffusion codecs.
-- #link("https://jpeg.org/items/20250219_press.html")[JPEG Committee (2025). *JPEG AI becomes an International Standard.* Press Release.] — Standardization milestone.
-- #link("https://arxiv.org/abs/2202.06533")[Yang, Mandt, Theis (2023). *An Introduction to Neural Data Compression.* Foundations and Trends.] — Comprehensive survey of the whole neural compression field.
-- #link("https://arxiv.org/abs/2401.12207")[Blau & Michaeli (2019/2024). *Rate-Distortion-Perception Tradeoff.* Extended treatment.] — Deeper mathematical treatment of the fundamental tradeoff.
-- #link("https://arxiv.org/abs/1801.03924")[Zhang et al. (2018). *The Unreasonable Effectiveness of Deep Features as a Perceptual Metric.* CVPR.] — The LPIPS metric paper; explains why VGG features predict human perception.
+- #link("https://arxiv.org/abs/2006.09965")[Mentzer et al. (2020). *High-Fidelity Generative Image Compression.* NeurIPS 2020. arXiv:2006.09965] - The HiFiC paper; required reading.
+- #link("https://hific.github.io/")[HiFiC Project Page] - Interactive comparison tool; try it before reading the math.
+- #link("https://arxiv.org/abs/2310.19817")[Careil et al. (2024). *Towards Image Compression with Perfect Realism at Ultra-Low Bitrates.* ICLR 2024.] - The PerCo paper introducing diffusion decoders for compression.
+- #link("https://arxiv.org/abs/2506.21977")[Zhang et al. (2025). *StableCodec: Taming One-Step Diffusion for Extreme Image Compression.* ICCV 2025.] - One-step distillation for fast decoding.
+- #link("https://arxiv.org/abs/2505.16687")[OneDC (2025). *One-Step Diffusion-Based Image Compression with Semantic Distillation.* arXiv:2505.16687.] - OneDC system; 40% bitrate reduction over prior diffusion codecs.
+- #link("https://jpeg.org/items/20250219_press.html")[JPEG Committee (2025). *JPEG AI becomes an International Standard.* Press Release.] - Standardization milestone.
+- #link("https://arxiv.org/abs/2202.06533")[Yang, Mandt, Theis (2023). *An Introduction to Neural Data Compression.* Foundations and Trends.] - Comprehensive survey of the whole neural compression field.
+- #link("https://arxiv.org/abs/2401.12207")[Blau & Michaeli (2019/2024). *Rate-Distortion-Perception Tradeoff.* Extended treatment.] - Deeper mathematical treatment of the fundamental tradeoff.
+- #link("https://arxiv.org/abs/1801.03924")[Zhang et al. (2018). *The Unreasonable Effectiveness of Deep Features as a Perceptual Metric.* CVPR.] - The LPIPS metric paper; explains why VGG features predict human perception.
 
 #bridge[
-  We have now seen how generative models — first GANs, then diffusion — transform the decoder
+  We have now seen how generative models (first GANs, then diffusion) transform the decoder
   from a deterministic inverse transform into a *conditioned image generator*. This is the most
   dramatic conceptual shift in compression since Shannon's theory.
 
   But still-image perceptual codecs are only the beginning. In Chapter 59 we turn to video:
   how do you handle the temporal dimension with neural codecs? The DVC family and the DCVC line
   replace classical motion estimation with learned optical flow and conditional entropy models.
-  And a radically different approach — implicit neural representations — stores a video not as
+  And a radically different approach, implicit neural representations, stores a video not as
   a sequence of frames but as the weights of a small network overfit to that particular clip.
   Both approaches struggle with the same deployment barriers we saw here, but both offer
   new ways to think about what it means to "store" moving images.

@@ -14,9 +14,9 @@ If a modern SSD can feed your CPU at 7,000 MB/s, the compressor is the
 bottleneck. It is slower than storage. It is slower than the network. It is,
 in the ugliest possible sense, helping.
 
-The algorithmic chapters you have read — Huffman (Chapter 24), arithmetic
-coding (Chapter 26), ANS (Chapter 27), LZ77 (Chapter 28), DEFLATE (Chapter 30),
-BWT (Chapter 35) — told you *what* to compute. This chapter tells you *how*
+The algorithmic chapters you have read (Huffman: Chapter 24; arithmetic
+coding: Chapter 26; ANS: Chapter 27; LZ77: Chapter 28; DEFLATE: Chapter 30;
+BWT: Chapter 35) told you *what* to compute. This chapter tells you *how*
 to make a computer do it as fast as physics allows. We will tour four
 interlocking techniques that every high-performance codec relies on: interleaved
 ANS decoding with SIMD, branchless match-copy loops, cache-aware hash-chain
@@ -27,8 +27,8 @@ only why zstd decompresses at multi-gigabyte-per-second speeds, but also how
 that performance is engineered, instruction by instruction.
 
 #recap[
-  In *Chapter 27* we met rANS — the Range variant of Asymmetric Numeral
-  Systems — which encodes symbols into a single integer state and achieves
+  In *Chapter 27* we met rANS (the Range variant of Asymmetric Numeral
+  Systems), which encodes symbols into a single integer state and achieves
   arithmetic-coding accuracy at near-table-lookup speed. In *Chapter 28* we
   built the LZ77 match finder, the heart of every modern dictionary codec.
   In *Chapter 30* we combined them into a DEFLATE implementation with a
@@ -58,7 +58,7 @@ that performance is engineered, instruction by instruction.
 == The modern CPU's dirty secret
 
 Before we can understand fast codecs, we need to understand the machine they
-run on — and modern CPUs have a gap between their *theoretical* peak performance
+run on. Modern CPUs have a gap between their *theoretical* peak performance
 and what most code actually achieves that is so large it might as well be a
 chasm.
 
@@ -67,7 +67,7 @@ next. It looks ahead into the instruction stream, figures out which instructions
 do not depend on each other, and runs several at the same time. This is called
 *superscalar execution*. A typical core can retire four to six instructions per
 clock cycle, and since a chip running at 4 GHz ticks 4 billion times a second,
-the theoretical ceiling is somewhere around 24 billion instructions per second —
+the theoretical ceiling is somewhere around 24 billion instructions per second
 *per core*.
 
 The catch: superscalar execution only helps when the CPU has *independent work
@@ -78,7 +78,7 @@ dominant performance killer in entropy decoders.
 #gomaths("Latency versus throughput")[
   Processor architects talk about two measures of an instruction's speed.
   *Latency* is how many clock cycles you must wait before the result is
-  ready — the delay from "start" to "usable output". *Throughput* is how many
+  ready (the delay from "start" to "usable output"). *Throughput* is how many
   of the same instruction can *start* per cycle if their inputs are already
   available.
 
@@ -109,7 +109,7 @@ Step 2 uses the result of step 1. Step 3 uses the result of step 2. The entire
 decode loop is one long chain of data dependencies. Every iteration of the loop
 must *wait* for the previous one to finish before it can start. On a 4 GHz
 CPU where the critical multiply has a 3-cycle latency, the maximum decoding
-speed is roughly one symbol per 3 cycles — throwing away the five-sixths of
+speed is roughly one symbol per 3 cycles, throwing away the five-sixths of
 execution capacity that is sitting idle.
 
 How fast is that in practice? If a symbol decodes in roughly 8--12 clock
@@ -136,7 +136,7 @@ With two states, $x_0$ and $x_1$, the decode loop looks like this in pseudocode:
 
 The update of $x_0$ and the update of $x_1$ have *no dependency on each other*.
 The CPU can start the second before the first is finished. With two streams,
-we nearly double throughput for free — no algorithmic change at all, just
+we nearly double throughput for free, with no algorithmic change at all, just
 reordering the work.
 
 With *four* interleaved states, throughput roughly doubles again. With *eight*,
@@ -144,13 +144,13 @@ we saturate the available multiply units on a typical superscalar core. In
 practice, the sweet spot for software rANS is four to sixteen states, depending
 on the CPU microarchitecture. Fabian "ryg" Giesen demonstrated this empirically
 in his 2014 ryg\_rans library (the canonical open-source reference), showing
-that four-way interleaved rANS decodes roughly 2--3× faster than single-state
+that four-way interleaved rANS decodes roughly 2--3x faster than single-state
 rANS on Intel Haswell, dropping from around 11 cycles per symbol to roughly
 4--5 cycles per symbol.
 
 #keyidea[
   Interleaving $N$ independent ANS states (each encoding a sub-sequence of
-  symbols) has *zero effect on the compression ratio* — you still reach the
+  symbols) has *zero effect on the compression ratio*: you still reach the
   entropy floor. It is a pure speed optimization that exploits instruction-level
   parallelism. The decompressor must maintain all $N$ states simultaneously and
   interleave their renormalization reads from the compressed stream.
@@ -170,7 +170,7 @@ rANS on Intel Haswell, dropping from around 11 cycles per symbol to roughly
 
 === SIMD: eight updates for the price of one instruction
 
-Modern CPUs also have a special set of *SIMD* instructions — a name standing
+Modern CPUs also have a special set of *SIMD* instructions, where SIMD stands
 for *Single Instruction, Multiple Data*. One SIMD instruction operates on an
 entire *vector* of values at once.
 
@@ -179,7 +179,7 @@ entire *vector* of values at once.
   and returns one 32-bit integer. A 256-bit SIMD multiply instruction instead
   takes two vectors, each containing *eight* 32-bit integers packed side by
   side, multiplies each pair in parallel, and returns one vector of eight
-  results — in *one* clock cycle.
+  results in *one* clock cycle.
 
   On Intel CPUs the relevant instruction sets are SSE2 (128-bit vectors,
   four 32-bit integers), SSE4.1, AVX2 (256-bit vectors, eight 32-bit
@@ -187,14 +187,14 @@ entire *vector* of values at once.
   CPUs have the equivalent NEON and SVE instruction sets.
 
   SIMD only helps when the *same* operation is applied to *many* independent
-  pieces of data simultaneously — which is exactly the shape of interleaved
+  pieces of data simultaneously, which is exactly the shape of interleaved
   ANS decoding.
 ]
 
 With eight interleaved rANS states and AVX2, each decode "round" does eight
 table lookups in parallel with one GATHER instruction, eight multiply-adds in
 parallel with SIMD arithmetic, and eight threshold comparisons in parallel with
-a SIMD compare — then reads renormalization bytes only for the states that need
+a SIMD compare. It then reads renormalization bytes only for the states that need
 it, using a compact bit-mask to guide which lanes get refreshed.
 
 In practical terms: an eight-way AVX2 interleaved rANS decoder running on a
@@ -205,7 +205,7 @@ and FSE back-ends.
 The tradeoff: SIMD code is *architecture-specific*. Code written for AVX2
 will not run on an ARM phone, and code using AVX-512 will not run on a CPU that
 only supports AVX2. Production codecs therefore ship multiple code paths and
-select the best one at runtime — a technique called *CPU dispatch*.
+select the best one at runtime, a technique called *CPU dispatch*.
 
 #algo(
   name: "Interleaved rANS (N-way)",
@@ -232,8 +232,8 @@ select the best one at runtime — a technique called *CPU dispatch*.
   $N-1$, symbol $N$ back to state 0, and so on.
 
   In Python, given a list of all symbols, we can extract the sub-sequence for
-  state $k$ using *slice notation* `seq[k::N]` — this means "start at index
-  `k`, take every `N`-th element".
+  state $k$ using *slice notation* `seq[k::N]` (meaning "start at index
+  `k`, take every `N`-th element").
 
   ```python
   symbols = [7, 3, 5, 1, 4, 0, 6, 2]  # eight symbols total
@@ -254,15 +254,15 @@ select the best one at runtime — a technique called *CPU dispatch*.
 
 === A tiny worked example: two-way interleaved rANS
 
-Let us trace through the idea with the smallest useful case — two interleaved
+Let us trace through the idea with the smallest useful case: two interleaved
 states, a 2-symbol alphabet {A, B} with probabilities $p_A = 3/4$,
 $p_B = 1/4$, and the message "A B A A" (4 symbols).
 
 In a real rANS coder we would first encode the symbols into two states, then
 write out both states to the compressed stream. On decoding we read both states
 back and interleave their decode loops. Using the slice rule `seq[k::2]` from
-the box above, state 0 carries the even-indexed symbols of "A B A A" — that is
-positions 0 and 2, namely "A A" — and state 1 carries the odd-indexed symbols,
+the box above, state 0 carries the even-indexed symbols of "A B A A" (that is
+positions 0 and 2, namely "A A") and state 1 carries the odd-indexed symbols,
 positions 1 and 3, namely "B A".
 
 Now watch the *dependency chain*. Writing $x_0 arrow.r x_0'$ for "the update of
@@ -277,25 +277,26 @@ two-state decoder splits that single chain into *two shorter, parallel* chains:
 $ underbrace(x_0 arrow.r x_0' arrow.r x_0'', "state 0: A, A") quad quad underbrace(x_1 arrow.r x_1' arrow.r x_1'', "state 1: B, A") $
 
 Nothing in the left chain depends on anything in the right chain, so the CPU can
-advance both at once — finishing in the time of *one* chain instead of two. The
+advance both at once, finishing in the time of *one* chain instead of two. The
 update of state $x_0$ and the update of state $x_1$ in the same round have *no
 data dependency on each other*, so both proceed simultaneously on a superscalar
 core. To reconstruct the message the decoder simply alternates outputs: first
 symbol from state 0 (A), first from state 1 (B), second from state 0 (A), second
-from state 1 (A) — recovering "A B A A".
+from state 1 (A), recovering "A B A A".
 
 Even without understanding every detail of rANS arithmetic (covered fully in
-Chapter 27), the *structural* point is visible: independent states = independent
-work = CPU execution units used in parallel.
+Chapter 27), the *structural* point is visible: independent states give
+independent work, and independent work lets the CPU use its execution units in
+parallel.
 
 == Branchless decoding: eliminating the if-statement tax
 
 The entropy coder is only half the battle. In LZ77-family codecs (Chapter 28),
-the decompressor must also *copy* back-references — sequences of bytes from
+the decompressor must also *copy* back-references: sequences of bytes from
 earlier in the already-decompressed data. These copies dominate decompression
 time in data-heavy codecs like LZ4 and LZ77.
 
-A naïve back-reference copy in Python looks like this:
+A naive back-reference copy in Python looks like this:
 
 ```python
 while length > 0:
@@ -307,7 +308,7 @@ while length > 0:
 The problem: this is a tight loop with a *branch* (the `while` condition) that
 the CPU checks on every iteration. Modern CPUs try to *predict* which way a
 branch will go (the branch predictor), but if the prediction is wrong the CPU
-must discard in-flight work and restart — a *misprediction penalty* of 10--20
+must discard in-flight work and restart, incurring a *misprediction penalty* of 10--20
 cycles. With back-references ranging from 4 to 255 bytes, the branch predictor
 has a difficult time.
 
@@ -323,11 +324,11 @@ decoder does:
 1. *Always* copy 16 (or 32) bytes from the back-reference source position.
 2. Advance the output pointer by exactly `length` bytes.
 
-Step 1 may copy too many bytes — but step 2 limits what the next output sees.
+Step 1 may copy too many bytes, but step 2 limits what the next output sees.
 The bytes past `length` are overwritten by the next token. The result is a
 fixed number of SIMD moves per token: no branch, no loop, predictable
 instruction count. LZ4's decompressor is famously built almost entirely on
-this trick, and it achieves 3--5 GB/s decompression on modern CPUs — fast
+this trick, and it achieves 3--5 GB/s decompression on modern CPUs, fast
 enough that the decompressor can keep up with a PCIe SSD.
 
 #pitfall[
@@ -339,15 +340,15 @@ enough that the decompressor can keep up with a PCIe SSD.
   If you wrap a fast decompressor in your own code, do the same.
 ]
 
-The same branchless technique applies to the *literal copy* phase — copying
-uncompressed bytes from the token stream into the output. With 16-byte SIMD
+The same branchless technique applies to the *literal copy* phase, where
+uncompressed bytes from the token stream go directly into the output. With 16-byte SIMD
 stores, a codec can blast out 16 literal bytes in a single instruction, far
 faster than a byte-at-a-time loop.
 
 #gopython("bytearray and memoryview for fast buffer manipulation")[
-  Python is not the right language for branchless decoding — the Python
-  interpreter adds overhead that drowns out instruction-level tricks. But
-  understanding the *idea* is still valuable. In Python, the closest
+  Python is not the right language for branchless decoding (the interpreter
+  adds overhead that drowns out instruction-level tricks), but understanding
+  the *idea* is still worthwhile. In Python, the closest
   equivalent to a SIMD copy is copying a *slice* of a `bytearray`, which
   uses C-level `memcpy` internally:
 
@@ -376,7 +377,7 @@ faster than a byte-at-a-time loop.
 === When branchlessness meets overlap
 
 There is one nasty corner case. If the back-reference offset is *smaller* than
-the copy length — for example, offset 2 with length 10 — the source and
+the copy length (for example, offset 2 with length 10), the source and
 destination regions overlap. This pattern is actually common: it is how RLE-like
 runs are encoded in LZ codecs ("repeat the last 2 bytes, 10 times").
 
@@ -391,13 +392,13 @@ overlap case is rare in practice, the branch predictor learns to predict
 == Cache-aware match finders
 
 The other major cost center in *compression* (as opposed to decompression) is
-the *match finder* — the code that searches the history buffer for the longest
+the *match finder*: the code that searches the history buffer for the longest
 previous occurrence of the current input string (Chapter 28).
 
 #note[
   *A two-minute tour of the memory hierarchy.* Back in *Chapter 13* we met the
-  *cache line* — the 64-byte chunk that is the smallest unit of data the CPU
-  ever moves between main memory (RAM) and the chip. To understand why the next
+  *cache line* (the 64-byte chunk that is the smallest unit of data the CPU
+  ever moves between main memory (RAM) and the chip). To understand why the next
   three sections obsess over "fitting in cache", we need a little more of the
   picture.
 
@@ -413,8 +414,8 @@ previous occurrence of the current input string (Chapter 28).
 
   When the CPU needs a byte, it checks L1, then L2, then L3, then RAM, stopping
   at the first level that has it. Finding it in a cache is a *cache hit*; having
-  to go all the way to RAM is a *cache miss* — and a miss is the single most
-  expensive everyday event in performance engineering. Because data moves in
+  to go all the way to RAM is a *cache miss* (the single most
+  expensive everyday event in performance engineering). Because data moves in
   64-byte lines, reading one byte pulls in its 63 neighbours for free, so
   *sequential* access is cheap and *random* access (jumping all over a big
   array) is a parade of cache misses. Keeping a data structure small enough to
@@ -432,11 +433,11 @@ The standard LZ77 hash chain works like this:
 
 The problem is *cache thrashing*. The sliding window is 32 KB in DEFLATE and up
 to 128 MB in high-compression settings. The `prev` array for a 128 MB window
-is 512 MB — far larger than the CPU's last-level cache (typically 16--64 MB on
+is 512 MB, far larger than the CPU's last-level cache (typically 16--64 MB on
 a server). Walking a long chain requires loading random positions from this
 512 MB array, each of which is a *cache miss* costing 50--200 nanoseconds. A
 match finder walking chains of length 64 at 50 ns each spends 3.2 microseconds
-on every output token — and at a token every 10--20 bytes, that limits
+on every output token, and at a token every 10--20 bytes, that limits
 compression to 3--6 MB/s, barely faster than a hard drive.
 
 === The hash table tricks that matter
@@ -445,7 +446,7 @@ Three techniques dominate modern match-finder optimization:
 
 *1. Small hash tables that fit in L2 or L3 cache.*
 If you restrict the window to 32 KB (as DEFLATE does), the head array needs
-only 128 KB of memory — small enough to stay in L2 cache. gzip's choice of a
+only 128 KB of memory, small enough to stay in L2 cache. gzip's choice of a
 32 KB window was not arbitrary; it was tuned to the cache sizes of 1990s
 hardware. zstd's "fast" compression level uses a similarly-small hash to stay
 in cache, trading ratio for speed.
@@ -453,8 +454,8 @@ in cache, trading ratio for speed.
 *2. Hash table entries that store multiple candidates.*
 Instead of one position per hash slot (and then chaining), store *four* or
 *eight* positions per slot in an array ("multi-probe hash table" or "cuckoo
-hash"). Looking up a slot loads all four candidates in one or two cache lines —
-a single memory access instead of four independent chain hops, each of which
+hash"). Looking up a slot loads all four candidates in one or two cache lines,
+a single memory access instead of four independent chain hops each of which
 might be a separate cache miss.
 
 *3. Second-level hashing with a longer key.*
@@ -473,7 +474,7 @@ chains at all for the common case. zstd calls this the "binary tree" or
     import cetz.draw: *
     // Simple hash chain box
     rect((0,3),(3,4), fill: rgb("#e8f4f8"), stroke: rgb("#0b5394"))
-    content((1.5,3.5))[Hash chain]
+    content((1.5,3.5), box(width: 2.6cm, inset: 2pt, align(center, text(size: 8pt)[Hash chain])))
     // arrows simulating chain hops
     for i in range(4) {
       circle((0.3 + i*0.7, 2.5 - i*0.4), radius: 0.18, fill: rgb("#0b5394"))
@@ -483,21 +484,21 @@ chains at all for the common case. zstd calls this the "binary tree" or
              mark: (end: "straight"))
       }
     }
-    content((1.5, 1.6))[4 cache misses]
+    content((1.5, 1.6), text(size: 8pt)[4 cache misses])
     // Multi-probe bucket box
     rect((4,3),(7,4), fill: rgb("#e8f8ec"), stroke: rgb("#0b6e4f"))
-    content((5.5,3.5))[Multi-probe]
+    content((5.5,3.5), box(width: 2.6cm, inset: 2pt, align(center, text(size: 8pt)[Multi-probe])))
     rect((4.2,2.0),(6.8,2.8), fill: rgb("#cceedc"), stroke: rgb("#0b6e4f"))
-    content((5.5,2.4))[4 slots in 1 line]
-    content((5.5, 1.6))[1 cache miss]
+    content((5.5,2.4), box(width: 2.2cm, inset: 2pt, align(center, text(size: 8pt)[4 slots / 1 line])))
+    content((5.5, 1.6), text(size: 8pt)[1 cache miss])
     // Two-level hash box
     rect((8,3),(11,4), fill: rgb("#fef5e0"), stroke: rgb("#783f04"))
-    content((9.5,3.5))[Two-level hash]
+    content((9.5,3.5), box(width: 2.6cm, inset: 2pt, align(center, text(size: 8pt)[Two-level hash])))
     rect((8.2,2.4),(9.8,2.8), fill: rgb("#fde9b0"), stroke: rgb("#783f04"))
-    content((9.0, 2.6))[4-byte]
+    content((9.0, 2.6), box(width: 1.2cm, inset: 2pt, align(center, text(size: 8pt)[4-byte])))
     rect((9.9,2.4),(10.8,2.8), fill: rgb("#fde9b0"), stroke: rgb("#783f04"))
-    content((10.35, 2.6))[8-byte]
-    content((9.5, 1.6))[1--2 misses]
+    content((10.35, 2.6), box(width: 0.6cm, inset: 1pt, align(center, text(size: 7pt)[8-byte])))
+    content((9.5, 1.6), text(size: 8pt)[1--2 misses])
   })
 )
 
@@ -515,7 +516,7 @@ chains at all for the common case. zstd calls this the "binary tree" or
 == Multithreading: frames and parallel blocks
 
 The techniques above squeeze more performance from a *single core*. To use all
-the cores on a modern CPU — typically 8 to 128 on a server — you need a
+the cores on a modern CPU (typically 8 to 128 on a server) you need a
 different strategy: *parallel framing*.
 
 The idea is to split the input data into *independent blocks* (called frames in
@@ -536,18 +537,18 @@ then also split across threads, making the whole pipeline parallel both ways.
 *The catch:* frames have a cost. Because each frame is independent, the match
 finder at the start of frame $k$ has no knowledge of the data at the end of
 frame $k-1$. Matches that cross frame boundaries cannot be represented.
-Compression ratio suffers — slightly for large frames (the boundary penalty is
-small relative to 1 MB of data), noticeably for very small frames. There is an
+Compression ratio suffers (slightly for large frames where the boundary penalty is
+small relative to 1 MB of data, and noticeably for very small frames). There is an
 inherent trade-off:
 
 #table(
   columns: (auto, 1fr, 1fr),
   align: (left, center, center),
   table.header([*Frame size*], [*Speed (8 cores)*], [*Ratio vs single-threaded*]),
-  [4 MB], [~7× faster], [−0.3%],
-  [1 MB], [~7× faster], [−1--2%],
-  [64 KB], [~7× faster], [−5--10%],
-  [4 KB],  [~5× faster (overhead)], [−15--25%],
+  [4 MB], [~7x faster], [-0.3%],
+  [1 MB], [~7x faster], [-1--2%],
+  [64 KB], [~7x faster], [-5--10%],
+  [4 KB],  [~5x faster (overhead)], [-15--25%],
 )
 
 The sweet spot for most use cases is 1--4 MB frames: nearly linear speedup
@@ -559,15 +560,15 @@ The same idea powers `pigz` (Parallel gzip, Mark Adler, 2007), which splits
 input into 128 KB blocks, compresses them independently with multiple threads,
 and outputs a standard gzip stream. Because gzip was never designed for
 parallelism, `pigz` has to concatenate single-byte sync blocks between
-compressed chunks — a hack that works but wastes a few bytes per block. zstd
+compressed chunks (a hack that works but wastes a few bytes per block). zstd
 was *designed* with frames from the start, making parallel compression a
 first-class feature rather than a retrofit.
 
 #keyidea[
-  The reason zstd compression is 3--5× faster than gzip at equivalent ratios
-  is not purely algorithmic cleverness. It is a combination of: (1) a better
+  The reason zstd compression is 3--5x faster than gzip at equivalent ratios
+  is not purely algorithmic cleverness. It combines: (1) a better
   hash table match finder, (2) a branchless FSE/ANS entropy back-end instead
-  of DEFLATE's Huffman, and (3) native multi-threading support with frames —
+  of DEFLATE's Huffman, and (3) native multi-threading support with frames,
   all designed together from the start rather than bolted on after the fact.
 ]
 
@@ -583,8 +584,7 @@ first-class feature rather than a retrofit.
 == GPU compression: NVIDIA nvCOMP
 
 The CPU techniques above push decompression into the 5--10 GB/s range on a
-high-core-count server — impressive, but still potentially slower than the
-memory bandwidth of a GPU. A modern NVIDIA H100 GPU has roughly 3.35 TB/s
+high-core-count server, but a modern NVIDIA H100 GPU has roughly 3.35 TB/s
 of HBM3 memory bandwidth. If you can feed data to the GPU fast enough, GPU
 decompression can crush CPU speeds.
 
@@ -619,7 +619,7 @@ GPU* and you need to decompress *a lot of it in parallel*. Three scenarios:
 
 *Database analytics:* Parquet or ORC files compressed with Snappy or LZ4 can
 be decompressed by nvCOMP kernels during a GPU SQL query (as in RAPIDS cuDF),
-eliminating the round-trip of "CPU decompresses → memcpy to GPU → GPU queries."
+eliminating the round-trip of "CPU decompresses -> memcpy to GPU -> GPU queries."
 
 *Deep learning checkpoints:* Storing model weights compressed and decompressing
 them directly on the GPU saves PCIe bandwidth and time during model loading.
@@ -627,7 +627,7 @@ them directly on the GPU saves PCIe bandwidth and time during model loading.
 *HPC:* Simulation output compressed on-the-fly on the GPU before writing to
 storage avoids the throughput bottleneck of writing raw data.
 
-The scenario where GPU decompression *does not win*: when the data arrives from
+The scenario where GPU decompression does not win: when the data arrives from
 the network or disk to CPU memory and the decompressed result is also needed by
 the CPU. The cost of copying from CPU memory to GPU memory (PCIe at ~64 GB/s)
 exceeds the CPU decompression cost for most codecs at most data sizes.
@@ -637,7 +637,7 @@ exceeds the CPU decompression cost for most codecs at most data sizes.
   the batch is large enough to overcome kernel launch overhead. For small or
   CPU-bound workloads, a well-tuned CPU codec (zstd, LZ4) running in
   parallel threads is faster and simpler. The Blackwell hardware DE reaching
-  180 GB/s for Snappy is genuinely extraordinary — but Snappy is a low-ratio
+  180 GB/s for Snappy is genuinely extraordinary, but Snappy is a low-ratio
   codec designed for speed, and 180 GB/s only beats a CPU if you have 180 GB/s
   of GPU memory bandwidth to fill in the first place.
 ]
@@ -660,9 +660,9 @@ Each Sapphire Rapids socket has one IAA instance with multiple work queues that
 applications can submit jobs to without CPU involvement.
 
 IAA accelerates DEFLATE (gzip) compression and decompression using a
-fixed-function pipeline — not a general CPU running DEFLATE code, but an
-actual hardware circuit wired to perform DEFLATE. This lets IAA decompress
-at multi-GB/s rates while burning *near-zero CPU cycles*, leaving those cycles
+fixed-function pipeline (not a general CPU running DEFLATE code, but an
+actual hardware circuit wired to perform DEFLATE). This lets IAA decompress
+at multi-GB/s rates while burning near-zero CPU cycles, leaving those cycles
 free for the application.
 
 The sweet spot for IAA is *database I/O*: a database server that reads
@@ -679,7 +679,7 @@ compression back-end supports DEFLATE and can be used as a drop-in backend for
 zlib and zstd via the *QAT-ZSTD Plugin* (open source, Intel).
 
 A 2025 IEEE paper found that using QAT for `zswap` (Linux kernel memory
-compression for swap-to-RAM) reduced tail latency by 2.2--7.9× compared to
+compression for swap-to-RAM) reduced tail latency by 2.2--7.9x compared to
 software DEFLATE, while reducing CPU usage by a corresponding amount. For
 cloud workloads where CPU time is money and memory pressure is constant, that
 is a compelling proposition.
@@ -693,9 +693,9 @@ is a compelling proposition.
     [*Best for*],
     [*CPU cycles used*],
   ),
-  [Intel IAA], [On-die, PCIe-like ENQCMD], [Database I/O, in-memory analytics], [Near zero],
-  [Intel QAT], [PCIe coprocessor or on-die], [Cloud DEFLATE, memory compression (zswap)], [Near zero],
-  [NVIDIA Blackwell DE], [On-die GPU hardware], [GPU-resident analytics, DL checkpoints], [Zero (GPU-side)],
+  [Intel IAA], [On-die, ENQCMD], [Database I/O, in-memory analytics], [Near zero],
+  [Intel QAT], [PCIe coprocessor or on-die], [Cloud DEFLATE, memory compression], [Near zero],
+  [NVIDIA Blackwell DE], [On-die GPU hardware], [GPU-resident analytics, DL checkpoints], [Zero (GPU)],
   [CPU (zstd, N threads)], [Software, any CPU], [General-purpose, latency-sensitive], [Full N cores],
 )
 
@@ -713,8 +713,8 @@ is a compelling proposition.
 
 == Putting it together: a mental model of codec design
 
-With all four techniques in view — interleaved ANS, branchless copying,
-cache-aware match finding, and parallel framing — we can describe the
+With all four techniques in view (interleaved ANS, branchless copying,
+cache-aware match finding, and parallel framing) we can describe the
 *philosophy* that distinguishes a fast production codec from a slow reference
 implementation.
 
@@ -742,7 +742,7 @@ it runs on:
   available cores.
 
 #scoreboard(
-  caption: "Performance landscape — fast codecs on modern hardware (mid-2026)",
+  caption: "Performance landscape: fast codecs on modern hardware (mid-2026)",
   [*Codec / engine*], [*Comp. speed*], [*Decomp. speed*], [*Notes*],
   [gzip -1 (1 core)],        [~80 MB/s],   [~500 MB/s],   [Reference baseline],
   [zstd -1 (1 core)],        [~500 MB/s],  [~2 GB/s],     [FSE/ANS + branchless LZ],
@@ -759,7 +759,7 @@ it runs on:
   bottleneck, or does the SSD?
 ][
   The SSD is the bottleneck. At 14 GB/s read and ~30 GB/s decompress,
-  the decompressor can easily keep up with the incoming data — the storage
+  the decompressor can easily keep up with the incoming data, so the storage
   device will be saturated first. This means that for highly-parallel
   workloads reading from fast NVMe storage, you should *increase* the
   compression ratio (use zstd -3 or -6 instead of -1) to reduce the bytes
@@ -774,7 +774,7 @@ logic inside a fast LZ sequence copy loop. Python is far too slow to benefit
 from these tricks itself (they require C or Rust with SIMD intrinsics), but
 reading the structure helps build intuition.
 
-#gopython("bytes and bytearray — mutable versus immutable")[
+#gopython("bytes and bytearray: mutable versus immutable")[
   In Python, `bytes` objects are *immutable*: you cannot change individual
   bytes after creation. `bytearray` objects are *mutable*: you can write to
   specific indices or slices. Decompressors need to build their output
@@ -787,7 +787,7 @@ reading the structure helps build intuition.
   ```
 
   The `bytearray[start:stop] = source[start:stop]` form calls into C and
-  uses `memmove` internally — much faster than a Python `for` loop.
+  uses `memmove` internally, which is much faster than a Python `for` loop.
 ]
 
 #pyrecall[
@@ -831,7 +831,7 @@ def lz_decompress(tokens: list[LZToken], capacity: int) -> bytes:
             # Fast path: no overlap (offset >= length and offset >= 16).
             # In real code this would be a SIMD 16-byte or 32-byte copy.
             if tok.offset >= length and tok.offset >= 16:
-                # Copy whole chunk at once — no per-byte loop.
+                # Copy whole chunk at once -- no per-byte loop.
                 out[pos : pos + length] = out[src : src + length]
             else:
                 # Slow path: overlapping copy (e.g. run-length encoding).
@@ -867,20 +867,20 @@ makes that logic run in nanoseconds.
   [*Branchless copy loops* eliminate the per-byte branch in back-reference
    copying; they always copy a fixed-width chunk and rely on the destination
    pointer for correctness, not a loop condition.],
-  [*Cache-aware hash tables* — small enough to stay in L2 cache, with
-   multi-probe buckets — replace long chain walks with one or two cache
+  [*Cache-aware hash tables* (small enough to stay in L2 cache, with
+   multi-probe buckets) replace long chain walks with one or two cache
    accesses, enabling compression speeds in the hundreds of MB/s.],
   [*Parallel frames* split input into independent blocks that compress and
    decompress simultaneously on all available CPU cores, giving near-linear
    throughput scaling with a modest ratio penalty.],
   [NVIDIA *nvCOMP* accelerates GPU-resident workloads; the Blackwell
-   Decompression Engine reaches 180 GB/s for Snappy — useful in database
-   analytics and DL pipelines where data never leaves the GPU.],
+   Decompression Engine reaches 180 GB/s for Snappy, useful in database
+   analytics and deep learning pipelines where data never leaves the GPU.],
   [Intel *IAA* and *QAT* offload DEFLATE compression to hardware circuits,
    freeing CPU cores entirely; the right choice for database servers where
    CPU time is the scarce resource.],
-  [Fast codecs are not just fast algorithms — they are algorithms designed
-   around latency, throughput, cache hierarchy, and SIMD width of a
+  [Fast codecs are not just fast algorithms. They are algorithms designed
+   around the latency, throughput, cache hierarchy, and SIMD width of a
    specific hardware generation.],
 ))
 
@@ -898,7 +898,7 @@ makes that logic run in nanoseconds.
   $3.5 times 10^9 / 9 approx 389 times 10^6$ symbols per second. If one symbol
   = one byte, that is ~389 MB/s. Notice that 4 instructions/cycle × 3.5 GHz =
   14 billion instructions per second, but we only use 1/9 of that capacity
-  because of the dependency chain — 96% of the execution units are idle.
+  because of the dependency chain: 96% of the execution units are idle.
 ]
 
 #exercise("73.2", 1)[
@@ -911,7 +911,7 @@ makes that logic run in nanoseconds.
   Two independent states have no data dependency between them, so the CPU can
   execute their updates in parallel. This doubles the work done per clock cycle
   without changing the mathematical relationship between symbols and compressed
-  bits — each state still encodes its sub-sequence at the entropy rate. If you
+  bits (each state still encodes its sub-sequence at the entropy rate). If you
   decoded symbols from only one stream, the other stream's data would be lost
   and decompression would fail; you must interleave outputs from both states to
   reconstruct the original sequence.
@@ -928,12 +928,12 @@ makes that logic run in nanoseconds.
 #solution("73.3")[
   The `prev[]` array is 2 MB × 4 bytes/entry = 8 MB (if treated as a flat
   array of 524,288 entries). At 32 chain hops, and assuming entries are
-  scattered randomly, most hops load a new cache line — approximately 32 cache
-  misses per match (though L3 at 24 MB can hold the full 8 MB array, so misses
-  become L3 hits, which are ~40 cycles rather than ~200 cycles for RAM).
+  scattered randomly, most hops load a new cache line (approximately 32 cache
+  misses per match, though L3 at 24 MB can hold the full 8 MB array, so misses
+  become L3 hits at ~40 cycles rather than ~200 cycles for RAM).
   A multi-probe bucket with 8 candidates in one 64-byte cache line needs
-  *one* cache-line load for 8 candidates — at most 1 miss per match for the
-  common case. This is 8--32× fewer cache misses.
+  *one* cache-line load for 8 candidates (at most 1 miss per match for the
+  common case). This is 8--32x fewer cache misses.
 ]
 
 #exercise("73.4", 2)[
@@ -946,9 +946,9 @@ makes that logic run in nanoseconds.
 #solution("73.4")[
   512 MB / 1 MB per frame = 512 frames. With 16 threads, all 16 run
   simultaneously, so the time is approximately (512 frames / 16 threads) × (1 MB / 400 MB/s)
-  = 32 × 2.5 ms = 80 ms total, giving a throughput of 512 MB / 80 ms ≈ 6,400 MB/s —
-  about 16× the single-threaded speed. The ratio penalty for 1 MB frames is
-  typically −1 to −2% relative to single-threaded (from the table in the
+  = 32 × 2.5 ms = 80 ms total, giving a throughput of 512 MB / 80 ms ≈ 6,400 MB/s
+  (about 16x the single-threaded speed). The ratio penalty for 1 MB frames is
+  typically -1 to -2% relative to single-threaded (from the table in the
   chapter), because matches cannot cross frame boundaries.
 ]
 
@@ -981,37 +981,37 @@ makes that logic run in nanoseconds.
 #solution("73.6")[
   Consider offset = 3, length = 9. The output so far ends with "XYZ" and
   the match says "go back 3 bytes and copy 9". The intended output is
-  "XYZXYZXYZ" — repeating "XYZ" three times. A fast SIMD copy reads 9 bytes
-  starting 3 bytes behind the current write position — but those positions
+  "XYZXYZXYZ" (repeating "XYZ" three times). A fast SIMD copy reads 9 bytes
+  starting 3 bytes behind the current write position, but those positions
   ahead of the 3 already-written bytes are garbage (they have not been filled
   yet). The slow byte-at-a-time copy is required: write byte 0 (X), then byte 1
-  (Y = position −2), ..., and by the time we write bytes 3--8 the positions
+  (Y = position -2), ..., and by the time we write bytes 3--8 the positions
   0--5 of the match have already been filled in by earlier iterations,
   correctly producing the repetition.
 ]
 
 == Further reading
 
-- #link("https://arxiv.org/abs/1402.3392")[Giesen, F. "Interleaved entropy coders." arXiv:1402.3392, 2014.] — The paper that formalized interleaved ANS and proved it achieves the entropy rate; short, readable, essential.
+- #link("https://arxiv.org/abs/1402.3392")[Giesen, F. "Interleaved entropy coders." arXiv:1402.3392, 2014.] -- The paper that formalized interleaved ANS and proved it achieves the entropy rate; short, readable, essential.
 
-- #link("https://fgiesen.wordpress.com/2014/02/02/rans-notes/")[Giesen, F. "rANS notes." ryg blog, February 2014.] — Practical companion to the paper with implementation details and performance measurements.
+- #link("https://fgiesen.wordpress.com/2014/02/02/rans-notes/")[Giesen, F. "rANS notes." ryg blog, February 2014.] -- Practical companion to the paper with implementation details and performance measurements.
 
-- #link("https://github.com/rygorous/ryg_rans")[rygorous/ryg\_rans, GitHub.] — Public-domain reference implementation of rANS with 2-way and 8-way interleaved variants and SIMD decode paths.
+- #link("https://github.com/rygorous/ryg_rans")[rygorous/ryg\_rans, GitHub.] -- Public-domain reference implementation of rANS with 2-way and 8-way interleaved variants and SIMD decode paths.
 
-- #link("https://engineering.fb.com/2016/08/31/core-infra/smaller-and-faster-data-compression-with-zstandard/")[Collet, Y. "Smaller and Faster Data Compression with Zstandard." Meta Engineering Blog, 2016.] — First-person account of the design choices behind zstd's speed; explains FSE and the branchless match copy.
+- #link("https://engineering.fb.com/2016/08/31/core-infra/smaller-and-faster-data-compression-with-zstandard/")[Collet, Y. "Smaller and Faster Data Compression with Zstandard." Meta Engineering Blog, 2016.] -- First-person account of the design choices behind zstd's speed; explains FSE and the branchless match copy.
 
-- #link("https://developer.nvidia.com/blog/accelerating-lossless-gpu-compression-with-new-flexible-interfaces-in-nvidia-nvcomp/")[NVIDIA. "Accelerating Lossless GPU Compression with New Flexible Interfaces in nvCOMP." NVIDIA Developer Blog.] — Official description of nvCOMP's API design and throughput on Ampere/Hopper/Blackwell GPUs.
+- #link("https://developer.nvidia.com/blog/accelerating-lossless-gpu-compression-with-new-flexible-interfaces-in-nvidia-nvcomp/")[NVIDIA. "Accelerating Lossless GPU Compression with New Flexible Interfaces in nvCOMP." NVIDIA Developer Blog.] -- Official description of nvCOMP's API design and throughput on Ampere/Hopper/Blackwell GPUs.
 
-- #link("https://dl.acm.org/doi/abs/10.1145/3605573.3605588")[Lin, F. et al. "Recoil: Parallel rANS Decoding with Decoder-Adaptive Scalability." ICPP 2023.] — Extends interleaved rANS to GPU with adaptive lane allocation; benchmarks on CUDA.
+- #link("https://dl.acm.org/doi/abs/10.1145/3605573.3605588")[Lin, F. et al. "Recoil: Parallel rANS Decoding with Decoder-Adaptive Scalability." ICPP 2023.] -- Extends interleaved rANS to GPU with adaptive lane allocation; benchmarks on CUDA.
 
-- #link("https://www.phoronix.com/news/Linux-6.8-Crypto-Intel")[Larabel, M. "Linux 6.8 Crypto Provides Intel IAA Compression Accelerator Driver." Phoronix, 2024.] — News coverage of the IAA driver landing in the Linux kernel.
+- #link("https://www.phoronix.com/news/Linux-6.8-Crypto-Intel")[Larabel, M. "Linux 6.8 Crypto Provides Intel IAA Compression Accelerator Driver." Phoronix, 2024.] -- News coverage of the IAA driver landing in the Linux kernel.
 
-- #link("https://ieeexplore.ieee.org/document/10856688/")[Cui, J. et al. "Hardware-Accelerated Kernel-Space Memory Compression Using Intel QAT." IEEE Computer Architecture Letters, 2025.] — Quantifies the tail-latency benefit of QAT in `zswap` workloads.
+- #link("https://ieeexplore.ieee.org/document/10856688/")[Cui, J. et al. "Hardware-Accelerated Kernel-Space Memory Compression Using Intel QAT." IEEE Computer Architecture Letters, 2025.] -- Quantifies the tail-latency benefit of QAT in `zswap` workloads.
 
 #bridge[
   We now know how to make a compressor fast. But *fast compared to what*?
-  Chapter 74 zooms out to place compression in the full I/O stack — caches,
-  operating systems, file systems, and networks — showing where compression
+  Chapter 74 zooms out to place compression in the full I/O stack (caches,
+  operating systems, file systems, and networks), showing where compression
   belongs architecturally, how it interacts with prefetching and paging, and
   why sometimes the fastest codec is *no compression at all*. Chapter 75 then
   builds the tools to measure and compare codecs honestly, with benchmarks

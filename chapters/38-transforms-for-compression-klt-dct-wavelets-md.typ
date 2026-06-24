@@ -18,15 +18,15 @@
   data is simplest. Everything else is bookkeeping."
 ][a paraphrase of the transform-coding credo]
 
-A photograph of a clear sky is, to a computer, a few hundred thousand numbers — one
-brightness value per pixel — and almost all of them are nearly equal. A second of a
+A photograph of a clear sky is, to a computer, a few hundred thousand numbers (one
+brightness value per pixel), and almost all of them are nearly equal. A second of a
 sustained flute note is forty-odd thousand numbers that rise and fall in a smooth,
 repeating wave. In both cases the file is *long* but the *content* is small: a slow
 gradient, a single pitch. The information is there, but it is smeared across thousands
 of samples, hidden in plain sight. The question this chapter answers is the deepest one
 in all of lossy compression:
 
-#align(center)[*Is there a way to rewrite the data so its simplicity becomes visible —
+#align(center)[*Is there a way to rewrite the data so its simplicity becomes visible,
 so a handful of numbers carry almost everything, and the rest can be thrown away
 almost for free?*]
 
@@ -34,7 +34,7 @@ The answer is yes, and it is called a *transform*. Spin the coordinate axes unti
 line up with the grain of the data, and the energy that was smeared across thousands of
 samples piles up onto a few. JPEG does it to your photos. MP3, AAC, and Opus do it to
 your music. Every mainstream video codec does it to every frame. The transform is the
-single idea that makes lossy media compression possible at all — and remarkably, the
+single idea that makes lossy media compression possible at all. Remarkably, the
 *same* family of cosine waves, written down in a three-page paper in 1974, still sits at
 the centre of it half a century later. This chapter builds that idea from the ground up:
 the ideal transform that theory hands us (and why we can't use it), the practical
@@ -45,13 +45,13 @@ without hearing the seams.
 #recap[
   In Chapter 12 we learned that *vectors* are arrows in a space, that a *matrix* rotates
   or reshapes them, and that an *orthonormal* (length-preserving) matrix $Q$ satisfies
-  $Q^T Q = I$, so its inverse is just its transpose — a perfect, lossless undo. We even
+  $Q^T Q = I$, so its inverse is just its transpose (a perfect, lossless undo). We even
   proved the *energy theorem* there (an orthonormal transform conserves the total squared
   length of a vector) and played with a tiny throwaway $2 times 2$ rotation in code to watch
   it come alive. In Chapter 21 we met Shannon's
   *rate–distortion function* $R(D)$, the exact bit-cost of allowing average distortion
   $D$, and in Chapter 37 we learned that any signal is a sum of *sine and cosine waves of
-  different frequencies* — the frequency-domain view, and the Discrete Fourier Transform
+  different frequencies*: the frequency-domain view, computed by the Discrete Fourier Transform
   (DFT) that computes it. This chapter fuses all three: we use orthonormal *cosine*
   transforms to move signals into a frequency-like coordinate system where energy
   compacts, so the quantiser of Chapter 39 can spend bits exactly where $R(D)$ says they
@@ -77,19 +77,19 @@ byte. But look at what they *share* and how they *differ*:
 $ "average" = (50 + 52)/2 = 51, quad "difference" = (52 - 50)/2 = 1. $
 
 The average is large; the difference is tiny. If we store $(51, 1)$ instead of
-$(50, 52)$, we have *lost nothing* — we can recover $50 = 51 - 1$ and $52 = 51 + 1$ — yet
+$(50, 52)$, we have *lost nothing*: we can recover $50 = 51 - 1$ and $52 = 51 + 1$, yet
 the second number is now so small it costs almost no bits. We have not compressed by
 deleting data; we have *changed coordinates* so that one coordinate is big and the other
 is nearly zero. That is the entire trick, and everything below is this trick made
 rigorous, made multi-dimensional, and made fast.
 
 The map $(x_0, x_1) |-> ("sum", "difference")$, scaled to preserve length, is an
-orthonormal rotation — exactly the $45 degree$ rotation we built in Chapter 12:
+orthonormal rotation, exactly the $45 degree$ rotation we built in Chapter 12:
 
 $ Q = 1/sqrt(2) mat(1, 1; 1, -1), quad Q vec(50, 52) = 1/sqrt(2) vec(102, -2) approx vec(72.1, -1.4). $
 
 One big coordinate ($approx 72$), one tiny one ($approx -1.4$). The energy
-$50^2 + 52^2 = 5204$ is exactly the new energy $72.1^2 + 1.4^2 approx 5204$ — conserved,
+$50^2 + 52^2 = 5204$ is exactly the new energy $72.1^2 + 1.4^2 approx 5204$, conserved,
 as the energy theorem promised. Compression has not happened *yet*; we still have two
 numbers. But the tiny coordinate will *quantise to zero* almost for free in Chapter 39,
 and *that* is where the bytes vanish. Hold that sequence in mind for the whole chapter:
@@ -97,7 +97,7 @@ and *that* is where the bytes vanish. Hold that sequence in mind for the whole c
 coder of Volume II packs the survivors.]
 
 #keyidea[
-  A transform never compresses by itself — it is perfectly reversible, so it cannot
+  A transform never compresses by itself. It is perfectly reversible, so it cannot
   delete information. Its job is to *re-express* the signal in a coordinate system where a
   few coordinates are large and most are near zero. The deleting happens later, in
   quantisation, and it is cheap *precisely because* the transform made most coordinates
@@ -105,7 +105,7 @@ coder of Volume II packs the survivors.]
 ]
 
 #misconception[
-  "The transform is the lossy step — that's where the data gets thrown away."
+  "The transform is the lossy step; that's where the data gets thrown away."
 ][
   The transform (DCT, wavelet, MDCT) is *exactly invertible*: feed its output back through
   the inverse and you recover the original to the last decimal. It loses nothing. The
@@ -122,13 +122,13 @@ still warm.
 #definition("Correlation")[
   Two coordinates are *correlated* when knowing one lets you predict the other. In a smooth
   image, neighbouring pixels are strongly correlated: tell me one is 50 and I will bet the
-  next is near 50. Correlation is *redundancy you can see between coordinates* — and
+  next is near 50. Correlation is *redundancy you can see between coordinates*, and
   redundancy, as we have said since Chapter 3, is exactly what compression removes.
 ]
 
 #definition("Decorrelation")[
-  A transform *decorrelates* when its output coordinates no longer predict each other —
-  knowing one tells you nothing about the rest. In our pair, "sum" and "difference" are
+  A transform *decorrelates* when its output coordinates no longer predict each other.
+  Knowing one tells you nothing about the rest. In our pair, "sum" and "difference" are
   decorrelated: the sum being 102 tells you nothing about whether the difference is $+2$ or
   $-2$. Decorrelated coordinates can be quantised *independently* without one re-encoding
   information already carried by another.
@@ -142,17 +142,17 @@ still warm.
   same," what remains is one big DC-like coordinate and a long tail of near-zeros.
 ]
 
-#gomaths("Covariance — measuring how two coordinates move together")[
+#gomaths("Covariance: measuring how two coordinates move together")[
   We need one number that says "how correlated." Take a coordinate that is sometimes above
   its average, sometimes below; write its *deviation* as $x - macron(x)$ where
   $macron(x)$ is the mean. The *covariance* of two coordinates $X$ and $Y$ is the average
   product of their deviations:
   $ "Cov"(X, Y) = EE[(X - macron(x))(Y - macron(y))]. $
   If $X$ and $Y$ tend to be above their means together (and below together), the products
-  are mostly positive and the covariance is large and positive — they are correlated. If
+  are mostly positive and the covariance is large and positive, meaning they are correlated. If
   they wander independently, the products are as often $+$ as $-$ and average to $0$.
   *Tiny example:* over the samples $X = (1, 3)$, $Y = (2, 6)$, means are $2$ and $4$;
-  deviations are $(-1, +1)$ and $(-2, +2)$; products $(+2, +2)$; average $+2$ — strongly
+  deviations are $(-1, +1)$ and $(-2, +2)$; products $(+2, +2)$; average $+2$: strongly
   positively correlated, as you can see (when $X$ goes up, so does $Y$). The variance
   $"Var"(X) = "Cov"(X, X) = EE[(X - macron(x))^2]$ is just a coordinate's covariance with
   itself: its energy about the mean. We met expectation $EE[dot.c]$ and variance in
@@ -164,19 +164,19 @@ $n times n$ grid called the *covariance matrix* $Sigma$, where entry $Sigma_(i j
 "Cov"(X_i, X_j)$. The diagonal holds the per-coordinate variances (energies); the
 off-diagonal holds the correlations between coordinates. A *decorrelating* transform is
 now defined with total precision: it is the rotation that makes the off-diagonal entries
-of the *transformed* signal's covariance matrix all zero — a diagonal covariance means
+of the *transformed* signal's covariance matrix all zero. A diagonal covariance means
 no coordinate predicts any other. That rotation has a name, and it is the best one can
 possibly do.
 
 == The Karhunen–Loève Transform: the perfect (impractical) ideal
 
-#gomaths("Eigenvectors and eigenvalues — the natural axes of a matrix")[
+#gomaths("Eigenvectors and eigenvalues: the natural axes of a matrix")[
   Most directions, when you push them through a matrix $A$, come out rotated *and*
   stretched. But a few special directions come out only *stretched*, not turned at all:
   $A bold(v) = lambda bold(v)$, meaning "applying $A$ to $bold(v)$ just scales it by the
   number $lambda$." Such a $bold(v)$ is an *eigenvector* (German _eigen_ = "own,
   characteristic"); its scale factor $lambda$ is the *eigenvalue*. They are the matrix's
-  own natural axes — the skeleton it acts on simply. *Tiny example:*
+  own natural axes, the skeleton it acts on simply. *Tiny example:*
   $A = mat(3, 0; 0, 5)$ stretches the $x$-axis by $3$ and the $y$-axis by $5$, so
   $bold(v) = (1, 0)$ has $lambda = 3$ and $bold(v) = (0, 1)$ has $lambda = 5$. A key fact
   we will use: a *symmetric* matrix (one equal to its own transpose, like every covariance
@@ -185,10 +185,10 @@ possibly do.
   the axes we will rotate onto.
 ]
 
-Here is the beautiful fact at the heart of optimal transform coding. The covariance
+Here is the central fact of optimal transform coding. The covariance
 matrix $Sigma$ is symmetric, so it has a full set of perpendicular (orthonormal)
 eigenvectors. Collect them as the rows of a matrix $Phi$. Then the transform
-$bold(y) = Phi bold(x)$ *exactly decorrelates* the signal — and it is named after the two
+$bold(y) = Phi bold(x)$ *exactly decorrelates* the signal. It is named after the two
 mathematicians who developed its continuous form.
 
 #algo(
@@ -202,14 +202,14 @@ mathematicians who developed its continuous form.
   superseded: "the DCT, which approximates it with a fixed, fast, transmission-free basis",
 )[
   The KLT is the gold standard against which every practical transform is measured. It is
-  also, for compression, almost unusable — which is the whole reason the rest of this
+  also, for compression, almost unusable, which is the whole reason the rest of this
   chapter exists. Note the names: in statistics the same construction is *Principal
   Component Analysis (PCA)*; the eigenvectors are the *principal components*. Same idea,
   different field, born independently.
 ]
 
-Why is the KLT optimal? The claim has two halves — it decorrelates perfectly, and among
-*all* transforms that keep only $k$ coefficients it loses the least energy — and both are
+Why is the KLT optimal? The claim has two halves: it decorrelates perfectly, and among
+*all* transforms that keep only $k$ coefficients it loses the least energy. Both are
 worth proving, because the proofs show exactly *what* "best transform" means.
 
 #theorem("KLT decorrelation")[
@@ -250,7 +250,7 @@ importance. The second half says no other transform compacts energy better.
   variances* (because energy is the sum of squared coordinates, and orthonormal transforms
   conserve total energy). So minimising lost energy means *packing as much variance as
   possible into the first $k$ coordinates.* The total variance $sum_i "Var"(y_i)$ is fixed
-  — it equals the *trace* of $Sigma$ (the sum of its diagonal entries, here the sum of the
+  (it equals the *trace* of $Sigma$, the sum of its diagonal entries, here the sum of the
   per-coordinate variances), which is unchanged by any orthonormal rotation (a
   rotation cannot create or destroy total energy). The KLT's coordinates have variances
   equal to the eigenvalues $lambda_1 >= lambda_2 >= dots.c$; taking the top $k$ takes the
@@ -262,29 +262,29 @@ importance. The second half says no other transform compacts energy better.
 
 #example[
   *A worked KLT, by hand.* Take a source whose two pixels have covariance
-  $Sigma = mat(2, 1.6; 1.6, 2)$ — equal variances $2$, strong positive correlation $1.6$.
+  $Sigma = mat(2, 1.6; 1.6, 2)$ (equal variances $2$, strong positive correlation $1.6$).
   A symmetric $2 times 2$ matrix with equal diagonals always has eigenvectors along the two
   diagonals $bold(v)_1 = (1, 1)\/sqrt(2)$ and $bold(v)_2 = (1, -1)\/sqrt(2)$. Check:
   $ Sigma bold(v)_1 = mat(2, 1.6; 1.6, 2) 1/sqrt(2) vec(1, 1) = 1/sqrt(2) vec(3.6, 3.6) = 3.6 thin bold(v)_1, $
   so $lambda_1 = 3.6$; similarly $Sigma bold(v)_2 = 0.4 thin bold(v)_2$, so $lambda_2 =
-  0.4$. The KLT basis is the $45 degree$ "sum/difference" rotation of our opening example —
-  *and the eigenvalues tell us why it works*: the sum direction carries variance $3.6$,
+  0.4$. The KLT basis is the $45 degree$ "sum/difference" rotation of our opening example,
+  and the eigenvalues tell us why it works: the sum direction carries variance $3.6$,
   the difference direction only $0.4$. Keep just the first coordinate and you retain
   $3.6 \/ (3.6 + 0.4) = 90%$ of the energy from $50%$ of the numbers. The more correlated
   the pixels (the larger the off-diagonal $1.6$ relative to $2$), the more lopsided the
-  split — correlation *is* compressibility, quantified.
+  split. Correlation *is* compressibility, quantified.
 ]
 
 #keyidea[
   The KLT proves that the *best possible* transform for a correlated source is simply "the
   eigenvectors of its covariance matrix, sorted by energy." It is the theoretical ceiling.
-  Everything practical is a fixed, fast *imitation* of this ceiling — and the astonishing
+  Everything practical is a fixed, fast *imitation* of this ceiling. The astonishing
   news of the next section is how close a fixed imitation can get.
 ]
 
 But notice the fatal catch hiding in that example. To build $Phi$ you must *know* $Sigma$,
 which means estimating the signal's statistics; then you must compute eigenvectors (an
-$O(n^3)$ job); then — because $Phi$ is different for every source — you must *transmit the
+$O(n^3)$ job); and then, because $Phi$ is different for every source, you must *transmit the
 entire basis to the decoder*, which for an $8 times 8 = 64$-dimensional image block is 64
 basis vectors of 64 numbers each. The basis can cost more than the data it saves. The KLT
 is optimal and almost useless. We need a transform that is *fixed* (no transmission),
@@ -292,18 +292,18 @@ is optimal and almost useless. We need a transform that is *fixed* (no transmiss
 
 == The Discrete Cosine Transform: the workhorse of the world
 
-The escape from the KLT's catch is a single, beautiful observation. Natural signals —
-photographs, audio — are well modelled as a *first-order Markov process*: each sample is
+The escape from the KLT's catch is a single observation. Natural signals (photographs,
+audio) are well modelled as a *first-order Markov process*: each sample is
 its neighbour plus a little fresh randomness, with correlation $rho$ between adjacent
 samples (think $rho approx 0.95$ for a smooth image). For such a source, the covariance
 matrix has a fixed, known shape ($Sigma_(i j) = rho^(abs(i - j))$, up to scale), and as
-the correlation $rho -> 1$, its eigenvectors — the KLT basis — converge to a *fixed set of
+the correlation $rho -> 1$, its eigenvectors (the KLT basis) converge to a *fixed set of
 cosine waves that do not depend on $rho$ at all.* That limiting basis is the DCT. It is
 the KLT's fixed, universal shadow: no statistics to estimate, no basis to transmit, and a
 fast algorithm to boot.
 
 #mathrecall[A *first-order Markov process* is one where each sample depends only on the
-immediately previous one, not the whole past — the simplest model of "smooth": tomorrow is
+immediately previous one, not the whole past. It is the simplest model of "smooth": tomorrow is
 today plus a nudge. It is built from the conditional probability of Chapter 9, asking only
 $P("next" | "current")$ rather than $P("next" | "all the past")$.]
 
@@ -311,13 +311,13 @@ $P("next" | "current")$ rather than $P("next" | "all the past")$.]
   name: "Discrete Cosine Transform (DCT-II)",
   year: "January 1974",
   authors: "Nasir Ahmed, T. Raj Natarajan, K. R. Rao (IEEE Trans. Computers 23(1), pp. 90–93)",
-  aim: "A fixed, signal-independent orthogonal transform onto cosine basis functions that approximates the KLT for highly-correlated (Markov-1) signals — the practical decorrelator.",
+  aim: "A fixed, signal-independent orthogonal transform onto cosine basis functions that approximates the KLT for highly-correlated (Markov-1) signals: the practical decorrelator.",
   complexity: "O(n log n) per block of length n via a fast algorithm (the same FFT-style butterfly structure as Chapter 37's DFT); a naive matrix multiply is O(n²).",
   strengths: "Fixed basis (nothing to transmit), excellent energy compaction on natural signals, near-KLT-optimal, fast, real-valued output, separable in 2-D.",
   weaknesses: "Blocking artifacts at low bitrates (hard block boundaries); fixed block size cannot adapt to local detail; not optimal for sharp edges.",
   superseded: "complemented by wavelets (JPEG 2000) and learned transforms (Chapter 57); still dominant in JPEG, MP3/AAC (via MDCT), and every mainstream video codec",
 )[
-  The DCT-II is *the* DCT — when someone says "the DCT" with no qualifier, this is it. Its
+  The DCT-II is *the* DCT. When someone says "the DCT" with no qualifier, this is it. Its
   inverse, used by every decoder, is the DCT-III. Ahmed conceived it at Kansas State
   University around 1972; his grant proposal to study it was reportedly rejected as too
   impractical. It went on to become very likely the most-executed numerical recipe in
@@ -334,29 +334,29 @@ block $x_0, x_1, dots, x_(N-1)$ produces $N$ coefficients $X_0, dots, X_(N-1)$:
 $ X_k = alpha_k sum_(n=0)^(N-1) x_n cos[ (pi (2n + 1) k) / (2N) ], quad k = 0, 1, dots, N-1, $
 
 where the normalisation $alpha_0 = sqrt(1\/N)$ and $alpha_k = sqrt(2\/N)$ for $k >= 1$ is
-chosen to make the transform *orthonormal* — so, exactly as in Chapter 12, the inverse is
+chosen to make the transform *orthonormal*, so, exactly as in Chapter 12, the inverse is
 the transpose and energy is conserved. The inverse (the IDCT, DCT-III) rebuilds the
 samples by summing the cosines back:
 
 $ x_n = sum_(k=0)^(N-1) alpha_k thin X_k cos[ (pi (2n + 1) k)/(2N) ]. $
 
 Read the formula physically. The $k=0$ coefficient uses $cos(0) = 1$ for every sample, so
-$X_0$ is (a scaling of) the *average* of the block — the *DC term*, the flat component,
+$X_0$ is (a scaling of) the *average* of the block: the *DC term*, the flat component,
 usually by far the largest. Higher $k$ multiplies the samples by faster and faster
-cosines, measuring how much *wiggle* of that frequency the block contains — the *AC
+cosines, measuring how much *wiggle* of that frequency the block contains - the *AC
 terms*. For a smooth block the wiggles are tiny, so the high-$k$ coefficients are near
 zero: energy compaction, straight out of the formula.
 
 #gomaths("Why these particular cosines are orthonormal")[
   Two basis waves are *orthogonal* when their samples, multiplied point-by-point and
-  summed, give zero — they "don't overlap." The DCT's cosines are sampled at the shifted
+  summed, give zero (they "don't overlap"). The DCT's cosines are sampled at the shifted
   points $(2n+1)\/(2N)$ precisely so that
   $ sum_(n=0)^(N-1) cos[(pi(2n+1) j)/(2N)] cos[(pi(2n+1) k)/(2N)] = 0 quad "whenever" j != k, $
   and equals a fixed constant when $j = k$ (which the $alpha_k$ factors normalise to $1$).
   This is the same product-to-sum trick that makes Fourier series work, applied to a finite
   block with the clever half-integer offset that handles the boundaries cleanly. The upshot
   is exactly Chapter 12's condition: stack the normalised cosine waves as rows of a matrix
-  $C$ and you get $C^T C = I$ — an orthonormal transform, perfectly invertible, energy
+  $C$ and you get $C^T C = I$: an orthonormal transform, perfectly invertible, energy
   preserving. You do not need to re-derive this; you need to trust that the DCT is a
   genuine length-preserving rotation, just like the $45 degree$ one, only $N$-dimensional
   and made of cosines.
@@ -379,7 +379,7 @@ Chapter 39 reason about distortion in the coefficient domain.
   $bold(x)^T I bold(x) = bold(x)^T bold(x) = sum_n x_n^2$. The two energies are equal. The
   consequence for compression is decisive: because the transform neither creates nor
   destroys energy, the squared error you introduce by rounding the coefficients equals,
-  exactly, the squared error you will see in the reconstructed samples — so quantising in
+  exactly, the squared error you will see in the reconstructed samples, so quantising in
   the coefficient domain lets you *predict the visible distortion directly*.
 ]
 
@@ -394,8 +394,8 @@ Chapter 39 reason about distortion in the coefficient domain.
   This is why $X_0$ is called the *DC term* (borrowing "direct current" from electronics):
   it is the flat, average level of the block, scaled by $sqrt(N)$ to keep the transform
   orthonormal. For our $N = 4$ ramp it predicts $X_0 = sqrt(4) dot.c 13 = 26$, matching the
-  worked example exactly. Every other coefficient measures *departures* from this average —
-  the detail — and for smooth blocks those departures are small.
+  worked example exactly. Every other coefficient measures *departures* from this average
+  (the detail), and for smooth blocks those departures are small.
 ]
 
 #fig([The eight 1-D DCT basis waves for a block of length $N = 8$. Coefficient $X_k$
@@ -422,7 +422,7 @@ the lower ones.],
   }))
 
 #example[
-  *A 1-D DCT by hand, $N = 4$.* Take a smooth ramp $bold(x) = (10, 12, 14, 16)$ — average
+  *A 1-D DCT by hand, $N = 4$.* Take a smooth ramp $bold(x) = (10, 12, 14, 16)$, average
   $13$, gently rising. The $k=0$ DC coefficient is
   $ X_0 = sqrt(1\/4) (10 + 12 + 14 + 16) = 1/2 dot.c 52 = 26, $
   which is $sqrt(4) = 2$ times the average $13$ (the orthonormal scaling). For $k=1$,
@@ -433,13 +433,13 @@ the lower ones.],
   $(26, -4.46, 0, -0.32)$: a big DC, a modest "slope" term, and two near-zeros. Two
   numbers describe the ramp almost perfectly; the last two quantise to nothing. Verify
   energy: $10^2 + 12^2 + 14^2 + 16^2 = 696$, and $26^2 + 4.46^2 + 0^2 + 0.32^2 approx 696$
-  — conserved to rounding, the energy theorem alive again.
+  Conserved to rounding, the energy theorem alive again.
 ]
 
 #checkpoint[
   A block is *perfectly flat*: $bold(x) = (7, 7, 7, 7)$. Without computing all the
   cosines, what do you expect its DCT to be, and why?
-][Only $X_0$ is nonzero; all AC coefficients are $0$. A flat block is pure DC — it contains
+][Only $X_0$ is nonzero; all AC coefficients are $0$. A flat block is pure DC. It contains
 no wiggle at any frequency, so every cosine wave $k >= 1$ (which has equal positive and
 negative parts) sums to exactly zero against a constant. The DCT reports "all average, no
 detail," which is the truth. This is energy compaction at its extreme: $100%$ of the energy
@@ -448,33 +448,33 @@ in $1$ of $4$ coefficients.]
 === From 1-D to 8×8: the separable 2-D DCT
 
 Images are two-dimensional, so JPEG works on $8 times 8$ blocks of pixels. The 2-D DCT is
-not a new idea — it is the 1-D DCT applied *twice*, once to every row and once to every
+not a new idea. It is the 1-D DCT applied *twice*, once to every row and once to every
 column. This is called *separability*, and it is what keeps the 2-D transform fast.
 
 $ X_(u v) = alpha_u alpha_v sum_(x=0)^7 sum_(y=0)^7 f_(x y) cos[(pi(2x+1)u)/16] cos[(pi(2y+1)v)/16]. $
 
 The double sum looks fierce, but separability means you never compute it directly: DCT
 each of the 8 rows (8 small 1-D transforms), then DCT each of the 8 columns of the result
-(8 more). The coefficient $X_(0 0)$ in the top-left corner is the DC term — the block's
+(8 more). The coefficient $X_(0 0)$ in the top-left corner is the DC term, the block's
 average brightness. Moving right increases horizontal frequency; moving down increases
 vertical frequency; the bottom-right corner is the fastest checkerboard. For a typical
 photographic block, the energy huddles in the top-left few coefficients and the rest are
-near zero — which is exactly why JPEG can throw most of them away.
+near zero, which is exactly why JPEG can throw most of them away.
 
 #example[
   *Separability on a $2 times 2$ block, in full.* Take the tiny block
-  $F = mat(10, 10; 30, 30)$ — flat across each row, jumping top-to-bottom. Use the $N = 2$
+  $F = mat(10, 10; 30, 30)$, flat across each row, jumping top-to-bottom. Use the $N = 2$
   DCT matrix $C = 1/sqrt(2) mat(1, 1; 1, -1)$ (the sum/difference rotation again).
-  *Step 1 — DCT each row.* Row $(10, 10) -> 1/sqrt(2)(20, 0) = (14.14, 0)$; row
-  $(30, 30) -> (42.43, 0)$. The row-transformed matrix is $mat(14.14, 0; 42.43, 0)$ —
-  every row was flat, so all the horizontal AC terms vanished. *Step 2 — DCT each column.*
+  *Step 1: DCT each row.* Row $(10, 10) -> 1/sqrt(2)(20, 0) = (14.14, 0)$; row
+  $(30, 30) -> (42.43, 0)$. The row-transformed matrix is $mat(14.14, 0; 42.43, 0)$:
+  every row was flat, so all the horizontal AC terms vanished. *Step 2: DCT each column.*
   Left column $(14.14, 42.43) -> 1/sqrt(2)(56.57, -28.28) = (40, -20)$; right column
   $(0, 0) -> (0, 0)$. Final coefficients: $mat(40, 0; -20, 0)$. Read them off: $X_(0 0) = 40$
-  is the DC term ($sqrt(4)$ times the block average $20$ — the 2-D version of the
+  is the DC term ($sqrt(4)$ times the block average $20$, the 2-D version of the
   DC-equals-mean theorem); $X_(1 0) = -20$ captures the vertical top-to-bottom jump; the two
   horizontal terms are exactly zero because the block has no horizontal variation. Two
   numbers describe the whole block. Energy: input $10^2+10^2+30^2+30^2 = 2000$; coefficients
-  $40^2 + 20^2 = 2000$ — conserved, and the 2-D DCT is just the 1-D DCT done twice.
+  $40^2 + 20^2 = 2000$, conserved, and the 2-D DCT is just the 1-D DCT done twice.
 ]
 
 #fig([The $8 times 8$ grid of 2-D DCT basis patterns. Top-left is flat (DC, the block
@@ -505,8 +505,8 @@ these 64 patterns; in natural images the top-left weights dominate.],
   bottom-right. After the 2-D DCT, essentially all the energy lands in $X_(0 0)$ (the
   average, near $140 times 8 = 1120$) plus the two adjacent low-frequency terms $X_(0 1)$
   and $X_(1 0)$ (the horizontal and vertical slopes). The remaining $61$ coefficients are
-  below $1$ in magnitude. Quantise with JPEG's standard table and all $61$ round to zero —
-  the block is stored as *three numbers plus 61 zeros*, and the 61 zeros cost almost
+  below $1$ in magnitude. Quantise with JPEG's standard table and all $61$ round to zero.
+  The block is stored as *three numbers plus 61 zeros*, and the 61 zeros cost almost
   nothing once run-length and Huffman coded (Chapter 42). A $64$-byte block becomes a
   handful of bytes, with a reconstruction the eye cannot tell from the original. That single
   paragraph is, in miniature, why JPEG exists.
@@ -514,7 +514,7 @@ these 64 patterns; in natural images the top-left weights dominate.],
 
 == The project: build the DCT in tinyzip
 
-#project("Step 17 · transform.py — dct1d / idct1d and 8×8 dct2d / idct2d")[
+#project("Step 17 · transform.py: dct1d / idct1d and 8x8 dct2d / idct2d")[
   This is `tinyzip`'s first lossy-pipeline module. In Chapter 12 we wrote a throwaway
   $2 times 2$ rotation to watch the energy theorem come alive, but explicitly kept no module;
   Chapter 37 promised the real transform would land here. Now we create `transform.py` with
@@ -523,15 +523,15 @@ these 64 patterns; in natural images the top-left weights dominate.],
 
   #gopython("math.cos, and nested lists as matrices")[
     We use `math.cos`, `math.pi`, and `math.sqrt` from Python's standard `math` module
-    (`import math`). A 2-D block is just a `list[list[float]]` — a list of rows, each row a
-    list of numbers — and we index it `block[row][col]`. A *nested comprehension*
+    (`import math`). A 2-D block is just a `list[list[float]]`, a list of rows where each row is a
+    list of numbers, and we index it `block[row][col]`. A *nested comprehension*
     `[[f(i, j) for j in range(N)] for i in range(N)]` builds an $N times N$ matrix row by
     row: the inner comprehension fills one row, the outer repeats it for every row. We met
     comprehensions in Chapter 16; here they let us write a whole transform in a few lines.
   ]
 
   ```python
-  # tinyzip/transform.py  —  Step 17: the Discrete Cosine Transform
+  # tinyzip/transform.py  -  Step 17: the Discrete Cosine Transform
   import math
 
   def _dct_matrix(n: int) -> list[list[float]]:
@@ -604,7 +604,7 @@ these 64 patterns; in natural images the top-left weights dominate.],
   Run `python -m tinyzip.transform`: the asserts pass (the DCT is exactly invertible and
   energy-conserving), and the smooth block reports the overwhelming majority of its energy
   sitting in the single DC coefficient. The transform stage does not move the scoreboard by
-  itself — a reversible rotation saves no bytes — but it is the lossless engine that the
+  itself (a reversible rotation saves no bytes), but it is the lossless engine that the
   quantiser of Chapter 39 and the toy JPEG of Chapter 42 turn into real savings. The
   throwaway scaffold of Chapter 12 has become a genuine JPEG transform stage, exactly as
   Chapter 37 promised.
@@ -612,7 +612,7 @@ these 64 patterns; in natural images the top-left weights dominate.],
 
 #pitfall[
   Our `dct1d` rebuilds the cosine matrix on every call and does a full $O(n^2)$ matrix
-  multiply — perfect for learning, far too slow for a real codec. Production encoders use a
+  multiply, perfect for learning but far too slow for a real codec. Production encoders use a
   *fast DCT* (an $O(n log n)$ butterfly, e.g. Loeffler–Ligtenberg–Moschytz, 1989, which
   computes an $8$-point DCT in just $11$ multiplications) and integer approximations so the
   encoder and decoder agree bit-exactly. We meet the integer DCT idea again with video
@@ -623,7 +623,7 @@ these 64 patterns; in natural images the top-left weights dominate.],
 
 The DCT has one structural weakness baked into it: it chops the signal into *fixed-size
 blocks* and transforms each independently. At high quality this is invisible. But push the
-quantisation hard — a heavily compressed JPEG — and the block boundaries stop matching up,
+quantisation hard (a heavily compressed JPEG), and the block boundaries stop matching up,
 producing the tell-tale $8 times 8$ *blocking artifacts* you have seen in over-compressed
 images. The root cause is that a single block size cannot be right everywhere: a flat sky
 wants big blocks (efficient), a sharp eyelash wants tiny ones (to localise the edge). What
@@ -631,12 +631,12 @@ if a transform could look at *every scale at once*?
 
 That is the *wavelet* idea. Instead of one fixed block size, a wavelet transform splits the
 signal into a *coarse* approximation (the slow, large-scale trends) and a *detail* signal
-(the fast, fine-scale wiggles) — then recursively splits the coarse part again, and again,
+(the fast, fine-scale wiggles), then recursively splits the coarse part again and again,
 building a pyramid of resolutions. Big smooth regions are captured cheaply by the coarse
 levels; sharp edges are pinpointed by a few large detail coefficients exactly where they
 occur. There is no fixed block grid to leave seams.
 
-#gomaths("Multi-resolution by averages and differences — the Haar wavelet")[
+#gomaths("Multi-resolution by averages and differences: the Haar wavelet")[
   The simplest wavelet is just our opening "sum and difference," applied as a pyramid. Take
   a signal $(s_0, s_1, s_2, s_3, dots)$. Pair it up and, for each pair, store the
   *average* and the *difference*:
@@ -648,8 +648,8 @@ occur. There is no fixed block grid to leave seams.
   every scale. *Tiny example:* $(4, 6, 10, 12) ->$ averages $(10, 22)\/sqrt(2) approx
   (7.07, 15.56)$, details $(-2, -2)\/sqrt(2) approx (-1.41, -1.41)$; recurse on the
   averages: overall average $(7.07 + 15.56)\/sqrt(2) approx 16.0$, coarse detail
-  $(7.07 - 15.56)\/sqrt(2) approx -6.0$. The full transform is $(16.0, -6.0, -1.41, -1.41)$
-  — one number for "how bright overall," one for "the big top-to-bottom trend," two for
+  $(7.07 - 15.56)\/sqrt(2) approx -6.0$. The full transform is $(16.0, -6.0, -1.41, -1.41)$:
+  one number for "how bright overall," one for "the big top-to-bottom trend," two for
   "the fine wiggles." Each step is orthonormal (the $sqrt(2)$ keeps lengths), so the whole
   pyramid is a perfect, invertible rotation: average back the way you split.
 ]
@@ -659,12 +659,12 @@ occur. There is no fixed block grid to leave seams.
   year: "1909 (Haar); 1988 (Daubechies, smooth orthonormal wavelets); 1989 (Mallat, the fast pyramid algorithm)",
   authors: "Alfréd Haar; Ingrid Daubechies; Stéphane Mallat; Yves Meyer",
   aim: "Decompose a signal into a coarse approximation plus detail bands at multiple scales simultaneously, localising both in space and in frequency.",
-  complexity: "O(n) — even faster than the FFT/DCT, because each level halves the data and the pyramid is a geometric series.",
+  complexity: "O(n), even faster than the FFT/DCT, because each level halves the data and the pyramid is a geometric series.",
   strengths: "Multi-resolution (no fixed block grid → no blocking artifacts), localises edges, naturally scalable/progressive (send coarse first), good energy compaction on natural images.",
   weaknesses: "More complex to implement than a block DCT; boundary handling is fiddly; the better smooth wavelets (Daubechies, CDF 9/7) are not as hardware-trivial as an 8×8 DCT.",
-  superseded: "not superseded — chosen by JPEG 2000 and used in many scientific and medical codecs; the DCT simply won the web on simplicity and momentum",
+  superseded: "not superseded. Chosen by JPEG 2000 and used in many scientific and medical codecs; the DCT simply won the web on simplicity and momentum",
 )[
-  The wavelet transform is genuinely *better* than the DCT at low bitrates on many images —
+  The wavelet transform is genuinely *better* than the DCT at low bitrates on many images:
   no blocking, graceful degradation, built-in scalability. JPEG 2000 (Chapter 43) is built
   on the Cohen–Daubechies–Feauveau (CDF) 9/7 wavelet. Yet JPEG-classic still dominates the
   web. The lesson, which recurs throughout this book, is that *technical superiority does
@@ -704,8 +704,8 @@ edges show up as a few large coefficients in the detail bands, localised where t
   and quantising them coarsely smears the edge into ripples. The Haar wavelet, by contrast, records the edge as essentially
   *one* large detail coefficient at the scale and location of the jump, with the flat
   regions collapsing to a couple of coarse numbers. The edge stays sharp and local; there is
-  no block grid to misalign. That locality — "an event affects only the coefficients near
-  it" — is the wavelet's structural advantage, and the reason JPEG 2000 looks better than
+  no block grid to misalign. That locality ("an event affects only the coefficients near
+  it") is the wavelet's structural advantage, and the reason JPEG 2000 looks better than
   JPEG at the same low bitrate.
 ]
 
@@ -715,27 +715,27 @@ We have leaned on the phrase "energy compaction" as if concentrating energy obvi
 saves bits. It is worth closing that loop precisely, because it connects this chapter back
 to the very first theorems of the book. In Chapter 18 we learned that the cost of coding a
 value is its *self-information*, and the average cost of a stream is its *entropy*
-$H = - sum_i p_i log_2 p_i$ — and in Chapter 19 that no lossless coder can beat that
+$H = - sum_i p_i log_2 p_i$, and in Chapter 19 that no lossless coder can beat that
 entropy. The transform does not change how many *coefficients* there are; it changes their
 *distribution*, and the distribution is what entropy charges for.
 
-Picture the histogram of a block's pixel values: a broad, flat spread — many different
+Picture the histogram of a block's pixel values: a broad, flat spread, many different
 mid-range brightnesses, each roughly as likely as the next. A broad, flat histogram has
 *high* entropy, so each pixel costs many bits. Now apply the DCT. The coefficient histogram
 is utterly different: one or two huge values (DC and the lowest frequencies) and a tall
 spike of values clustered tightly at *zero* (all the empty high frequencies). A histogram
-dominated by a single value — zero — has *low* entropy, because the entropy formula rewards
+dominated by a single value (zero) has *low* entropy, because the entropy formula rewards
 peaked distributions: when one outcome has probability near $1$, $- sum p_i log_2 p_i$
 collapses toward $0$. The transform did not delete anything, but it moved the data from a
 high-entropy arrangement to a low-entropy one, and the entropy coder of Volume II banks the
 difference. *Energy compaction is the geometric face of entropy reduction.*
 
-#gomaths("How a peaked distribution lowers entropy — a two-number check")[
+#gomaths("How a peaked distribution lowers entropy: a two-number check")[
   Take two ways to split a unit of probability over four symbols. *Flat:* each has
   $p = 1\/4$, so $H = -4 times (1\/4) log_2(1\/4) = -4 times (1\/4)(-2) = 2$ bits per symbol.
   *Peaked:* one symbol has $p = 0.97$, the other three share $0.01$ each. Then
   $H = -0.97 log_2 0.97 - 3 times 0.01 log_2 0.01 approx 0.043 + 0.199 = 0.24$ bits per
-  symbol. Same four symbols, same total probability — but the peaked distribution costs
+  symbol. Same four symbols, same total probability, but the peaked distribution costs
   *one-eighth* as many bits. After a transform, the coefficient stream looks like the
   peaked case (mostly zeros); before it, the pixel stream looks like the flat case. The
   entropy coder charges by the histogram, and the transform reshapes the histogram. That,
@@ -746,7 +746,7 @@ difference. *Energy compaction is the geometric face of entropy reduction.*
   After the DCT, a quantised $8 times 8$ block is $63$ zeros and one nonzero DC value. Why
   does an entropy coder store this in far fewer than $64$ bytes, even though there are still
   $64$ numbers?
-][Because the histogram is extremely peaked — one symbol (zero) has probability $63\/64$, so
+][Because the histogram is extremely peaked: one symbol (zero) has probability $63\/64$, so
 its self-information is tiny ($-log_2(63\/64) approx 0.02$ bits each). The entropy is near
 zero, and a run-length plus Huffman or arithmetic coder (Volume II) spends almost nothing on
 the long run of zeros, reserving its bits for the single DC value. The *count* of numbers is
@@ -758,28 +758,28 @@ distribution, not the count.]
 Audio raises a problem the image DCT does not face so sharply. A song is a continuous
 stream; to transform it you must cut it into blocks. But if you DCT independent blocks and
 quantise them, the tiny errors at the two sides of a block boundary differ, producing a
-faint *click* at every seam — at, say, $44100$ samples per second and blocks of $1024$,
+faint *click* at every seam. At, say, $44100$ samples per second and blocks of $1024$,
 that is a click forty-odd times a second, an audible buzz. The fix in images would be to
 *overlap* the blocks so the seams blend. But overlap means each sample lands in two blocks,
-so you produce *twice* as many coefficients as samples — and doubling the data is the
+so you produce *twice* as many coefficients as samples, and doubling the data is the
 opposite of compression.
 
 The Modified DCT resolves this paradox with one of the most elegant tricks in signal
 processing. It uses windows that overlap by exactly $50%$, *yet produces only half as many
-coefficients as input samples* — so two overlapping length-$2N$ windows together yield
-$2N$ coefficients for $2N$ fresh samples. No expansion at all. This property — same number
-of coefficients out as samples in — is called *critical sampling*.
+coefficients as input samples*, so two overlapping length-$2N$ windows together yield
+$2N$ coefficients for $2N$ fresh samples. No expansion at all. This property (same number
+of coefficients out as samples in) is called *critical sampling*.
 
 #definition("Critical sampling")[
   A transform is *critically sampled* when it outputs exactly as many coefficients as it
-  takes in samples — no more (which would waste bits) and no fewer (which would lose
+  takes in samples: no more (which would waste bits) and no fewer (which would lose
   information). The plain DCT is critically sampled; naive overlapping is *not* (it
   over-produces); the MDCT restores critical sampling *despite* overlapping.
 ]
 
 How can overlapping windows not produce extra data? Because the MDCT is deliberately *not
 individually invertible*: a single MDCT block, inverted alone, does *not* give back its
-samples — it gives back the samples plus a ghostly, time-reversed copy of part of them,
+samples. It gives back the samples plus a ghostly, time-reversed copy of part of them,
 called *time-domain aliasing*. That sounds like a disaster. The miracle is that this
 aliasing is engineered so that *when you add the overlapping inverse blocks together, the
 ghosts of adjacent blocks are exact negatives of each other and cancel perfectly*, leaving
@@ -795,7 +795,7 @@ only the true samples. This is *Time-Domain Aliasing Cancellation (TDAC)*.
   and the window normalisation turns the $2$ back into $1$. The ghosts annihilate; the truth
   survives; and because each block stored only $N$ numbers, the total count never exceeded
   the number of samples. You get smooth, seam-free block transitions *and* critical
-  sampling — overlap for free. The exact condition the windows must satisfy is the
+  sampling, overlap for free. The exact condition the windows must satisfy is the
   *Princen–Bradley condition*, $w(n)^2 + w(n + N)^2 = 1$ across the overlap, which the
   standard sine window $w(n) = sin[pi(n + 1\/2)\/(2N)]$ obeys.
 ]
@@ -812,7 +812,7 @@ only the true samples. This is *Time-Domain Aliasing Cancellation (TDAC)*.
   $ w(1)^2 + w(3)^2 approx 0.924^2 + 0.383^2 = 0.853 + 0.147 = 1.000. $
   Both sum to exactly $1$. That is the algebraic guarantee that when neighbouring windowed,
   inverse-transformed blocks are overlap-added, the window weights of the shared region add
-  to unity and the time-domain aliasing ghosts cancel — perfect reconstruction, with no
+  to unity and the time-domain aliasing ghosts cancel: perfect reconstruction, with no
   extra coefficients stored. The elegant audio transform is, at bottom, two sine values that
   square-sum to one.
 ]
@@ -821,17 +821,17 @@ only the true samples. This is *Time-Domain Aliasing Cancellation (TDAC)*.
   name: "Modified Discrete Cosine Transform (MDCT)",
   year: "1986 (TDAC principle, Princen–Bradley); 1987 (the MDCT, Princen–Johnson–Bradley)",
   authors: "John P. Princen, A. W. Johnson, Alan B. Bradley (University of Surrey)",
-  aim: "A lapped (50%-overlapping) cosine transform that is critically sampled and gives perfect reconstruction via time-domain aliasing cancellation — the transform for streaming audio.",
+  aim: "A lapped (50%-overlapping) cosine transform that is critically sampled and gives perfect reconstruction via time-domain aliasing cancellation: the transform for streaming audio.",
   complexity: "O(n log n) via a length-N DCT-IV core plus pre/post windowing; a length-2N input yields N coefficients.",
   strengths: "No blocking/seam artifacts (overlap blends boundaries), critically sampled (no data expansion), perfect reconstruction, adaptive block sizes (long for steady tones, short for transients).",
   weaknesses: "Not individually invertible (needs the neighbouring block to cancel aliasing); window design is constrained by the Princen–Bradley condition; about one block of latency.",
-  superseded: "not superseded — it is *the* transform of MP3, AAC, AC-3 (Dolby Digital), Vorbis, and Opus; essentially all modern lossy audio",
+  superseded: "not superseded. It is the transform of MP3, AAC, AC-3 (Dolby Digital), Vorbis, and Opus: essentially all modern lossy audio",
 )[
   Built on the type-IV DCT, the MDCT maps $2N$ overlapping samples to $N$ coefficients.
   It is the reason an MP3 or an Opus stream has no audible block clicks despite chopping the
   music into thousands of overlapping frames per second. Codecs also switch between *long*
   windows (great frequency resolution for steady tones) and *short* windows (good time
-  resolution to avoid *pre-echo* smearing a sharp drum hit backwards) — adaptive blocking,
+  resolution to avoid *pre-echo* smearing a sharp drum hit backwards), giving adaptive blocking
   impossible with a non-overlapping transform.
 ]
 
@@ -864,7 +864,7 @@ overlap-add blends the seams and the engineered time-domain aliasing cancels exa
   The MDCT is why your music streams smoothly and your images do not need to. Video and
   images can tolerate the hard $8 times 8$ block grid because the eye forgives a little
   blockiness more than the ear forgives a periodic click. Audio's relentless time axis makes
-  seamlessness non-negotiable — so audio got the cleverer transform. Form follows perception.
+  seamlessness non-negotiable, so audio got the cleverer transform. Form follows perception.
 ]
 
 == Choosing a transform: the trade-off, in one view
@@ -894,8 +894,8 @@ seeing them side by side, because real codecs choose among exactly these conside
   (1947) and Loève (1948), with the discrete PCA going back to Hotelling (1933) and even
   Pearson (1901). Ahmed, Natarajan, and Rao published the DCT in January 1974, explicitly
   motivated as a fast KLT substitute for Markov-1 signals. Haar's wavelet dates to 1909, but
-  the modern theory — smooth orthonormal wavelets (Daubechies, 1988) and the fast pyramid
-  algorithm (Mallat, 1989) — arrived only in the late 1980s, just in time for JPEG 2000.
+  the modern theory (smooth orthonormal wavelets from Daubechies in 1988, and the fast pyramid
+  algorithm from Mallat in 1989) arrived only in the late 1980s, just in time for JPEG 2000.
   Princen and Bradley gave the TDAC principle in 1986 and, with Johnson, the MDCT in 1987.
   Three of the four transforms that run every media file you touch were finalised in a single
   remarkable decade.
@@ -903,42 +903,42 @@ seeing them side by side, because real codecs choose among exactly these conside
 
 == Bringing it home: the transform's place in the pipeline
 
-Step back and see where this chapter sits. Every transform codec — JPEG, MP3, H.264, and
-the learned codecs of Volume IV — has the same three-stage skeleton we sketched in Chapter
+Step back and see where this chapter sits. Every transform codec (JPEG, MP3, H.264, and
+the learned codecs of Volume IV) has the same three-stage skeleton we sketched in Chapter
 21 and will build piece by piece:
 
 #enum(
   [*Transform* (this chapter): rotate the signal into a coordinate system where energy
    compacts onto a few coefficients. _Lossless and reversible._],
   [*Quantise* (Chapter 39): round those coefficients to a coarse grid, spending fine grids
-   on the coefficients that matter and coarse grids — even zero — on the rest. _The only
+   on the coefficients that matter and coarse grids (even zero) on the rest. _The only
    lossy step._],
   [*Entropy-code* (Volume II): losslessly pack the quantised coefficients with Huffman,
    arithmetic, or ANS. _Lossless again._],
 )
 
-The transform is stage one, and it does no compression on its own — but it sets up
+The transform is stage one, and it does no compression on its own, but it sets up
 everything downstream. Without it, the quantiser would round *pixels*, smearing visible
 noise everywhere; with it, the quantiser rounds *frequency coefficients*, and because
 energy compacted, most rounds harmlessly to zero. The transform is the move that makes the
 lossy step cheap. That is why half a century of codecs open with it, and why we built it
 first.
 
-#scoreboard(caption: "the transform stage adds no bytes yet — it sets up the savings",
+#scoreboard(caption: "the transform stage adds no bytes yet, but it sets up the savings",
   [Raw block ($8 times 8$, bytes)], [64], [1.00×], [the uncompressed pixel block],
   [After DCT (this chapter)], [64], [1.00×], [reversible rotation: energy compacted, no bytes saved *yet*],
-  [After quantise (Ch 39)], [—], [—], [most coefficients → 0; the savings begin],
-  [After entropy-code (Ch 42, toy JPEG)], [—], [—], [run-length + Huffman packs the survivors],
+  [After quantise (Ch 39)], [n/a], [n/a], [most coefficients → 0; the savings begin],
+  [After entropy-code (Ch 42, toy JPEG)], [n/a], [n/a], [run-length + Huffman packs the survivors],
 )
 
 #takeaways((
-  [A *transform* compresses nothing by itself — it is a perfectly reversible rotation. Its job is to re-express the signal so a few coordinates are large and the rest near zero; quantisation banks that later.],
-  [*Decorrelation* removes the predict-each-other redundancy between coordinates; *energy compaction* is its payoff for correlated sources — a few big coefficients, a long tail of near-zeros.],
-  [The *KLT* (eigenvectors of the covariance matrix) is provably the optimal decorrelating, energy-compacting transform — but it is signal-dependent, $O(n^3)$, and must be transmitted, so it is a benchmark, not a tool.],
-  [The *DCT* (Ahmed–Natarajan–Rao, 1974) is a fixed, fast cosine transform that converges to the KLT for smooth (Markov-1) signals — near-optimal, transmission-free, and the heart of JPEG and every mainstream video codec.],
+  [A *transform* compresses nothing by itself. It is a perfectly reversible rotation, whose job is to re-express the signal so a few coordinates are large and the rest near zero; quantisation banks that later.],
+  [*Decorrelation* removes the predict-each-other redundancy between coordinates; *energy compaction* is its payoff for correlated sources, producing a few big coefficients and a long tail of near-zeros.],
+  [The *KLT* (eigenvectors of the covariance matrix) is provably the optimal decorrelating, energy-compacting transform, but it is signal-dependent, $O(n^3)$, and must be transmitted to the decoder, so it serves as a benchmark rather than a practical tool.],
+  [The *DCT* (Ahmed–Natarajan–Rao, 1974) is a fixed, fast cosine transform that converges to the KLT for smooth (Markov-1) signals: near-optimal, transmission-free, and the heart of JPEG and every mainstream video codec.],
   [*Wavelets* decompose at every scale at once, avoiding the DCT's fixed-block blocking artifacts and localising edges; chosen by JPEG 2000, though the DCT won the web on simplicity.],
-  [The *MDCT* overlaps audio blocks by 50% to kill seam clicks, yet stays critically sampled (no data expansion) through time-domain aliasing cancellation — the transform of MP3, AAC, AC-3, Vorbis, and Opus.],
-  [In tinyzip we created `transform.py` with real `dct1d`/`idct1d` and 8×8 `dct2d`/`idct2d` that round-trip exactly and compact energy onto the DC corner — the engine Chapter 42's toy JPEG will drive.],
+  [The *MDCT* overlaps audio blocks by 50% to kill seam clicks, yet stays critically sampled (no data expansion) through time-domain aliasing cancellation. It is the transform of MP3, AAC, AC-3, Vorbis, and Opus.],
+  [In tinyzip we created `transform.py` with real `dct1d`/`idct1d` and 8x8 `dct2d`/`idct2d` that round-trip exactly and compact energy onto the DC corner, the engine Chapter 42's toy JPEG will drive.],
 ))
 
 == Exercises
@@ -949,13 +949,13 @@ first.
   actually discards data, and what does the transform do to make that discarding cheap?
 ]
 #solution("38.1")[
-  A reversible transform cannot, by itself, save any bytes — feed its output through the
+  A reversible transform cannot, by itself, save any bytes. Feed its output through the
   inverse and you recover the original exactly, so no information has left. Its purpose is to
   *rearrange* the signal's energy into a coordinate system where most coordinates are tiny.
   The actual discarding happens in the *quantisation* step (Chapter 39), which rounds the
   coefficients to a coarse grid; rounding tiny coefficients to zero costs almost no
   distortion. So the transform makes lossy compression cheap by ensuring that the things
-  quantisation throws away were nearly zero to begin with — it concentrates the
+  quantisation throws away were nearly zero to begin with. It concentrates the
   "throw-away-able" content into many small coefficients and the "must-keep" content into a
   few large ones.
 ]
@@ -968,7 +968,7 @@ first.
 #solution("38.2")[
   For $(5,5,5,5)$: only $X_0 != 0$. The DC basis is constant, so $X_0 = sqrt(1\/4)(5+5+5+5)
   = (1\/2)(20) = 10$. Every higher basis wave ($k >= 1$) has equal positive and negative
-  lobes, so summed against a constant it gives exactly $0$. Result: $(10, 0, 0, 0)$ — pure
+  lobes, so summed against a constant it gives exactly $0$. Result: $(10, 0, 0, 0)$, pure
   DC, $100%$ energy compaction. For $(5,5,5,6)$: the single raised sample breaks the
   flatness, so *all* coefficients become nonzero, but $X_0$ stays large (the average rose
   slightly) and the AC terms are small (the deviation from flat is small). The DCT honestly
@@ -991,7 +991,7 @@ first.
   bold(v)_2$, so $lambda_2 = 1$. The larger eigenvalue carries $7\/(7+1) = 87.5%$ of the
   energy. Keeping only the first KLT coefficient retains $87.5%$. Keeping one *original*
   pixel retains only its own variance $4$ out of the total variance $4 + 4 = 8$, i.e.
-  $50%$ — and worse, you have not removed the correlation, so the kept pixel still carries
+  $50%$, and worse, you have not removed the correlation, so the kept pixel still carries
   redundant information. The KLT's rotation concentrates $87.5%$ of the energy into one
   decorrelated coordinate; the pixel basis spreads it $50\/50$. That gap is exactly the value
   of decorrelation.
@@ -1024,28 +1024,28 @@ first.
   the averages $(8.485, 2.828)$: overall average $(8.485 + 2.828)\/sqrt(2) = 11.314\/sqrt(2) =
   8.0$; coarse detail $(8.485 - 2.828)\/sqrt(2) = 5.657\/sqrt(2) = 4.0$. Full transform:
   $(8.0, 4.0, 2.828, -1.414)$. Energy check: input $8^2 + 4^2 + 1^2 + 3^2 = 64+16+1+9 = 90$;
-  output $8.0^2 + 4.0^2 + 2.828^2 + 1.414^2 = 64 + 16 + 8 + 2 = 90$. Conserved exactly —
+  output $8.0^2 + 4.0^2 + 2.828^2 + 1.414^2 = 64 + 16 + 8 + 2 = 90$. Conserved exactly:
   the Haar transform is orthonormal.
 ]
 
 #exercise("38.6", 2)[
   The MDCT takes $2N$ overlapping samples and produces only $N$ coefficients, yet perfectly
   reconstructs the audio. A naive overlapping scheme that kept all coefficients would produce
-  $2N$ coefficients for $N$ new samples — a $2 times$ data expansion. Explain, in terms of
+  $2N$ coefficients for $N$ new samples, a $2 times$ data expansion. Explain, in terms of
   time-domain aliasing cancellation, how the MDCT avoids this expansion while still using
   overlap.
 ]
 #solution("38.6")[
   Naive overlap expands data because each sample is covered by two windows and each window
   is independently invertible, so you must store enough coefficients to invert each window
-  alone — twice as many as samples. The MDCT instead makes each block emit only $N$
+  alone, twice as many as samples. The MDCT instead makes each block emit only $N$
   coefficients for its $2N$ samples, which means a single block is *not* individually
   invertible: inverting it alone yields the true samples *plus* a folded, time-reversed
   "ghost" (time-domain aliasing). The window shapes and cosine phases are engineered (the
   Princen–Bradley condition) so that the ghost produced by one block is the exact negative of
   the ghost produced by the overlapping neighbour. When the inverse blocks are overlap-added,
   the ghosts cancel and only the true samples remain. So overlap is achieved with no extra
-  coefficients: $N$ out per $N$ fresh samples in — critical sampling preserved — because the
+  coefficients: $N$ out per $N$ fresh samples in, critical sampling preserved, because the
   redundancy that overlap would normally cost is paid back by aliasing cancellation rather
   than by storing more numbers.
 ]
@@ -1078,10 +1078,10 @@ first.
           print(f"k={k}: err={err:.3f}, energy kept={100 * kept_e / total_e:.1f}%")
   ```
   *Predicted curves.* For a *smooth* block, energy is compacted onto the top-left corner, so
-  even $k = 2$ retains nearly all the energy and the error drops almost to zero immediately —
+  even $k = 2$ retains nearly all the energy and the error drops almost to zero immediately:
   a steep early fall, then flat. For a *noisy* block, energy is spread across all
   frequencies, so the retained-energy curve climbs slowly and roughly in proportion to $k^2$
-  (the number of kept coefficients), and the error falls slowly — there is no compaction to
+  (the number of kept coefficients), and the error falls slowly, with no compaction to
   exploit. This is energy compaction made visible: the steeper the smooth block's curve, the
   more compressible the data, exactly as the KLT theory predicts.
 ]
@@ -1095,13 +1095,13 @@ first.
   by using the fixed DCT instead of computing the true KLT per image.
 ]
 #solution("38.8")[
-  Photographs are smooth almost everywhere — adjacent pixels are nearly equal — which is
+  Photographs are smooth almost everywhere, adjacent pixels nearly equal, which is
   exactly the high-$rho$ regime where the Markov-1 model is accurate and its KLT eigenvectors
   are essentially the DCT cosines. So for the vast majority of natural image blocks the DCT
   *is* the KLT to within a tiny error: you get near-optimal decorrelation and energy
-  compaction from a fixed basis. The two concrete costs you avoid: (1) *computation* — you
+  compaction from a fixed basis. The two concrete costs you avoid: (1) *computation*: you
   skip estimating the per-image covariance matrix and finding its eigenvectors, an $O(n^3)$
-  job per block, replacing it with a fixed $O(n log n)$ fast DCT; and (2) *transmission* —
+  job per block, replacing it with a fixed $O(n log n)$ fast DCT; and (2) *transmission*:
   the KLT basis depends on the image, so a true-KLT codec would have to send the entire basis
   ($64$ vectors of $64$ numbers for $8 times 8$ blocks) to the decoder, often costing more
   than the data it saves. The DCT's basis is built into both encoder and decoder, so nothing
@@ -1111,20 +1111,20 @@ first.
 
 == Further reading
 
-- #link("https://ieeexplore.ieee.org/document/223784")[Ahmed, N., Natarajan, T. & Rao, K. R. (1974). _Discrete Cosine Transform_. IEEE Transactions on Computers 23(1), 90–93.] — the original three-page paper that launched transform coding.
-- #link("https://spectrum.ieee.org/compression-algorithms")[Ahmed, N. & IEEE Spectrum. _How I Came Up With the Discrete Cosine Transform_.] — Ahmed's own account, including the rejected grant proposal.
-- #link("https://en.wikipedia.org/wiki/Modified_discrete_cosine_transform")[Princen, J. P. & Bradley, A. B. (1986); Princen, Johnson & Bradley (1987).] — the TDAC and MDCT papers (IEEE Trans. ASSP 34(5); ICASSP 1987).
-- #link("https://arxiv.org/abs/2202.06533")[Yang, Y., Mandt, S. & Theis, L. (2023). _An Introduction to Neural Data Compression_.] — connects the classical transform-coding pipeline of this chapter to the learned transforms of Chapter 57.
-- Mallat, S. (2008). _A Wavelet Tour of Signal Processing_ (3rd ed.), Academic Press — the canonical, thorough treatment of wavelets and multi-resolution.
-- Rao, K. R. & Yip, P. (1990). _Discrete Cosine Transform: Algorithms, Advantages, Applications_, Academic Press — everything about the DCT, including the fast algorithms our project omits.
+- #link("https://ieeexplore.ieee.org/document/223784")[Ahmed, N., Natarajan, T. & Rao, K. R. (1974). _Discrete Cosine Transform_. IEEE Transactions on Computers 23(1), 90–93.] The original three-page paper that launched transform coding.
+- #link("https://spectrum.ieee.org/compression-algorithms")[Ahmed, N. & IEEE Spectrum. _How I Came Up With the Discrete Cosine Transform_.] Ahmed's own account, including the rejected grant proposal.
+- #link("https://en.wikipedia.org/wiki/Modified_discrete_cosine_transform")[Princen, J. P. & Bradley, A. B. (1986); Princen, Johnson & Bradley (1987).] The TDAC and MDCT papers (IEEE Trans. ASSP 34(5); ICASSP 1987).
+- #link("https://arxiv.org/abs/2202.06533")[Yang, Y., Mandt, S. & Theis, L. (2023). _An Introduction to Neural Data Compression_.] Connects the classical transform-coding pipeline of this chapter to the learned transforms of Chapter 57.
+- Mallat, S. (2008). _A Wavelet Tour of Signal Processing_ (3rd ed.), Academic Press. The canonical treatment of wavelets and multi-resolution.
+- Rao, K. R. & Yip, P. (1990). _Discrete Cosine Transform: Algorithms, Advantages, Applications_, Academic Press. Covers everything about the DCT, including the fast algorithms our project omits.
 
 #bridge[
-  We now have a transform that piles a signal's energy onto a handful of coefficients —
+  We now have a transform that piles a signal's energy onto a handful of coefficients,
   but a reversible rotation alone, as the scoreboard just confirmed, saves not one byte. The
   bytes appear only when we *throw coefficients away*: round the big ones coarsely, the small
   ones to zero, and never look back. That irreversible rounding is *quantisation*, the single
   lossy step in every transform codec, and the knob that walks us along Shannon's
-  rate–distortion curve. Chapter 39 builds it from scratch — uniform and non-uniform scalar
+  rate–distortion curve. Chapter 39 builds it from scratch: uniform and non-uniform scalar
   quantisers, the Lloyd–Max optimum, dead-zones, and the leap to *vector* quantisation that
   will carry us all the way to the VQ-VAE tokenizers of Volume IV. The transform has set the
   table; now we decide what to keep.

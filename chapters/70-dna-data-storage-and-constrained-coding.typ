@@ -9,8 +9,8 @@
 ][Yaniv Erlich, 2017]
 
 Picture a teaspoon of clear liquid sitting on your desk. Inside it, dissolved and invisible,
-floats enough synthetic DNA to hold all the data humanity has ever created — every book,
-every film, every photograph, every database — with room to spare. That is not a science
+floats enough synthetic DNA to hold all the data humanity has ever created: every book,
+every film, every photograph, every database, with room to spare. That is not a science
 fiction premise. It is a number that researchers have calculated from the known physical
 chemistry of DNA molecules, and it sits very close to the theoretical maximum that Shannon's
 laws of information theory allow.
@@ -18,21 +18,21 @@ laws of information theory allow.
 The punchline: we already know how to get there. The technique is called DNA Fountain, it
 was published in _Science_ in March 2017 by Yaniv Erlich and Dina Zielinski at Columbia
 University and the New York Genome Center, and it achieves a storage density of roughly
-215 petabytes per gram — about six orders of magnitude denser than the best flash memory.
+215 petabytes per gram, about six orders of magnitude denser than the best flash memory.
 
 But storing data in molecules is not simply "write bytes into bases." The DNA channel has
 quirks that no hard disk or fibre-optic cable has ever had: it hates long runs of the same
 base; it needs a balanced ratio of certain chemical pairs; it can lose entire molecules
 during synthesis; and reading it back requires a biological sequencing machine that
 introduces its own random errors. Making this work reliably requires an elegant combination
-of two ideas from very different parts of the compression world — *constrained coding* (the
+of two ideas from very different parts of the compression world: *constrained coding* (the
 art of mapping arbitrary bits into sequences that obey physical rules) and *fountain codes*
 (a kind of rateless error-correction that lets you recover data even when random pieces
 go missing). Together they turn an unpredictable chemical soup into a perfectly reliable
 archive.
 
-This chapter is the payoff of a long journey. In Chapter 20 we studied channels and their
-capacity — the maximum reliable throughput through any noisy medium. In Chapters 24–26 we
+This chapter draws on work we have built throughout the book. In Chapter 20 we studied channels and their
+capacity (the maximum reliable throughput through any noisy medium). In Chapters 24–26 we
 built the entropy coders that squeeze data toward Shannon's theoretical floor. Chapter 69
 showed how biology drives compression in the read direction, compressing sequencing data
 against a reference genome. Now we flip the question: how do we *write* arbitrary digital
@@ -61,7 +61,7 @@ years later with zero errors?
 
 == Why DNA at All?
 
-Before diving into the coding theory, it is worth pausing to ask why anyone would bother.
+Before the coding theory, it is worth asking why anyone would bother.
 Hard drives are cheap. Tape is cheaper. Flash memory is fast. Why encode data in a molecule
 that costs dollars per base to write and days to read?
 
@@ -69,21 +69,21 @@ The answer is a combination of density and longevity that no manufactured materi
 close to matching.
 
 *Density.* A single gram of double-stranded DNA can hold, in principle, about $10^(21)$
-bits — roughly $10^9$ terabytes, or a million petabytes. Flash memory in 2025 achieves
+bits, roughly $10^9$ terabytes, or a million petabytes. Flash memory in 2025 achieves
 roughly 10 terabytes per cubic centimetre of silicon. The same cubic centimetre of dry DNA
 could hold on the order of $10^(15)$ terabytes. The advantage is not a factor of two or
 ten; it is a factor of roughly one hundred million.
 
 *Longevity.* Magnetic hard drives have a rated lifetime of three to five years under
 continuous use, and perhaps twenty to thirty years in cold storage. Tape can last fifty
-years in controlled conditions. DNA, under the right conditions — cool, dark, and dry — is
+years in controlled conditions. DNA, under the right conditions (cool, dark, and dry), is
 stable for hundreds of thousands of years. Researchers have successfully sequenced DNA from
 woolly mammoths that died over 40,000 years ago. In 2021, scientists recovered and decoded
 DNA fragments from 1.2-million-year-old mammoth teeth found in Siberian permafrost. No
 data centre can match that.
 
 *Energy.* Magnetic storage must be powered continuously to prevent data decay and drive
-failure. DNA in a sealed vial at room temperature is essentially passive — no electricity
+failure. DNA in a sealed vial at room temperature is essentially passive: no electricity
 required. For the hundreds of exabytes of "cold" archival data that humanity accumulates
 (video archives, genomic databases, regulatory records that must be kept for decades) but
 rarely accesses, this is economically significant.
@@ -92,7 +92,7 @@ The catch, as always, is cost and speed. In 2025, synthesising a single DNA base
 nucleotide) costs on the order of a fraction of a cent at scale (Twist Bioscience quotes
 USD 0.007 per base for bulk oligonucleotide synthesis), but reading and writing a megabyte of
 data still takes hours and costs far more than equivalent flash storage. The technology is
-squarely in the "promising but expensive" zone — which is exactly where hard drives were
+squarely in the "promising but expensive" zone, which is exactly where hard drives were
 in the 1950s, and where flash memory was in the 1990s.
 
 #history[
@@ -101,12 +101,12 @@ in the 1950s, and where flash memory was in the 1990s.
   a 5.27-megabit book (_Regenesis_ by Church and Ed Regis) into 55,000 short DNA strands
   and read it back correctly. Their paper in _Science_ (August 2012) used a simple encoding:
   each two-bit value (00, 01, 10, 11) mapped to one of three nucleotide letters, deliberately
-  avoiding the fourth (T) to limit homopolymer runs — a crude but effective constrained code.
+  avoiding the fourth (T) to limit homopolymer runs, a crude but effective constrained code.
   In 2013, Nick Goldman and colleagues at the EMBL-EBI encoded 739 kilobytes (including an
   MP3 of Martin Luther King's "I Have a Dream" speech) using a more sophisticated scheme that
   spread each byte redundantly across multiple oligos for error tolerance. Erlich and
   Zielinski's DNA Fountain (2017) shattered the efficiency record, encoding 2.14 megabytes
-  at 1.55 bits per nucleotide — 85% of the theoretical Shannon channel capacity. In 2019,
+  at 1.55 bits per nucleotide (85% of the theoretical Shannon channel capacity). In 2019,
   researchers at the University of Washington and Microsoft stored 200 megabytes and read
   it back automatically using a nanopore sequencer. By 2024, the DNA Data Storage Alliance
   (Catalog Technologies, Quantum, Twist Bioscience, Western Digital) released its first
@@ -119,14 +119,14 @@ in the 1950s, and where flash memory was in the 1990s.
 To understand why constrained coding is necessary, you need a one-paragraph primer on what
 DNA actually is.
 
-DNA is a polymer — a long chain molecule made of repeating units called *nucleotides*.
+DNA is a polymer, a long chain molecule made of repeating units called *nucleotides*.
 There are four possible nucleotides, conventionally abbreviated by their nitrogen bases:
 *A* (adenine), *T* (thymine), *G* (guanine), and *C* (cytosine). Each position in the
 chain holds exactly one of these four letters. A strand of length $n$ nucleotides therefore
 belongs to an alphabet of size 4, and in an ideal noiseless world could carry exactly
 $log_2 4 = 2$ bits of information per position.
 
-Double-stranded DNA (the famous double helix) pairs A with T and G with C — A always bonds
+Double-stranded DNA (the famous double helix) pairs A with T and G with C. A always bonds
 to T, and G always bonds to C. This pairing rule has a critical consequence for storage: it
 defines what is called the *GC content* of a strand, the fraction of bases that are G or C
 (equivalently, the fraction that are A or T is the AT content). A healthy synthetic DNA
@@ -139,7 +139,7 @@ strand for storage purposes needs GC content between about 40% and 60%.
   _nucleotide_.
 ]
 
-#gomaths("Logarithms base 2 — a quick reminder")[
+#gomaths("Logarithms base 2: a quick reminder")[
   You met logarithms in Chapter 7. The base-2 logarithm $log_2 n$ answers the question:
   "To what power must I raise 2 to get $n$?" So $log_2 4 = 2$ because $2^2 = 4$. This is
   exactly the number of bits needed to represent $n$ equally likely choices: with 4 choices
@@ -155,8 +155,8 @@ read back.
 
 *Constraint 1: No long homopolymer runs.* A *homopolymer run* is a stretch of repeated
 identical bases: `AAAAAAA`, `GCCCCC`, and so on. Long runs (typically five or more of the
-same base in a row) cause synthesis machines to "stutter" — making errors at high frequency
-— and cause sequencing machines to miscount the length of the run. The fix is to forbid
+same base in a row) cause synthesis machines to "stutter," making errors at high frequency,
+and cause sequencing machines to miscount the length of the run. The fix is to forbid
 runs beyond a maximum length $r$ (commonly $r = 3$ or $r = 4$).
 
 *Constraint 2: Balanced GC content.* Sequences with very high GC content (say, 70%+)
@@ -171,7 +171,7 @@ cause the molecule to fold back on itself (hairpin loops) or to stick to other o
 usually handled by including it in the synthesis quality score.
 
 *Constraint 4: Index/barcode regions.* Each oligo must include a few bases at each end
-that serve as a barcode — identifying which oligo is which when the pool is sequenced back.
+that serve as a barcode, identifying which oligo is which when the pool is sequenced back.
 These bases are not free data; they are overhead. Typical addressing overhead is 20–30
 nucleotides per oligo out of a total of 120–200.
 
@@ -187,7 +187,7 @@ and GC content stays between $p_("min")$ and $p_("max")$.
 ]
 
 #checkpoint[Why does GC content between 40% and 60% matter? What goes wrong if a sequence
-is 90% GC?][A 90% GC sequence has very strong inter-strand hydrogen bonding — G-C pairs form
+is 90% GC?][A 90% GC sequence has very strong inter-strand hydrogen bonding. G-C pairs form
 three hydrogen bonds, while A-T pairs form only two. This makes the two strands hard to
 separate (high melting temperature), which is required for both synthesis and sequencing.
 In extreme cases the strand forms internal structures that block the synthesis machinery
@@ -208,7 +208,7 @@ Think of the constraints as a set of rules about which bases are allowed to foll
 others. We can represent these rules as a *directed graph* (also called a *labeled graph*
 or *de Bruijn graph*) where:
 
-- Each *node* represents a state — the recent history of output bases that matters for the
+- Each *node* represents a state, specifically the recent history of output bases that matters for the
   constraint.
 - Each *directed edge* (arrow) represents a valid next base.
 - An edge is labelled with the base it contributes.
@@ -227,7 +227,7 @@ sequence.
   where $lambda_max$ is the *largest eigenvalue* (Perron-Frobenius eigenvalue) of $A$.
   This result was proved by Shannon in 1948. For a completely unconstrained 4-symbol alphabet,
   $A$ is a $4 times 4$ all-ones matrix (every transition allowed), its largest eigenvalue
-  is 4, and $C = log_2 4 = 2$ bits/symbol — as expected.
+  is 4, and $C = log_2 4 = 2$ bits/symbol, as expected.
 
   You do not need to know how to compute eigenvalues from scratch to follow the chapter.
   The key intuition is: constraints reduce the number of paths through the graph, which
@@ -243,21 +243,21 @@ $ A = mat(0, 1; 1, 0) $
 
 The eigenvalues of this matrix are $+1$ and $-1$. The Perron-Frobenius eigenvalue (the
 largest positive one) is $lambda_max = 1$. Capacity $= log_2 1 = 0$ bits/symbol. That
-makes sense: the only valid sequences are `010101...` and `101010...` — exactly one bit of
+makes sense: the only valid sequences are `010101...` and `101010...`. There is exactly one bit of
 choice at the start, and then no choice at all. This extreme constraint eliminates almost
 all information.
 
 Let us do one case where the answer is _not_ zero, so the machinery earns its keep. Loosen
-the rule to "no run of length 3 or more" over the binary alphabet — at most two identical
-symbols in a row, exactly the constraint drawn in the figure below. A compact way to count
+the rule to "no run of length 3 or more" over the binary alphabet (at most two identical
+symbols in a row), exactly the constraint drawn in the figure below. A compact way to count
 the valid strings is to ask: how many length-$n$ binary strings avoid `000` and `111`? Call
 that count $T_n$. A short argument (a valid string of length $n$ ends in either a single
 fresh symbol or a doubled one, appended to a shorter valid string) gives the recurrence
-$T_n = T_(n-1) + T_(n-2)$ — each term is the sum of the previous two, which is the famous
+$T_n = T_(n-1) + T_(n-2)$: each term is the sum of the previous two, which is the famous
 _Fibonacci recurrence_ (the sequence $1, 1, 2, 3, 5, 8, 13, dots$, where the counting tools of
 Chapter 8 and the sequences of Chapter 11 meet). A standard fact about this recurrence is
 that its terms grow like $phi^n$, where $phi = (1 + sqrt(5))\/2 approx 1.618$ is the
-_golden ratio_ — and that growth rate $phi$ is precisely the Perron-Frobenius eigenvalue of
+_golden ratio_. That growth rate $phi$ is precisely the Perron-Frobenius eigenvalue of
 this constraint's adjacency matrix. The capacity is
 
 $ C = log_2 phi approx log_2 1.618 approx 0.694 "bits/symbol", $
@@ -265,13 +265,13 @@ $ C = log_2 phi approx log_2 1.618 approx 0.694 "bits/symbol", $
 noticeably below the unconstrained 1 bit/symbol but far from the zero we got with the harsher
 rule. (Sharpen the rule back to "at most run 2" with a different bookkeeping and you get the
 $approx 0.946$ figure quoted in Exercise 70.2; the exact number depends on precisely which
-runs you forbid, but the _method_ — count the paths, take $log_2$ of the growth rate — is
+runs you forbid, but the _method_ (count the paths, take $log_2$ of the growth rate) is
 always the same.) This is the whole game of constrained-coding capacity in one line: *the
 capacity is the base-2 logarithm of the rate at which the number of valid sequences grows.*
 
 For the DNA case, the constraint is softer. With a maximum run length of $r = 3$ over the
 4-symbol DNA alphabet (no run of four or more), and approximate GC balance, the constrained
-capacity works out to roughly 1.98 bits/nucleotide — astonishingly close to the unconstrained
+capacity works out to roughly 1.98 bits/nucleotide, astonishingly close to the unconstrained
 maximum of 2.00. This means the constraints cost almost nothing in theory; the hard part is
 building a practical code that achieves this theoretical limit.
 
@@ -362,14 +362,14 @@ The constrained coding layer handles the "which sequences are valid" problem. Th
 second, completely separate challenge: *erasure*. DNA synthesis is not perfectly reliable.
 Some oligos simply fail to synthesise. Others synthesise but are present in such small
 quantities in the pool that when you sequence a random sample, you just happen to miss them.
-When you retrieve your data, some fraction of your oligos will be gone entirely — not
+When you retrieve your data, some fraction of your oligos will be gone entirely, not
 corrupted but absent.
 
 This is the *erasure channel*: the receiver receives each transmitted packet with some
 probability, and misses it with the complementary probability, with no way to know in
 advance which packets will be missing. Designing error-correcting codes for erasure channels
-is a solved problem — classical block codes such as Reed-Solomon (which we will build from
-scratch in Chapter 72, _The Error-Correction Boundary_) handle erasures optimally — but those
+is a solved problem. Classical block codes such as Reed-Solomon (which we will build from
+scratch in Chapter 72, _The Error-Correction Boundary_) handle erasures optimally, but those
 classical solutions have a drawback for DNA: they require a fixed rate. If you plan for 20%
 erasure but actually get 35% erasure, a fixed-rate code fails. You either over-provision
 (waste capacity) or under-provision (lose data).
@@ -395,7 +395,7 @@ you catch.
 Michael Luby invented the first practical fountain codes in 1998 (published 2002); they are
 called *LT codes* for "Luby Transform." The encoding rule is elegantly simple:
 
-1. Fix a degree distribution $Omega(d)$ — a probability distribution over the integers
+1. Fix a degree distribution $Omega(d)$, a probability distribution over the integers
    $1, 2, 3, dots, k$.
 2. To generate one encoded symbol:
    a. Sample a degree $d$ from $Omega$.
@@ -411,7 +411,7 @@ symbol), use it to recover that input symbol directly, then subtract it from eve
 encoded symbol that depends on it (reducing their degree by 1). This may create new degree-1
 symbols, which you decode in turn. Continue until everything is recovered.
 
-#gomaths("XOR — exclusive or")[
+#gomaths("XOR: exclusive or")[
   XOR (exclusive or) of two bits: output 1 if they differ, 0 if they are the same.
   Extended to bytes: XOR each pair of corresponding bits independently.
   The crucial property: $a xor a = 0$ and $a xor 0 = a$ for any $a$.
@@ -431,7 +431,7 @@ symbols:
 
 Suppose $e_2$ is lost in the channel. The decoder receives $e_1$ and $e_3$.
 
-Decoding: $e_1$ has degree 1, so $s_2 = $ `10` directly. Now $e_3 = s_2 xor s_3 xor s_4$; subtract the known $s_2$: $e_3 xor s_2 = `01` xor `10` = `11` = s_3 xor s_4$. Still stuck — two unknowns. If we had one more symbol, we could finish. The example illustrates the peeling process and also shows why some overhead beyond $k$ symbols is needed.
+Decoding: $e_1$ has degree 1, so $s_2 = $ `10` directly. Now $e_3 = s_2 xor s_3 xor s_4$; subtract the known $s_2$: $e_3 xor s_2 = `01` xor `10` = `11` = s_3 xor s_4$. Still stuck with two unknowns. If we had one more symbol, we could finish. The example illustrates the peeling process and shows why some overhead beyond $k$ symbols is needed.
 
 The Luby design uses a *Soliton distribution* for the degrees, tuned so that the peeling
 process proceeds smoothly. With the ideal Soliton distribution, an LT code can recover $k$
@@ -454,11 +454,11 @@ from these $k'$ intermediates.
 
 The benefit: because the precode handles any final missing pieces, the LT part can use a
 simpler, lower-overhead degree distribution. The combined scheme achieves near-zero overhead
-with linear-time encoding and decoding — $O(k log(1/delta))$ operations to fail with
+with linear-time encoding and decoding, requiring $O(k log(1/delta))$ operations to fail with
 probability at most $delta$, compared to $O(k^2)$ for Reed-Solomon codes.
 
 Raptor codes are deployed in digital broadcasting (the 3GPP eMBMS standard for mobile TV),
-in peer-to-peer file sharing, and — crucially — in the DNA Fountain system.
+in peer-to-peer file sharing, and, crucially, in the DNA Fountain system.
 
 #algo(
   name: "LT Codes (Luby Transform)",
@@ -466,7 +466,7 @@ in peer-to-peer file sharing, and — crucially — in the DNA Fountain system.
   authors: "Michael Luby",
   aim: "Rateless fountain code for erasure channels; each encoded symbol is the XOR of a random subset of input blocks, drawn from a Soliton degree distribution.",
   complexity: "Encoding: O(k log k) expected per encoded symbol. Decoding: O(k log k) total using belief propagation (peeling).",
-  strengths: "Rateless — arbitrarily many encoded symbols can be generated on demand; no fixed code rate needed; simple encoder.",
+  strengths: "Rateless: arbitrarily many encoded symbols can be generated on demand; no fixed code rate needed; simple encoder.",
   weaknesses: "Overhead of O(1/sqrt(k)) symbols beyond k; peeling decoder can stall on rare instances; not universal for all k.",
   superseded: "Raptor codes (Shokrollahi 2006) achieve smaller overhead with linear-time decoding.",
 )[]
@@ -511,8 +511,8 @@ paper, a commercial service). The machine chemically builds each strand one nucl
 a time.
 
 #gopython("Generators and yield")[
-  A Python *generator* is a function that produces a sequence of values lazily — one at a
-  time, on demand — using the `yield` keyword. This is exactly the right data structure for
+  A Python *generator* is a function that produces a sequence of values lazily, one at a
+  time on demand, using the `yield` keyword. This is exactly the right data structure for
   a fountain code: we want to produce encoded drops one at a time, potentially without bound.
 
   ```python
@@ -541,20 +541,20 @@ cetz.canvas({
   import cetz.draw: *
   // Boxes
   rect((0, 4), (2.5, 5), fill: rgb("#e8f0f8"), stroke: rgb("#0b5394"), radius: 3pt)
-  content((1.25, 4.5))[Source file]
+  content((1.25, 4.5), box(width: 2.1cm, inset: 2pt, align(center, text(size: 8pt)[Source file])))
   rect((0, 2.5), (2.5, 3.5), fill: rgb("#e8f0f8"), stroke: rgb("#0b5394"), radius: 3pt)
-  content((1.25, 3))[Packetise\ ($k$ segments)]
+  content((1.25, 3), box(width: 2.1cm, inset: 2pt, align(center, text(size: 8pt)[Packetise ($k$ segments)])))
   rect((3.5, 2.5), (6, 3.5), fill: rgb("#e8f5f2"), stroke: rgb("#0f766e"), radius: 3pt)
-  content((4.75, 3))[Fountain\ encode (XOR)]
+  content((4.75, 3), box(width: 2.1cm, inset: 2pt, align(center, text(size: 8pt)[Fountain encode (XOR)])))
   rect((3.5, 1), (6, 2), fill: rgb("#faf7ee"), stroke: rgb("#783f04"), radius: 3pt)
-  content((4.75, 1.5))[Add header\ + barcode]
+  content((4.75, 1.5), box(width: 2.1cm, inset: 2pt, align(center, text(size: 8pt)[Add header + barcode])))
   rect((0, 1), (2.5, 2), fill: rgb("#f4f0f8"), stroke: rgb("#5b3a86"), radius: 3pt)
-  content((1.25, 1.5))[Screen: GC,\ homopolymer]
+  content((1.25, 1.5), box(width: 2.1cm, inset: 2pt, align(center, text(size: 8pt)[Screen: GC, homopolymer])))
   rect((0, -0.5), (2.5, 0.5), fill: rgb("#e8f5f2"), stroke: rgb("#0f766e"), radius: 3pt)
-  content((1.25, 0))[Synthesise\ oligo]
+  content((1.25, 0), box(width: 2.1cm, inset: 2pt, align(center, text(size: 8pt)[Synthesise oligo])))
   // PRNG box
   rect((7, 2.5), (9.5, 3.5), fill: rgb("#fff4e0"), stroke: rgb("#783f04"), radius: 3pt)
-  content((8.25, 3))[PRNG seed\ (drop \#)]
+  content((8.25, 3), box(width: 2.1cm, inset: 2pt, align(center, text(size: 8pt)[PRNG seed (drop \#)])))
   // Arrows
   line((1.25, 4), (1.25, 3.5), mark: (end: ">"))
   line((2.5, 3), (3.5, 3), mark: (end: ">"))
@@ -572,7 +572,7 @@ cetz.canvas({
 
 === The Decoding Pipeline
 
-Sequencing recovers the pool of oligos — not all of them (some were lost) and with some
+Sequencing recovers the pool of oligos. Not all will be present (some were lost), and some have
 base-call errors mixed in. The decoder proceeds as follows:
 
 *Stage 1: Error-correct and parse.* Use a short Reed-Solomon or BCH code embedded in the
@@ -581,8 +581,8 @@ payload.
 
 *Stage 2: Rebuild the connection graph.* For each received drop, use the PRNG seed to
 recover which $k$ source segments were XOR-ed. Build the _bipartite graph_ connecting drops
-to segments. (A graph is _bipartite_ when its nodes split into two groups — here, "drops" on
-one side and "source segments" on the other — and every edge runs _between_ the groups, never
+to segments. (A graph is _bipartite_ when its nodes split into two groups, here "drops" on
+one side and "source segments" on the other, and every edge runs _between_ the groups, never
 within one. An edge means "this drop is the XOR of, among others, this segment.")
 
 *Stage 3: Belief propagation.* Apply the peeling decoder: find a drop of degree 1 (connected
@@ -596,12 +596,12 @@ In the 2017 demonstration, Erlich and Zielinski encoded 2.14 megabytes of data (
 a full computer operating system, a movie, and other files) into 72,000 oligos of 200
 nucleotides each. They used approximately 7% redundancy (about 5,000 extra drops beyond
 the minimum needed) to guard against oligo dropout. The entire file was recovered without
-a single bit error. The information density achieved was 1.55 bits per nucleotide — 85% of
-the theoretical Shannon channel capacity of 1.83 bits/nt (the gap from 2.00 is due to
-error-correction overhead, barcoding, and the small GC constraint cost).
+a single bit error. The information density achieved was 1.55 bits per nucleotide, 85% of
+the theoretical Shannon channel capacity of 1.83 bits/nt. The gap from 2.00 is due to
+error-correction overhead, barcoding, and the small GC constraint cost.
 
 #keyidea[
-  DNA Fountain achieves 85% of the Shannon channel capacity of the DNA storage medium —
+  DNA Fountain achieves 85% of the Shannon channel capacity of the DNA storage medium,
   closer to the theoretical limit than many engineered communication systems. The key
   innovations are: (1) screening rather than constructing constrained sequences, which
   avoids complex code design; (2) using a rateless fountain code, which naturally handles
@@ -622,7 +622,7 @@ sequencing. It operates at the oligo level.
 Because these two problems are at different levels of the system, the solutions can be
 stacked without interference. The fountain code does not care about the internal structure
 of each oligo, and the constrained code does not care about which oligos survive. This
-separation of concerns — a classic principle of good engineering design — is exactly what
+separation of concerns, a classic principle of good engineering design, is exactly what
 makes the architecture practical.
 
 #gopython("Bitwise XOR in Python")[
@@ -712,20 +712,20 @@ ballpark. All versions of the number are astonishing compared to flash memory's 
 
 #gomaths("Avogadro's number and moles")[
   Avogadro's number, $N_A approx 6.022 times 10^(23)$, is the number of atoms (or molecules,
-  or any other specified particle) in one *mole* — the chemist's standard unit for counting
+  or any other specified particle) in one *mole*, the chemist's standard unit for counting
   large numbers of particles. A single nucleotide (DNA base + sugar + phosphate) has a
   molecular weight of about 330 daltons (330 grams per mole). One gram of nucleotides
   therefore contains $1 / 330$ moles, which is $(1/330) times 6.022 times 10^(23) approx
   1.8 times 10^(21)$ nucleotides. In double-stranded DNA, each base is paired, halving
-  this to $approx 9 times 10^(20)$ nucleotide pairs per gram — the figure used above.
-  This is pure chemistry, but the result — almost a trillion trillion nucleotides per gram
-  — is why DNA density is almost beyond comprehension.
+  this to $approx 9 times 10^(20)$ nucleotide pairs per gram, the figure used above.
+  This is pure chemistry, but the result - almost a trillion trillion nucleotides per gram
+  - is why DNA density is almost beyond comprehension.
 ]
 
 #scoreboard(caption: "Information density comparison (not bytes on a file, but storage density)",
-  [Flash memory (3D NAND, 2025)], [~10 GB/g], [—], [Best consumer storage per gram],
-  [Magnetic tape (LTO-9)], [~1 GB/g], [—], [Long-term archival workhorse],
-  [DNA storage (Goldman 2013)], [~0.3 bits/nt], [—], [First carefully designed scheme],
+  [Flash memory (3D NAND, 2025)], [~10 GB/g], [n/a], [Best consumer storage per gram],
+  [Magnetic tape (LTO-9)], [~1 GB/g], [n/a], [Long-term archival workhorse],
+  [DNA storage (Goldman 2013)], [~0.3 bits/nt], [n/a], [First carefully designed scheme],
   [DNA Fountain (2017)], [1.55 bits/nt], [~85% capacity], [Current practical record],
   [Theoretical maximum], [2.00 bits/nt], [100%], [Shannon limit for 4-symbol alphabet],
 )
@@ -753,7 +753,7 @@ that the fountain code is designed to handle. Typical dropout rates in 2025 syst
 from 1% to 10% depending on the synthesis technology.
 
 *Coverage imbalance.* Even when an oligo is present, it may be amplified unequally during
-the _polymerase chain reaction_ (PCR — the standard laboratory technique that copies a DNA
+the _polymerase chain reaction_ (PCR, the standard laboratory technique that copies a DNA
 sample many times over to produce enough material to sequence), so some oligos appear
 hundreds of times and others only once or twice. This requires careful statistical sequencing
 depth planning.
@@ -778,7 +778,7 @@ coupling efficiency of about 99% per step; for a 200-nucleotide oligo, this mean
 $(0.99)^(200) approx 13%$ of chains complete successfully without any error, requiring
 significant quality control. Twist Bioscience's silicon array platform achieves higher
 uniformity by synthesising thousands of sequences simultaneously on a chip. By 2025, Twist
-was quoting prices around USD 0.007 per base for bulk orders — expensive for data storage
+was quoting prices around USD 0.007 per base for bulk orders, expensive for data storage
 (a 1 MB file requires roughly 600,000 bases at 1.55 bits/nt) but dropping steadily.
 
 The emerging alternative is *enzymatic synthesis* (companies like Ansa Biotechnologies,
@@ -801,7 +801,7 @@ base in bulk.
 pairs at once (up to tens of kilobases), which is useful for reading long oligos or
 reconstructing overlapping reads. Error rates are higher (1–5% for nanopore, improving
 rapidly in 2024–2026 with AI-based basecallers). The Oxford Nanopore MinION is the size of
-a USB drive and can sequence a sample in a few hours on a laptop — transformative for
+a USB drive and can sequence a sample in a few hours on a laptop, transformative for
 portability.
 
 === Random Access: Retrieving One File from the Pool
@@ -813,7 +813,7 @@ oligos, how do you find the 72,000 oligos for one specific file?
 The answer is *PCR* (the polymerase chain reaction we just met) with file-specific primers. Each file's
 oligos carry unique short sequences at their ends (primers) that PCR can recognise and
 amplify selectively. Add the matching primer pair to the pool, run PCR, and only the target
-file's oligos are amplified — everything else stays in the background at low concentration.
+file's oligos are amplified; everything else stays in the background at low concentration.
 Sequence the amplified product, and you have your file. This is essentially a molecular
 key-value lookup. Researchers at the University of Washington (Lee et al., 2019) demonstrated
 automated random access in a 200 MB pool.
@@ -838,11 +838,11 @@ tiny (less than 1%). But a more careful analysis reveals an interesting subtlety
 Consider Erlich and Zielinski's screening approach. They generate candidate sequences using
 a pseudorandom mapping from bits to DNA, then screen them. Only about 97% of candidates
 pass. This means they must generate roughly $1/0.97 approx 1.03$ candidates per accepted
-sequence — a 3% overhead in the generation step. This overhead is negligible.
+sequence, a 3% overhead in the generation step. This overhead is negligible.
 
 But the rejected sequences are not just "wasted computation": each rejection forces the
 use of a different fountain-code drop number. Since the fountain code is rateless, this
-is fine — just skip the rejected drop number and use the next. The decoder does not care
+is fine: just skip the rejected drop number and use the next. The decoder does not care
 which specific drop numbers were used.
 
 This is the elegant cleverness of the design: the screening approach converts the
@@ -852,8 +852,8 @@ constructing constrained codewords; instead, generate random candidates and disc
 ones. The fountain code absorbs the "missing" drops with zero penalty.
 
 #aside[
-  This trick — generate many candidates, keep the good ones, and use a rateless outer code
-  so that the selection does not create gaps — is broadly applicable. It appears in other
+  This trick (generate many candidates, keep the good ones, and use a rateless outer code
+  so that the selection does not create gaps) is broadly applicable. It appears in other
   biological storage media (fluorescent molecules, peptides, synthetic polymers) and in some
   classical communications applications where constructing explicit constrained codes is
   impractical.
@@ -862,7 +862,7 @@ ones. The fountain code absorbs the "missing" drops with zero penalty.
 == State of the Art in 2025–2026
 
 The DNA storage field in mid-2026 sits at an interesting inflection point. The science is
-solid — the information-theoretic results are proved, the coding schemes work, multiple
+solid. The information-theoretic results are proved, the coding schemes work, and multiple
 demonstrations have stored and retrieved megabytes to hundreds of megabytes without error.
 The bottleneck is engineering cost and speed.
 
@@ -874,8 +874,8 @@ for routine storage, it is not.
 *Writing speed.* Current synthesis throughput is on the order of kilobytes to megabytes
 per day per device. This is millions of times slower than writing to a hard drive.
 
-*Reading speed.* Sequencing throughput is higher — Oxford Nanopore's PromethION can
-sequence tens of gigabases per run — but the wet-lab preparation steps (PCR, library
+*Reading speed.* Sequencing throughput is higher. Oxford Nanopore's PromethION can
+sequence tens of gigabases per run, but the wet-lab preparation steps (PCR, library
 preparation) add hours of latency.
 
 *Industry activity.* Multiple companies are pursuing commercial DNA storage:
@@ -891,15 +891,15 @@ preparation) add hours of latency.
   metadata.
 
 The consensus view in 2026 is that DNA storage will first become commercially viable for
-*cold archival* data — data that is written once, stored for decades, and almost never read.
+*cold archival* data: data written once, stored for decades, and almost never read.
 The economics favour it: no power required for storage, physical footprint near zero,
 century-scale durability. The question is not whether the technology works but how quickly
 costs fall. Most analysts project DNA storage entering commercial archival markets sometime
 in the late 2020s to early 2030s.
 
 #misconception[DNA data storage is a single technology that stores data inside real cells.][
-  DNA data storage uses *synthetic* oligonucleotides — short custom-made strands built
-  chemically or enzymatically in a laboratory — stored in a sealed vial, not inside living
+  DNA data storage uses *synthetic* oligonucleotides: short custom-made strands built
+  chemically or enzymatically in a laboratory, stored in a sealed vial, not inside living
   cells. Living cells would copy, mutate, and express the DNA in ways that would corrupt the
   data rapidly. The stored molecules are inert chemical compounds, more like a bottle of
   special ink than a biological organism. Separately, "in vivo" DNA storage (storing data
@@ -911,13 +911,13 @@ in the late 2020s to early 2030s.
 
 No TINYZIP step is assigned to this chapter (see the project spec: DNA storage has no
 `#project` step). But it is instructive to sketch the complete encode-decode loop in Python
-to make the pipeline concrete. The following code is intentionally simplified — it omits
-the biochemical screening, uses a minimal PRNG, and represents DNA as a string — but it
+to make the pipeline concrete. The following code is intentionally simplified (it omits
+the biochemical screening, uses a minimal PRNG, and represents DNA as a string), but it
 captures all the structural pieces.
 
 ```python
 """
-dna_fountain_sketch.py — illustrative sketch of the DNA Fountain pipeline.
+dna_fountain_sketch.py - illustrative sketch of the DNA Fountain pipeline.
 NOT a production implementation. Simplified for teaching purposes.
 """
 import random
@@ -1070,7 +1070,7 @@ if __name__ == "__main__":
         print(f"Decoded: {result!r}")
         print(f"Round-trip {'PASSED' if ok else 'FAILED'}")
     else:
-        print("Decoding FAILED — not enough drops received")
+        print("Decoding FAILED - not enough drops received")
 ```
 
 Running this on the 26-byte string `"Hello, DNA storage world!!"` splits it into $k = 7$
@@ -1079,7 +1079,7 @@ redundancy), loses 1 of the 8 to simulated dropout, and still recovers all 26 by
 Notice the margin is thin: with only one spare drop, the peeling decoder succeeds here but
 would fail on a less lucky combination of which segments each drop happens to cover. That
 fragility is exactly why real systems use a richer degree distribution (the Robust Soliton)
-and far more redundancy — typically 5–10% _extra oligos on top of_ a code already designed so
+and far more redundancy, typically 5–10% _extra oligos on top of_ a code already designed so
 that the peeling process almost never stalls. The sketch is faithful to the _structure_ of
 DNA Fountain, not to its safety margins.
 
@@ -1104,8 +1104,7 @@ sequencing, require a different family of error-correcting codes. *Varshamov-Ten
 DNA. Extending to multiple deletions is an active research area. Helitag, a scheme developed
 at the Weizmann Institute (2021), provides practical indel protection for short sequences.
 
-*In-memory computation.* Some researchers are exploring not just storing data in DNA but
-*computing with it* — molecular logic gates that operate on DNA. This is related to the
+*In-memory computation.* Some researchers are exploring whether DNA can also serve as a computing substrate via molecular logic gates. This is related to the
 broader field of molecular computing (Chapter 80 looks at the longer horizon). For now,
 computation in DNA is orders of magnitude slower and more error-prone than silicon.
 
@@ -1116,7 +1115,7 @@ The coding-theory framework of this chapter applies to all of them.
 
 *Integration with AI.* Recent work (2025–2026) is exploring using neural networks to predict
 synthesis quality scores for proposed sequences, enabling smarter screening that rejects
-fewer candidates while maintaining biochemical reliability — marrying the learned-compression
+fewer candidates while maintaining biochemical reliability, marrying the learned-compression
 ideas of Chapter 62 with the physical constraints of the DNA channel.
 
 #takeaways((
@@ -1135,8 +1134,8 @@ ideas of Chapter 62 with the physical constraints of the DNA channel.
   [DNA Fountain (Erlich and Zielinski, 2017) combines biochemical screening for constrained
    coding with a Raptor-inspired fountain code for erasure correction, achieving 215 PB/g
    equivalent storage density and zero-error recovery of 2.14 MB.],
-  [The two layers — constrained coding (nucleotide level) and fountain coding (oligo level)
-   — solve orthogonal problems and compose cleanly, which is the architectural key to the
+  [The two layers (constrained coding at the nucleotide level and fountain coding at the oligo level)
+   solve orthogonal problems and compose cleanly, which is the architectural key to the
    system's simplicity and near-capacity performance.],
   [As of 2026, DNA storage is not yet commercially competitive with tape for cost and speed,
    but the information-theoretic foundations are solid, writing costs are falling, and the
@@ -1152,7 +1151,7 @@ ideas of Chapter 62 with the physical constraints of the DNA channel.
   (GC between 40%–60%, max run ≤ 3)?
 ]
 #solution("70.1")[
-  GC count: G appears at positions 4, 9; C appears at positions 3, 10 — total 4 GC out of
+  GC count: G appears at positions 4, 9; C appears at positions 3, 10. That is 4 GC out of
   12 bases. GC content = 4/12 = 33.3%. This fails the 40%–60% GC constraint.
   Longest homopolymer run: `TTT` at positions 6–8, length 3. This passes the run constraint.
   Overall verdict: fails screening (GC too low), would be rejected and a new drop tried.
@@ -1162,7 +1161,7 @@ ideas of Chapter 62 with the physical constraints of the DNA channel.
   In a simple 2-symbol constrained system, runs of 3 or more identical symbols are forbidden.
   Draw the finite-state graph (states represent "how many consecutive identical symbols have
   appeared") and identify all valid transitions. What is the maximum bit-per-symbol capacity
-  (qualitatively — more or less than for the unconstrained 2-symbol case)?
+  (qualitatively: more or less than for the unconstrained 2-symbol case)?
 ]
 #solution("70.2")[
   States: S1 (just emitted a symbol, 1 in a row), S2 (2 in a row). Transitions: from S1,
@@ -1186,7 +1185,7 @@ ideas of Chapter 62 with the physical constraints of the DNA channel.
   there is no predetermined $n$: the encoder generates symbols indefinitely, and the decoder
   collects as many as needed. The "rate" is determined dynamically by how many symbols
   actually survive. For DNA storage, dropout rates vary between synthesis batches, vendors,
-  and storage conditions — they cannot be precisely predicted. A rateless code automatically
+  and storage conditions. They cannot be precisely predicted. A rateless code automatically
   adapts: if fewer oligos survive, just sequence more of the pool to get more drops. No
   re-encoding required.
 ]
@@ -1261,7 +1260,7 @@ ideas of Chapter 62 with the physical constraints of the DNA channel.
   RS decoding (too many substitutions to correct) are simply discarded (treated as erased),
   and the fountain code recovers the data from the surviving oligos.
   The layers interact cleanly because RS decoding either succeeds (producing a corrected,
-  trusted oligo) or fails (producing a discarded oligo — an erasure). The fountain decoder
+  trusted oligo) or fails (producing a discarded oligo, treated as an erasure). The fountain decoder
   sees only clean oligos or missing oligos; it never receives a partially-corrupted oligo.
   This clean separation of concerns (within-oligo correction via RS; between-oligo recovery
   via fountain) is architecturally robust and matches the way DNA Fountain was actually
@@ -1297,7 +1296,7 @@ encoding.]
 #link("https://arxiv.org/abs/2308.05952")["Embracing Errors Is More Efficient Than Avoiding
 Them Through Constrained Coding for DNA Data Storage," arXiv:2308.05952, 2023. A provocative
 analysis arguing that for modern high-accuracy synthesis, the rate penalty from constrained
-coding is smaller than the error-correction overhead of not using constraints — nuanced
+coding is smaller than the error-correction overhead of not using constraints. A careful
 engineering trade-off analysis.]
 
 #link("https://www.snia.org/sites/default/files/DNA/SNIA-DNA-Data-Storage-Technology-Review-v1.0.pdf")[
@@ -1308,10 +1307,10 @@ error correction, and standardisation efforts.]
 #bridge[
   DNA molecules are the most information-dense storage medium we know of, and we have now
   seen how to use them reliably by layering constrained coding and fountain codes. But DNA
-  is exotic and expensive. The next chapter — Chapter 71 — returns to earth, examining
+  is exotic and expensive. The next chapter, Chapter 71, returns to earth, examining
   *delta coding, diff, and deduplication*: the workhorse techniques that store not a fresh
   copy of every file, but only what has changed since the last version. Git, rsync, backup
   systems, and version control all rely on these ideas, and they compress version histories
   by orders of magnitude while remaining entirely practical on commodity hardware. From
-  molecules back to bytes — the full circle of the compression story.
+  molecules back to bytes: the full circle of the compression story.
 ]

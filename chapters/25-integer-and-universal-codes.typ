@@ -7,12 +7,12 @@
   Nature uses only the longest threads to weave her patterns, so each small piece of her fabric reveals the organization of the entire tapestry.
 ][Richard Feynman]
 
-Picture a seismologist in 1977 squinting at a paper printout of earthquake residuals — the tiny differences between what a geological model predicted and what the sensors actually felt. The residuals are small integers: mostly zeros and ones, occasionally a ten or twenty, very rarely a five hundred. She needs to store fifty years of these residuals on magnetic tape. Huffman coding would require a full probability table — but she doesn't know the exact probabilities in advance, and the data changes character from week to week. What she needs is a code that works *reasonably well* for any source that tends to produce small numbers, without having to survey the data first.
+Picture a seismologist in 1977 squinting at a paper printout of earthquake residuals (the tiny differences between what a geological model predicted and what the sensors actually felt). The residuals are small integers: mostly zeros and ones, occasionally a ten or twenty, very rarely a five hundred. She needs to store fifty years of these residuals on magnetic tape. Huffman coding would require a full probability table, but she doesn't know the exact probabilities in advance, and the data changes character from week to week. What she needs is a code that works *reasonably well* for any source that tends to produce small numbers, without having to survey the data first.
 
-The answer, it turns out, had already been worked out. A family of codes called *universal integer codes* — unary, Elias gamma and delta, Rice and Golomb, Fibonacci, and their cousins — gives you a compact representation of any non-negative integer based purely on its size, not on a pre-measured probability table. They are the Swiss Army knives of compression: not the sharpest tool in any one job, but always sharp enough, always ready. Today they encode the residuals in FLAC audio files, the motion vectors in every H.264 and HEVC video stream, the match-length differences in DEFLATE, and the prediction errors in lossless image formats. This chapter teaches you exactly how they work and why each choice is optimal for a particular situation.
+The answer, it turns out, had already been worked out. A family of codes called *universal integer codes* (unary, Elias gamma and delta, Rice and Golomb, Fibonacci, and their cousins) gives you a compact representation of any non-negative integer based purely on its size, not on a pre-measured probability table. Think of them as the Swiss Army knives of compression: not the sharpest tool in any one job, but always sharp enough, always ready. Today they encode the residuals in FLAC audio files, the motion vectors in every H.264 and HEVC video stream, the match-length differences in DEFLATE, and the prediction errors in lossless image formats. This chapter explains exactly how they work and why each choice is optimal for a particular situation.
 
 #recap[
-  In Chapter 24 we built Huffman coding — the optimal way to assign fixed codewords to symbols when you know their exact probabilities. Huffman requires a frequency table computed up front and stored alongside the data (or a two-pass scheme). In Chapter 18 we learned that Shannon's entropy sets the theoretical floor: you cannot, on average, do better than $-log_2 p$ bits per symbol. In Chapters 15–17 we built the Python toolkit and the BitWriter/BitReader we will use here. This chapter uses all of that as a springboard.
+  In Chapter 24 we built Huffman coding, the optimal way to assign fixed codewords to symbols when you know their exact probabilities. Huffman requires a frequency table computed up front and stored alongside the data (or a two-pass scheme). In Chapter 18 we learned that Shannon's entropy sets the theoretical floor: you cannot, on average, do better than $-log_2 p$ bits per symbol. In Chapters 15–17 we built the Python toolkit and the BitWriter/BitReader we will use here. This chapter uses all of that as a springboard.
 ]
 
 #objectives((
@@ -28,7 +28,7 @@ The answer, it turns out, had already been worked out. A family of codes called 
 
 == The Problem: Coding Without a Table
 
-Huffman coding is brilliant — but it has a prerequisite: you need to know the probability $p_s$ of every symbol $s$ before you can build the tree. For a fixed alphabet of 256 byte values, that's manageable: scan the file, count frequencies, build a tree, prepend the tree to your compressed output.
+Huffman coding is brilliant, but it has a prerequisite: you need to know the probability $p_s$ of every symbol $s$ before you can build the tree. For a fixed alphabet of 256 byte values, that's manageable: scan the file, count frequencies, build a tree, prepend the tree to your compressed output.
 
 But what if your alphabet is all non-negative integers ${0, 1, 2, 3, dots.h}$? This is not a strange situation. Compression is full of integer-valued quantities:
 
@@ -37,9 +37,9 @@ But what if your alphabet is all non-negative integers ${0, 1, 2, 3, dots.h}$? T
 - *Motion-vector components* in video (Chapter 51): how many pixels did the block move?
 - *Wavelet/DCT coefficients* after quantization (Chapters 38–39): typically small integers, occasionally large.
 
-These quantities are *unbounded* — a residual could, in principle, be any integer. You cannot build a Huffman tree over an infinite alphabet. You need a different approach.
+These quantities are *unbounded*: a residual could, in principle, be any integer. You cannot build a Huffman tree over an infinite alphabet. You need a different approach.
 
-The idea behind universal integer codes is elegant: rather than measuring the data, we assume a *shape*. We know that small integers are much more probable than large ones — we just don't know by exactly how much. A good integer code packs small values into few bits and large values into many bits, in a way that is guaranteed to be within a constant factor of optimal for *any* distribution that prefers smaller values. The technical name for this is a *universal code*.
+The idea behind universal integer codes is elegant: rather than measuring the data, we assume a *shape*. We know that small integers are much more probable than large ones, but we don't know by exactly how much. A good integer code packs small values into few bits and large values into many bits, in a way that is guaranteed to be within a constant factor of optimal for *any* distribution that prefers smaller values. The technical name for this is a *universal code*.
 
 #definition("Universal Code")[
   A prefix-free code $C$ for the positive integers is called *universal* if, for every computable probability distribution $P$ over the positive integers that gives larger probability to smaller integers, the expected code length under $C$ is within a constant factor of the entropy $H(P)$. Informally: a universal code never does catastrophically worse than the ideal code for any such distribution.
@@ -81,11 +81,11 @@ So the code for 1 is `0`, for 2 is `1 0`, for 3 is `1 1 0`, for 4 is `1 1 1 0`, 
   })
 )
 
-The codeword for $n$ is exactly $n$ bits long. This is a legal prefix code — no codeword is a prefix of another, because every codeword ends in a `0` and the terminating zero is what distinguishes them.
+The codeword for $n$ is exactly $n$ bits long. This is a legal prefix code: no codeword is a prefix of another, because every codeword ends in a `0` and the terminating zero is what distinguishes them.
 
 How many bits does unary cost? Precisely $n$ bits per symbol. For a source where $n$ is always 1 or 2, that's great. But if $n$ can be 1000, you are writing 1000 bits for a single number. Unary only shines when values are nearly always 1, 2, or 3. The moment you expect values in the dozens, you need something smarter.
 
-Still, unary is not useless. It appears *inside* other codes as a building block — you'll see it in gamma and Golomb below — and it's also the natural code for the Bernoulli/geometric source with very high probability of small values. FLAC uses a truncated form of Rice coding (which builds on unary) for its residuals.
+Still, unary is not useless. It appears *inside* other codes as a building block (you'll see it in gamma and Golomb below), and it's also the natural code for the Bernoulli/geometric source with very high probability of small values. FLAC uses a truncated form of Rice coding (which builds on unary) for its residuals.
 
 #gopython("Bit-level I/O with BitWriter")[
   From Chapter 17, `tinyzip` already has `BitWriter` and `BitReader` in `bitio.py`. A `BitWriter` writes individual bits to a `bytes` buffer; a `BitReader` reads them back. Both track position at the bit level, not the byte level. Here is a quick refresher on how to write a single bit:
@@ -123,14 +123,14 @@ def read_unary(br: "BitReader") -> int:
     return n
 ```
 
-Simple, correct, and easy to test. For $n = 4$: write `1`, `1`, `1`, `0` — four bits for the value 4. To read, count the ones until a zero appears; the count of ones plus one is your answer.
+Simple, correct, and easy to test. For $n = 4$: write `1`, `1`, `1`, `0`. That's four bits for the value 4. To read, count the ones until a zero appears; the count of ones plus one is your answer.
 
 == Elias Gamma Coding: Logarithmic Efficiency
 
-Peter Elias published three integer codes in 1975 that all achieve logarithmic code length — meaning the code for $n$ uses roughly $log_2 n$ bits, not $n$ bits. The first and most widely used is the *gamma code*.
+Peter Elias published three integer codes in 1975 that all achieve logarithmic code length. The code for $n$ uses roughly $log_2 n$ bits, not $n$ bits. The first and most widely used is the *gamma code*.
 
 #history[
-  Peter Elias (1923–2001) was a professor of electrical engineering at MIT who made foundational contributions to information theory and coding. He introduced arithmetic coding in an unpublished lecture around 1963, and his 1975 paper "Universal codeword sets and representations of the integers" (IEEE Transactions on Information Theory) introduced gamma, delta, and omega codes — all of which now appear in real-world codecs. Elias was Shannon's colleague at MIT and a member of the original group that made information theory a discipline.
+  Peter Elias (1923--2001) was a professor of electrical engineering at MIT who made foundational contributions to information theory and coding. He introduced arithmetic coding in an unpublished lecture around 1963, and his 1975 paper "Universal codeword sets and representations of the integers" (IEEE Transactions on Information Theory) introduced gamma, delta, and omega codes, all of which now appear in real-world codecs. Elias was Shannon's colleague at MIT and a member of the original group that made information theory a discipline.
 ]
 
 === The Gamma Construction
@@ -239,7 +239,7 @@ The gamma code for $n$ uses $2k + 1 = 2 floor(log_2 n) + 1$ bits. For $n = 1000$
 ]
 
 #proof[
-  Write $k = floor(log_2 n)$. The code consists of $k$ leading zeros, one `1`, and $k$ payload bits — a total of $k + 1 + k = 2k + 1$ bits. Since $k = floor(log_2 n)$, the length is $2 floor(log_2 n) + 1$. $square$
+  Write $k = floor(log_2 n)$. The code consists of $k$ leading zeros, one `1`, and $k$ payload bits, for a total of $k + 1 + k = 2k + 1$ bits. Since $k = floor(log_2 n)$, the length is $2 floor(log_2 n) + 1$. $square$
 ]
 
 For what distribution is gamma optimal? It's within a factor of 2 of entropy for any "monotone decreasing" distribution on the positive integers, meaning any distribution where $P(n+1) <= P(n)$ for all $n$. That's a remarkably general guarantee.
@@ -256,7 +256,7 @@ Many compression systems count from zero (run lengths starting at 0, residuals t
 
 == Elias Delta Coding: Better for Large Numbers
 
-Gamma code costs $2k$ overhead bits (the $k$ leading zeros) plus 1 bit for the separator, on top of the $k$ payload bits. For moderate $n$ that's fine, but for very large $n$ (say, $n = 10^6$), $k approx 20$ and the overhead is 20 bits — half the total code length. Can we do better?
+Gamma code costs $2k$ overhead bits (the $k$ leading zeros) plus 1 bit for the separator, on top of the $k$ payload bits. For moderate $n$ that's fine, but for very large $n$ (say, $n = 10^6$), $k approx 20$ and the overhead is 20 bits, half the total code length. Can we do better?
 
 Yes. *Elias delta* coding encodes $k+1$ *in gamma* instead of in unary, then writes the payload bits.
 
@@ -277,10 +277,10 @@ Compare: gamma for 13 was 7 bits (since $n$ is small, gamma wins here). But for 
   Gamma code length: $2 floor(log_2 n) + 1$ bits.
   Delta code length: $2 floor(log_2(floor(log_2 n) + 1)) + 1 + floor(log_2 n)$ bits.
 
-  For large $n$, the $2 floor(log_2 n)$ overhead in gamma grows proportionally to $log_2 n$. Delta's overhead grows as $2 log_2(log_2 n)$ — the logarithm of the logarithm, which barely grows at all. For $n = 10^6$: $log_2(10^6) approx 20$, $log_2(20) approx 4.3$, delta's overhead is about 9 bits vs gamma's 40 bits. Delta wins enormously at large $n$, at the cost of being slightly less efficient for small $n$.
+  For large $n$, the $2 floor(log_2 n)$ overhead in gamma grows proportionally to $log_2 n$. Delta's overhead grows as $2 log_2(log_2 n)$ (the logarithm of the logarithm), which barely grows at all. For $n = 10^6$: $log_2(10^6) approx 20$, $log_2(20) approx 4.3$, delta's overhead is about 9 bits vs gamma's 40 bits. Delta wins enormously at large $n$, at the cost of being slightly less efficient for small $n$.
 ]
 
-The delta code is therefore the right choice when your integers could plausibly range up to millions or billions — large match offsets in dictionary coders, for instance.
+The delta code is therefore the right choice when your integers could plausibly range up to millions or billions. Large match offsets in dictionary coders are a typical example.
 
 == Elias Omega Coding: The Recursive Cousin
 
@@ -298,11 +298,11 @@ Binary of 13: `1101`. Length of this = 4 bits, but we need to encode the bit-len
 $floor(log_2 13) = 3$. Encode 3: binary `11`, then encode $floor(log_2 3) = 1$. Encode 1: output `0`.
 So omega(13) = `0` || `11` || `1101` = `0111101` = 7 bits.
 
-This produces a code whose length grows as $log n + log log n + log log log n + dots.h$ — barely more than the raw information content of $n$. For $n = 10^9$, the code length is approximately $30 + 5 + 2 + 1 = 38$ bits, compared to gamma's $2 times 30 + 1 = 61$ bits. Omega dramatically outperforms gamma for very large integers.
+This produces a code whose length grows as $log n + log log n + log log log n + dots.h$, barely more than the raw information content of $n$. For $n = 10^9$, the code length is approximately $30 + 5 + 2 + 1 = 38$ bits, compared to gamma's $2 times 30 + 1 = 61$ bits. Omega dramatically outperforms gamma for very large integers.
 
-However, omega is rarely used in practical codecs today for two reasons. First, the recursive structure makes it slightly harder to implement without looking it up. Second, "very large integers" rarely arise in the contexts where integer codes are used — match lengths are bounded by window size, residuals are bounded by the signal range, and motion vectors have finite scope. Gamma and delta give sufficient efficiency for all practical purposes.
+However, omega is rarely used in practical codecs today for two reasons. First, the recursive structure makes it slightly harder to implement without looking it up. Second, "very large integers" rarely arise in the contexts where integer codes are used: match lengths are bounded by window size, residuals are bounded by the signal range, and motion vectors have finite scope. Gamma and delta give sufficient efficiency for all practical purposes.
 
-Where omega matters most is as a theoretical tool: it demonstrates that universal codes can get arbitrarily close to the entropy limit for any monotone-decreasing distribution, at the cost of more complex implementation. The existence of omega proves that the 2x overhead of gamma is not fundamental — it's a convenience trade-off, not a wall.
+Where omega matters most is as a theoretical tool: it demonstrates that universal codes can get arbitrarily close to the entropy limit for any monotone-decreasing distribution, at the cost of more complex implementation. The existence of omega proves that the 2x overhead of gamma is not fundamental. It's a convenience trade-off, not a wall.
 
 #aside[
   Levenshtein coding (Vladimir Levenshtein, 1968) is another recursive universal code, closely related to omega, that appears in some database and index compression systems. The key insight shared by both is that instead of paying $O(log n)$ bits for the "size indicator" (as gamma does with its unary prefix), you pay only $O(log log n)$ by encoding the size in a compressed form.
@@ -310,7 +310,7 @@ Where omega matters most is as a theoretical tool: it demonstrates that universa
 
 == Golomb and Rice Codes: Optimal for Geometric Sources
 
-All three Elias codes are *universal* — they work reasonably well for *any* distribution on positive integers. But what if we know more? Specifically, what if we know our source follows a *geometric distribution*?
+All three Elias codes are *universal*: they work reasonably well for *any* distribution on positive integers. But what if we know more? Specifically, what if we know our source follows a *geometric distribution*?
 
 #gomaths("The geometric distribution")[
   A *geometric distribution* with parameter $p in (0,1)$ gives probability $P(n) = (1-p)^(n-1) p$ to each positive integer $n$. It models the number of trials until the first "success" in a series of independent coin flips where each flip is heads with probability $p$. Key properties:
@@ -329,7 +329,7 @@ In 1966, Solomon Golomb (University of Southern California) showed that for a ge
 Choose a positive integer *modulus* $m$ (we'll see how to choose it optimally in a moment). To encode $n >= 0$ with Golomb parameter $m$:
 
 1. Compute the *quotient* $q = floor(n / m)$ and *remainder* $r = n mod m$.
-2. Write $q$ in unary (so $q$ ones followed by a zero, or $q$ zeros followed by a one — conventions differ; we use the $q$ zeros then one convention here, matching FLAC).
+2. Write $q$ in unary (so $q$ ones followed by a zero, or $q$ zeros followed by a one; conventions differ, and we use the $q$ zeros then one convention here, matching FLAC).
 3. Write $r$ in a special "truncated binary" code of either $floor(log_2 m)$ or $floor(log_2 m) + 1$ bits.
 
 Step 3 needs more explanation. Let $b = floor(log_2 m)$ and $t = 2^(b+1) - m$.
@@ -337,7 +337,7 @@ Step 3 needs more explanation. Let $b = floor(log_2 m)$ and $t = 2^(b+1) - m$.
 - If $r < t$: write $r$ using exactly $b$ bits.
 - If $r >= t$: write $r + t$ using exactly $b + 1$ bits.
 
-This truncated binary encoding of the remainder is what makes Golomb optimal — it squeezes the remainder into the minimum possible bits for a range that isn't a power of two.
+This truncated binary encoding of the remainder is what makes Golomb optimal: it squeezes the remainder into the minimum possible bits for a range that isn't a power of two.
 
 *Example: $m = 5$, $n = 13$.*
 $q = floor(13/5) = 2$, $r = 13 mod 5 = 3$.
@@ -366,9 +366,9 @@ $ m = "round"(- 1 / log_2(1-p)), $
 
 which is the same number written differently (recall from Chapter 7 that $log_2 x = (ln x) slash (ln 2)$, so the two expressions are identical).
 
-The intuition is worth pausing on. A geometric source loses a factor of $(1-p)$ in probability with every step up in value, so the probability is *halved* after some fixed number of steps — call that number $m$. The optimal Golomb modulus is exactly that half-life: it makes the unary "quotient" part of the code grow by one bit each time the probability halves, which is precisely the $-log_2 p$ behaviour entropy demands.
+The intuition is worth pausing on. A geometric source loses a factor of $(1-p)$ in probability with every step up in value, so the probability is *halved* after some fixed number of steps - call that number $m$. The optimal Golomb modulus is exactly that half-life: it makes the unary "quotient" part of the code grow by one bit each time the probability halves, which is precisely the $-log_2 p$ behaviour entropy demands.
 
-*A worked number.* Suppose $p = 0.2$, so the average value is $1 slash p = 5$. Then $1 - p = 0.8$, and $log_2(0.8) approx -0.322$, giving $m = "round"(-1 slash (-0.322)) = "round"(3.11) = 3$. So for a source whose values average 5, Golomb with $m = 3$ is the Shannon-optimal prefix code. (The nearest Rice code would round $m$ to a power of two — here $m = 4$, i.e. Rice with $k = 2$ — paying a tiny efficiency price for the bit-shift speed.)
+*A worked number.* Suppose $p = 0.2$, so the average value is $1 slash p = 5$. Then $1 - p = 0.8$, and $log_2(0.8) approx -0.322$, giving $m = "round"(-1 slash (-0.322)) = "round"(3.11) = 3$. So for a source whose values average 5, Golomb with $m = 3$ is the Shannon-optimal prefix code. The nearest Rice code would round $m$ to a power of two (here $m = 4$, i.e. Rice with $k = 2$), paying a tiny efficiency price for the bit-shift speed.
 
 === Rice Codes: The Power-of-Two Special Case
 
@@ -380,10 +380,10 @@ The *Rice code* is a Golomb code where the modulus $m$ is constrained to be a po
 - $r = n "AND" (2^k - 1)$ (mask the low $k$ bits = modulo $2^k$)
 
 #pyrecall[
-  The bit operators below — `>>` (right shift), `<<` (left shift), `&` (bitwise AND), `|` (bitwise OR) and `^` (bitwise XOR) — were built from scratch in Chapter 17 (A Python Primer III). Quick reminders: `n >> k` drops the lowest $k$ bits (an integer divide by $2^k$); `n & ((1 << k) - 1)` keeps only the lowest $k$ bits (the remainder modulo $2^k$); `(b >> i) & 1` extracts the single bit at position $i$.
+  The bit operators below (`>>` right shift, `<<` left shift, `&` bitwise AND, `|` bitwise OR, `^` bitwise XOR) were built from scratch in Chapter 17 (A Python Primer III). Quick reminders: `n >> k` drops the lowest $k$ bits (integer divide by $2^k$); `n & ((1 << k) - 1)` keeps only the lowest $k$ bits (the remainder modulo $2^k$); `(b >> i) & 1` extracts the single bit at position $i$.
 ]
 
-And since $m = 2^k$ is a power of two, the truncated binary remainder is just the exact $k$-bit representation of $r$ — no special cases needed.
+And since $m = 2^k$ is a power of two, the truncated binary remainder is just the exact $k$-bit representation of $r$, with no special cases needed.
 
 #definition("Rice code")[
   Given Rice parameter $k >= 0$ and non-negative integer $n$:
@@ -472,12 +472,12 @@ or just $k = floor(log_2(mu))$, which is within 1 of optimal for most sources.
   year: "1966 (Golomb), 1979 (Rice)",
   authors: "Solomon Golomb (USC); Robert Rice (JPL/Caltech)",
   aim: "Optimal prefix-free coding of geometrically distributed non-negative integers using modulus m (Golomb) or m=2^k (Rice).",
-  complexity: "O(n/m) bits to encode n; decoding reads quotient then remainder — O(q+k) bit operations.",
+  complexity: "O(n/m) bits to encode n; decoding reads quotient then remainder, O(q+k) bit operations.",
   strengths: "Provably optimal for geometric distributions; Rice variant requires only bit-shifts and masks (no division); naturally adaptive; used in FLAC, JPEG-LS, H.264, BWT + RLE stages.",
   weaknesses: "Suboptimal for non-geometric distributions; fixed-parameter Rice is slow to adapt if the source statistics change rapidly.",
   superseded: "Rice-within-ANS or arithmetic coding in systems where the full distribution is known; adaptive Rice remains competitive for simple hardware.",
 )[
-  Rice coding was invented by Robert F. Rice at the Jet Propulsion Laboratory (JPL) in the late 1970s as a way to compress astronomical sensor data from deep-space probes (including Voyager). The hardware constraints of the era — limited computation, no multiplication — made the bit-shift simplicity of power-of-two moduli essential. Rice published the technique in 1979 in JPL Technical Report. The same construction was later independently noted in the context of FLAC audio compression, and Rice codes remain the backbone of FLAC's lossless compression to this day.
+  Rice coding was invented by Robert F. Rice at the Jet Propulsion Laboratory (JPL) in the late 1970s as a way to compress astronomical sensor data from deep-space probes (including Voyager). The hardware constraints of the era (limited computation, no multiplication) made the bit-shift simplicity of power-of-two moduli essential. Rice published the technique in 1979 in JPL Technical Report. The same construction was later independently noted in the context of FLAC audio compression, and Rice codes remain the backbone of FLAC's lossless compression to this day.
 ]
 
 == Exp-Golomb Codes: Video's Integer Workhorse
@@ -537,12 +537,12 @@ So $"SE"(1) = 1$, $"SE"(-1) = 2$, $"SE"(2) = 3$, $"SE"(-2) = 4$, matching the ta
 
 == Fibonacci Coding: Resilience Through Structure
 
-All the codes above — unary, gamma, delta, Rice, Exp-Golomb — share a property: a single bit error can corrupt not just one codeword, but potentially many subsequent ones (because the decoder loses its place in the stream). In communications applications where the channel is noisy, this is dangerous.
+All the codes above (unary, gamma, delta, Rice, Exp-Golomb) share a property: a single bit error can corrupt not just one codeword but potentially many subsequent ones, because the decoder loses its place in the stream. In communications applications where the channel is noisy, this is dangerous.
 
-*Fibonacci coding* offers a different trade-off: slightly longer codewords, but a robust termination pattern that allows resynchronization after an error.
+*Fibonacci coding* offers a different trade-off: slightly longer codewords in exchange for a termination pattern that allows resynchronization after an error.
 
 #history[
-  The Fibonacci sequence $1, 1, 2, 3, 5, 8, 13, 21, 34, dots.h$ was described by Leonardo of Pisa (known as Fibonacci) in 1202 in his book *Liber Abaci*, originally to model rabbit breeding. The sequence $F_n$ satisfies $F_1 = F_2 = 1$ and $F_n = F_(n-1) + F_(n-2)$ for $n >= 3$. Zeckendorf's theorem (1972, Édouard Zeckendorf) states that every positive integer has a unique representation as a sum of non-consecutive Fibonacci numbers — a fact that makes Fibonacci coding possible. The coding scheme itself was proposed in the 1980s; it appears in some database and communication systems where error resilience matters.
+  The Fibonacci sequence $1, 1, 2, 3, 5, 8, 13, 21, 34, dots.h$ was described by Leonardo of Pisa (known as Fibonacci) in 1202 in his book *Liber Abaci*, originally to model rabbit breeding. The sequence $F_n$ satisfies $F_1 = F_2 = 1$ and $F_n = F_(n-1) + F_(n-2)$ for $n >= 3$. Zeckendorf's theorem (1972, Édouard Zeckendorf) states that every positive integer has a unique representation as a sum of non-consecutive Fibonacci numbers, a fact that makes Fibonacci coding possible. The coding scheme itself was proposed in the 1980s; it appears in some database and communication systems where error resilience matters.
 ]
 
 === Zeckendorf Representation
@@ -569,7 +569,7 @@ Bits: `1`, end marker `1` → code is `11`.
 *Example: $n = 4 = F_4 + F_2 = 3 + 1$.*
 Bits: `1, 0, 1`, end marker `1` → code is `1011`.
 
-The key property: the pattern `11` never occurs within a valid Fibonacci codeword (because of the non-consecutive Zeckendorf constraint) — it only appears at the end. This means a decoder can always find codeword boundaries by searching for `11`, even after a channel error corrupted some bits. This self-synchronizing property is unique to Fibonacci coding among the codes in this chapter.
+The key property: the pattern `11` never occurs within a valid Fibonacci codeword (because of the non-consecutive Zeckendorf constraint) and it only appears at the end. A decoder can therefore always find codeword boundaries by searching for `11`, even after a channel error corrupted some bits. This self-synchronizing property is unique to Fibonacci coding among the codes in this chapter.
 
 #algo(
   name: "Fibonacci Coding",
@@ -579,7 +579,7 @@ The key property: the pattern `11` never occurs within a valid Fibonacci codewor
   complexity: "Codeword length is approximately 1.44 log2(n) + 1 bits (since Fibonacci numbers grow as phi^n); encoding and decoding are O(log n).",
   strengths: "Self-synchronizing: after a bit error, the decoder can re-find codeword boundaries by searching for '11'; unique termination pattern; no explicit length field needed.",
   weaknesses: "~44% longer than Elias gamma for large n; not competitive for pure compression; no adaptive variant widely deployed.",
-  superseded: "Not widely superseded — fills a niche where error resilience matters more than compression ratio.",
+  superseded: "Not widely superseded; fills a niche where error resilience matters more than compression ratio.",
 )[
   Fibonacci coding is used in some fault-tolerant storage and database systems. It also appears in the theory of codes and is a beautiful example of how number theory (Zeckendorf) directly enables a practical data structure.
 ]
@@ -629,7 +629,7 @@ Notice the self-synchronizing property in the decoder: it reads until it finds `
 
 == Byte Varints: The Pragmatic Alternative
 
-The codes above operate at the bit level, which is natural for compression. But many software systems — protocol buffers (protobuf), databases like LevelDB and RocksDB, network formats — need to encode variable-length integers *without* bit-packing, because they're working at the byte level and bit-level I/O is expensive.
+The codes above operate at the bit level, which is natural for compression. But many software systems (protocol buffers, databases like LevelDB and RocksDB, network formats) need to encode variable-length integers *without* bit-packing, because they work at the byte level and bit-level I/O is expensive.
 
 The *variable-length integer* (varint) solves this pragmatically: each output byte uses 7 bits of payload and 1 bit to signal continuation.
 
@@ -694,7 +694,7 @@ Varints are less efficient than Rice or Elias codes for geometric distributions 
 Armed with six code families, how do you choose?
 
 #table(
-  columns: (auto, auto, auto),
+  columns: (auto, 1fr, 1fr),
   align: (left, left, left),
   table.header([*Code*], [*Best for*], [*Typical use*]),
   [Unary], [Values almost always 0 or 1], [Inside gamma/Rice; binary arithmetic coding contexts],
@@ -720,7 +720,7 @@ A key rule of thumb:
 
 == Combining Integer Codes with Rice: The Adaptive Case
 
-Many practical systems don't fix $k$ for Rice coding — they *adapt*. FLAC, for instance, partitions each block of audio residuals into sub-blocks and independently chooses the best $k$ for each sub-block, storing $k$ explicitly (it's small, typically 4 bits) and then coding the residuals with Rice(k). This gives most of the benefit of full arithmetic coding for residuals, at a fraction of the implementation complexity.
+Many practical systems don't fix $k$ for Rice coding; they *adapt*. FLAC partitions each block of audio residuals into sub-blocks and independently chooses the best $k$ for each sub-block, storing $k$ explicitly (it's small, typically 4 bits) and then coding the residuals with Rice(k). This captures most of the benefit of full arithmetic coding for residuals at a fraction of the implementation complexity.
 
 The adaptation rule used by FLAC is simple: for a block of $N$ residuals $r_0, dots.h, r_(N-1)$ (all non-negative after sign-mapping):
 
@@ -733,7 +733,7 @@ This gives the Rice parameter that minimizes expected code length under the assu
   Sign mapping is essential when residuals can be negative. The Rice/Golomb codes above assume non-negative integers. For signed integers, map $x -> 2x$ if $x >= 0$ and $x -> -2x - 1$ if $x < 0$ (this is the same bijection used in Exp-Golomb for SE values). This maps $0 -> 0$, $1 -> 2$, $-1 -> 1$, $2 -> 4$, $-2 -> 3$, and so on, preserving the "small magnitude → small code" property. Never forget to apply the inverse mapping on the decoder side.
 ]
 
-#project("Step 9 · codes.py — Unary, Elias Gamma, and Rice")[
+#project("Step 9 · codes.py: Unary, Elias Gamma, and Rice")[
 
   This step adds `tinyzip/codes.py`, the integer-coding module used later by `deflate.py` (Step 13) and `bwt.py` (Step 15) to encode residuals, lengths, and distances compactly.
 
@@ -978,7 +978,7 @@ With Elias gamma: each value maps to $2 floor(log_2(n+1)) + 1$ bits ($n+1$ becau
 
 Rice(k=0) wins here because the source is very sparse (mostly zeros). This confirms the rule: when mean $approx 1$, Rice(k=0) = unary is optimal.
 
-#scoreboard(caption: "tinyzip running scoreboard — 1 KiB sample of Calgary corpus `book1` excerpt",
+#scoreboard(caption: "tinyzip running scoreboard: 1 KiB sample of Calgary corpus `book1` excerpt",
   [Raw (no compression)], [1024], [1.00×], [Baseline],
   [Huffman (Step 8, Ch.24)], [614], [1.67×], [Matches entropy ≈ 4.87 bits/sym],
   [Rice(k=0) on residuals], [510], [2.01×], [Prediction + Rice; best for this excerpt],
@@ -1001,7 +1001,7 @@ We've been building codes intuitively. Let's make the guarantees precise.
   The gamma code for $n$ has length $2 floor(log_2 n) + 1$, which is at most $2 log_2 n + 1$. Taking the average over all $n$ weighted by their probability $P(n)$, the expected length is at most $2 dot.op (sum_n P(n) log_2 n) + 1$. Because $P$ is monotone decreasing, the $n$-th most probable integer satisfies $P(n) <= 1 slash n$, so $log_2 n <= -log_2 P(n)$. Summing: $(sum_n P(n) log_2 n) <= H$. Therefore the expected length is at most $2H + 1$. #h(1fr) $square$
 ]
 
-The factor of 2 in the bound means Elias gamma can use at most twice the entropy in the worst case. This is the "within a constant factor" guarantee that defines universality. For Rice codes with the optimal $k$, the redundancy per symbol is at most about 1.58 bits over entropy — quite tight.
+The factor of 2 in the bound means Elias gamma can use at most twice the entropy in the worst case. This is the "within a constant factor" guarantee that defines universality. For Rice codes with the optimal $k$, the redundancy per symbol is at most about 1.58 bits over entropy, which is quite tight.
 
 #keyidea[
   Universal codes sacrifice the *optimality* guarantee of Huffman (optimal among all prefix codes for a fixed alphabet) in exchange for *universality*: they work for any distribution of a given shape. The trade-off is worth it whenever the alphabet is infinite or the distribution unknown. As a rule: if you know everything, use Huffman or arithmetic coding; if you know the *shape* (geometric, monotone decreasing), use Rice or Elias.
@@ -1017,7 +1017,7 @@ That's 20 values. Let's compare three coding strategies.
 
 === Strategy 1: Flat 8-bit bytes
 
-The obvious starting point: store each value as a byte. 20 values × 8 bits = 160 bits = 20 bytes. This is the baseline — no compression at all.
+The obvious starting point: store each value as a byte. 20 values × 8 bits = 160 bits = 20 bytes. This is the baseline, with no compression at all.
 
 === Strategy 2: Huffman on the observed alphabet
 
@@ -1062,9 +1062,9 @@ No parameter overhead (k=0 is the default). Total = 31 bits.
   [Entropy floor], [~30], [1.49], [Theoretical minimum],
 )
 
-Notice that Rice(k=0) achieves 31 bits against a theoretical floor of 30 bits — just 1 bit above optimal! And it did so with zero stored parameters, zero table overhead, and a decoder that's literally a while-loop counting ones. That's the power of matching your code to your distribution.
+Notice that Rice(k=0) achieves 31 bits against a theoretical floor of 30 bits, just 1 bit above optimal. It does this with zero stored parameters, zero table overhead, and a decoder that's literally a while-loop counting ones. That's the payoff from matching your code to your distribution.
 
-For this stream, Huffman is actually the *worst* performer despite being "optimal among prefix codes" — because the tree overhead dominates on a short stream. Universal codes like Rice shine precisely when you can't afford to store a table.
+For this stream, Huffman is actually the *worst* performer despite being "optimal among prefix codes", because the tree overhead dominates on a short stream. Universal codes like Rice shine precisely when you can't afford to store a table.
 
 #aside[
   In DEFLATE (Chapter 30), the situation reverses: the stream is long enough that Huffman's tree overhead (a few hundred bits) is amortized over thousands of symbols, and Huffman's tight coding wins over the 1-2 bit-per-symbol overhead of universal codes. The crossover point where Huffman beats universal codes depends on stream length, distribution uniformity, and how often the distribution changes. DEFLATE explicitly uses multiple Huffman tables and switches between them, giving table-based coding the adaptiveness it needs.
@@ -1084,19 +1084,19 @@ FLAC (Free Lossless Audio Codec) encodes audio by:
 5. Choosing the best Rice parameter for each sub-block (stored as a 4-bit header per block).
 6. Encoding residuals with the chosen Rice parameter.
 
-Rice coding is why FLAC achieves 50–60% compression of CD audio at near-zero decoding complexity — a Rice decoder is a shift, a mask, and a bit counter.
+Rice coding is why FLAC achieves 50--60% compression of CD audio at near-zero decoding complexity. A Rice decoder is a shift, a mask, and a bit counter.
 
 === PNG (Chapter 44)
 
-PNG uses a predictor-then-DEFLATE pipeline. The predictors (Sub, Up, Average, Paeth) convert image data into residuals. Those residuals are then DEFLATE-compressed (Chapter 30). Inside DEFLATE, literal byte values near zero (frequent in residuals) are coded by Huffman, which effectively gives them short codewords — functionally similar to a coarse Rice code.
+PNG uses a predictor-then-DEFLATE pipeline. The predictors (Sub, Up, Average, Paeth) convert image data into residuals. Those residuals are then DEFLATE-compressed (Chapter 30). Inside DEFLATE, literal byte values near zero (frequent in residuals) are coded by Huffman, which effectively gives them short codewords, functionally similar to a coarse Rice code.
 
 === H.264 and HEVC (Chapters 52–53)
 
-Both standards use Exp-Golomb for "syntax elements" — the metadata that describes the bitstream structure: reference frame indices, block sizes, quantization parameters. Motion vector differences and coefficient amplitudes may use either Exp-Golomb or CABAC (context-adaptive binary arithmetic coding) depending on the profile. Exp-Golomb handles the long tail of parameter types; CABAC squeezes out the last bits of efficiency for high-compression profiles.
+Both standards use Exp-Golomb for "syntax elements" (the metadata that describes the bitstream structure): reference frame indices, block sizes, quantization parameters. Motion vector differences and coefficient amplitudes may use either Exp-Golomb or CABAC (context-adaptive binary arithmetic coding) depending on the profile. Exp-Golomb handles the long tail of parameter types; CABAC squeezes out the last bits of efficiency for high-compression profiles.
 
 === bzip2 (Chapter 35)
 
-After the Burrows-Wheeler Transform, bzip2 applies Move-to-Front coding and run-length encoding. The MTF output is a sequence of small integers (usually 0 or 1 with rare large values) — exactly a geometric-like source. bzip2 then applies Huffman coding on these small integers, but the distribution is so geometric that Rice coding would perform comparably with far simpler code.
+After the Burrows-Wheeler Transform, bzip2 applies Move-to-Front coding and run-length encoding. The MTF output is a sequence of small integers (usually 0 or 1 with rare large values), exactly a geometric-like source. bzip2 then applies Huffman coding on these small integers, but the distribution is so geometric that Rice coding would perform comparably with far simpler code.
 
 == Summary of Code Lengths
 
@@ -1122,7 +1122,7 @@ Here is a table of how many bits each code uses for small values, which makes th
   [31], [32], [9], [16], [9], [6],
 )
 
-The pattern is clear: unary coding grows linearly (bad for large values), gamma grows logarithmically, and Rice with parameter k grows roughly as the quotient plus k remainder bits — a mixture of linear and constant terms. For a given mean, the Rice parameter that minimizes expected code length is approximately the base-2 logarithm of the mean.
+The pattern is clear: unary coding grows linearly (bad for large values), gamma grows logarithmically, and Rice with parameter k grows roughly as the quotient plus k remainder bits, a mixture of linear and constant terms. For a given mean, the Rice parameter that minimizes expected code length is approximately the base-2 logarithm of the mean.
 
 == Exercises
 
@@ -1264,20 +1264,20 @@ The pattern is clear: unary coding grows linearly (bad for large values), gamma 
 - #link("https://arxiv.org/abs/0902.0271")[Duda, J. (2009). *Asymmetric Numeral Systems.* arXiv:0902.0271.] For comparison: how ANS replaces many of these codes in modern codecs.
 
 #takeaways((
-  "Universal integer codes encode any positive integer using only its magnitude — no probability table is needed.",
-  "Unary coding costs n bits for the value n — optimal only for sources where n is almost always 1 or 2.",
-  "Elias gamma uses 2·floor(log2(n))+1 bits — logarithmic growth, universal for any monotone-decreasing distribution.",
-  "Elias delta encodes k+1 in gamma before the payload — better than gamma for large integers (n > 1000 or so).",
+  "Universal integer codes encode any positive integer using only its magnitude; no probability table is needed.",
+  "Unary coding costs n bits for the value n, optimal only for sources where n is almost always 1 or 2.",
+  "Elias gamma uses 2·floor(log2(n))+1 bits: logarithmic growth, universal for any monotone-decreasing distribution.",
+  "Elias delta encodes k+1 in gamma before the payload, giving better efficiency than gamma for large integers (n > 1000 or so).",
   "Golomb–Rice codes are provably optimal for geometrically distributed sources; Rice restricts m to powers of two for fast bit-shift arithmetic.",
   "The optimal Rice parameter k satisfies k ≈ log2(mean); FLAC adapts k per sub-block.",
   "Exp-Golomb codes (gamma of n+1) are the integer-coding backbone of H.264, HEVC, and AV1 video standards.",
   "Fibonacci codes use the unique Zeckendorf representation and terminate in '11', giving self-synchronization after bit errors.",
-  "Byte varints give integer coding without bit-level I/O — used in Protocol Buffers, LevelDB, and database wire formats.",
-  "tinyzip Step 9 (codes.py) implements unary, Elias gamma, Rice, and zigzag sign mapping — used by later steps for residuals.",
+  "Byte varints give integer coding without bit-level I/O, used in Protocol Buffers, LevelDB, and database wire formats.",
+  "tinyzip Step 9 (codes.py) implements unary, Elias gamma, Rice, and zigzag sign mapping, used by later steps for residuals.",
 ))
 
 #bridge[
   We now have three entropy coding tools in our kit: Huffman (Chapter 24) for fixed alphabets with known probabilities, and the integer codes (this chapter) for unbounded integer-valued residuals. But both families share a limitation: they must snap to whole bits per symbol. A symbol whose true information content is 0.1 bits will cost at least 1 bit in Huffman, and 1 bit in Rice(k=0). The theoretical floor is entropy; our current tools can't reach it.
 
-  Chapter 26 solves this by throwing out the per-symbol constraint entirely. *Arithmetic coding* encodes an entire message — thousands of symbols — as a single interval in $[0,1)$. By accumulating the fractional-bit cost of every symbol together, it achieves the entropy rate almost exactly, regardless of how skewed the distribution is. It's the technology that closes the gap our current codes leave open.
+  Chapter 26 solves this by throwing out the per-symbol constraint entirely. *Arithmetic coding* encodes an entire message (thousands of symbols) as a single interval in $[0,1)$. By accumulating the fractional-bit cost of every symbol together, it achieves the entropy rate almost exactly, regardless of how skewed the distribution is. It's the technology that closes the gap our current codes leave open.
 ]

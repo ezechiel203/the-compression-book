@@ -11,17 +11,17 @@ Here is a peculiar fact. The year is 1994. You work at CompuServe, the most popu
 service in the United States. Millions of people are swapping pictures over slow dial-up modems
 and your company invented the format they use: the Graphics Interchange Format, GIF. One day a
 letter arrives from a law firm representing a company called Unisys. It informs you, politely,
-that the compression algorithm inside every GIF file is covered by a patent --- and that
+that the compression algorithm inside every GIF file is covered by a patent, and that
 CompuServe owes licensing fees, retroactively, for every copy ever distributed.
 
 The internet does not take this calmly. Within months, a coalition of programmers launches a
-project to create a free replacement. They do not just copy GIF --- they improve it in almost
+project to create a free replacement. They did not copy GIF. They improved it in almost
 every measurable way, add features GIF cannot provide, and release the specification without
 patents. They call it PNG: Portable Network Graphics, or, jokingly, "PNG's Not GIF."
 
 PNG became the universal standard for lossless images on the web. GIF, patent burden lifted
 decades later, survived as the cultural home of looping animations. And in 2021, one programmer
-working alone over a long weekend published a third format --- QOI, the Quite OK Image Format ---
+working alone over a long weekend published a third format (QOI, the Quite OK Image Format)
 that compresses about as well as PNG but encodes twenty to fifty times faster, fits its entire
 specification on a single sheet of paper, and stores a complete decoder in roughly three hundred
 lines of C.
@@ -60,7 +60,7 @@ Before the history, it helps to understand what "lossless image compression" act
 why it is different from what we did in Chapters 42 and 43.
 
 #keyidea[
-  Lossless compression means that `decode(encode(image)) == image` exactly --- every single
+  Lossless compression means that `decode(encode(image)) == image` exactly: every single
   pixel value comes back unchanged. No quality setting, no ringing, no blocking artifacts. The
   price is that you cannot achieve the extreme ratios lossy coding offers: natural photographs
   that compress 15:1 under JPEG might compress only 2:1 or 3:1 losslessly, because the true
@@ -84,7 +84,7 @@ beyond what lossy coding finds useful:
   be lossless. Each resave through a lossy codec degrades quality cumulatively.
 
 GIF was built for the first case (palettized graphics over dial-up modems). PNG was built for
-all three. QOI was built for the third --- speed in software pipelines --- while still handling
+all three. QOI was built for the third (speed in software pipelines) while still handling
 the others adequately.
 
 == GIF: The Format That Spawned a Culture
@@ -99,7 +99,7 @@ written specification so that any programmer could implement it.
 The lead engineer, Steve Wilhite, chose the Lempel-Ziv-Welch algorithm as the compression
 core. LZW (Chapter 29) was fast, well-understood, and achieved good ratios on the kind of
 blocky, palette-limited images typical of 1980s computer graphics. The resulting format was
-released on June 15, 1987 as *GIF87a* --- the "87" for the year and "a" for the version letter.
+released on June 15, 1987 as *GIF87a* (the "87" for the year, "a" for the version letter).
 
 Two years later, in July 1989, CompuServe published *GIF89a*, the version almost everyone uses
 today. It added three important extensions:
@@ -107,7 +107,7 @@ today. It added three important extensions:
 1. *Animation*: a sequence of image frames, each with a delay time. The viewer displays them in
    order, looping indefinitely or a specified number of times.
 2. *Transparent color*: one palette index can be designated as transparent, letting a background
-   show through (though only fully on or fully off --- no partial transparency).
+   show through (though only fully on or fully off, with no partial transparency).
 3. *Comment extensions*: arbitrary metadata blocks for copyright notices or creation tools.
 
 GIF89a is the format behind every looping cat video, every reaction GIF, and every vintage web
@@ -118,7 +118,7 @@ technical sophistication.
 
 Here is the central constraint of GIF: it supports at most *256 colors per frame*.
 
-More precisely, each GIF frame has a color table --- a list of up to 256 RGB triplets. Instead
+More precisely, each GIF frame has a color table: a list of up to 256 RGB triplets. Instead
 of storing the red, green, and blue values for every pixel directly (3 bytes per pixel), GIF
 stores a single *palette index*: a number from 0 to 255 pointing into the color table (1 byte
 per pixel, or fewer if the table is small). This is called *indexed color* or *palettized
@@ -154,7 +154,7 @@ cetz.canvas({
   content((5.7,5.5))[#text(size:8pt, weight:"bold")[Index Grid]]
 }))
 
-For photographs with millions of shades, 256 colors is brutally insufficient --- the result is
+For photographs with millions of shades, 256 colors is brutally insufficient. The result is
 visible banding and posterization. But for line art, logos, cartoons, and interface screenshots
 with a limited palette, it works surprisingly well. Many such images naturally use fewer than
 256 colors and need no approximation at all.
@@ -192,7 +192,7 @@ to 8 bits (for full 256-color images).
 
 To save bits, GIF lets the codes _grow as the dictionary grows_. Recall from Chapter 4 that to
 name one of $N$ things you need $ceil(log_2 N)$ bits. With an 8-bit minimum code size, the
-dictionary starts holding $256$ palette entries plus the clear and end codes --- $258$ values ---
+dictionary starts holding $256$ palette entries plus the clear and end codes, totaling $258$ values,
 so the first codes emitted are $9$ bits wide (since $2^8 = 256 < 258 <= 512 = 2^9$). Each time a
 new entry pushes the dictionary count past the next power of two ($512$, then $1024$, then
 $2048$), the code width ticks up by one bit, to a maximum of $12$ bits at $4096$ entries. When
@@ -231,7 +231,7 @@ independent GIF image block, preceded by a *Graphic Control Extension* block tha
 - *Transparent color index*: which palette entry is transparent in this frame
 
 The disposal method is the key to efficient animation. If most of a frame is identical to the
-previous one, only the *changed region* needs updating --- the changed region is stored as a
+previous one, only the *changed region* needs updating. That region is stored as a
 smaller sub-image at an offset within the frame. A bouncing ball against a static background
 can store the full background once and then only small patches around the ball's position for
 each subsequent frame.
@@ -240,13 +240,13 @@ each subsequent frame.
   GIF animation has a hard technical limit many people do not know: each frame can only have
   *one* palette of up to 256 colors. Multi-frame animations can use *different* palettes per
   frame (GIF89a allows each frame its own local color table), which lets individual frames
-  represent more color variety --- but the result is still palette-per-frame, not a unified
+  represent more color variety, but the result is still palette-per-frame, not a unified
   color space. The 256-color limit per frame is why early web animations look the way they do.
 ]
 
 #pitfall[
   The "GIF is lossless" claim is only conditionally true. If your source image fits in 256
-  colors, GIF encodes it losslessly. If it does not --- a photograph, for example --- the
+  colors, GIF encodes it losslessly. If it does not (a photograph, for example), the
   *color-quantization step* that reduces it to 256 colors is lossy. Many people have been
   surprised to find that saving and reloading a "lossless GIF" of a photograph destroyed
   color accuracy. Always use PNG or a modern format for photographs you need to preserve exactly.
@@ -256,18 +256,18 @@ each subsequent frame.
 
 The LZW algorithm was patented by Terry Welch in 1983, and the patent (US4558302) was assigned
 to Sperry Corporation, which merged with Burroughs to form Unisys in 1986. When CompuServe
-designed GIF in 1987, they were not aware of the patent --- or at least, believed it was not
+designed GIF in 1987, they were not aware of the patent, or at least believed it was not
 being actively enforced in software.
 
-In January 1993, Unisys began licensing negotiations with CompuServe. On December 24, 1994 ---
-Christmas Eve --- CompuServe announced the licensing agreement: developers who created software
+In January 1993, Unisys began licensing negotiations with CompuServe. On December 24, 1994,
+Christmas Eve, CompuServe announced the licensing agreement: developers who created software
 that read or wrote GIF files would owe royalties to Unisys. The internet reacted with fury.
 The backlash was immediate and sustained: boycotts, "Burn All GIFs" campaigns, and most
 importantly, a coordinated effort to build a free replacement.
 
 The US patent expired on June 20, 2003. European, UK, French, German, Italian, and Japanese
 counterparts expired in June and July 2004. GIF has been completely patent-free for over two
-decades as of this writing. But the damage was done --- PNG had already established itself, and
+decades as of this writing. But the damage was done. PNG had already established itself, and
 the story of the patent war had become one of the defining cautionary tales of open standards.
 
 #history[
@@ -284,8 +284,8 @@ the story of the patent war had become one of the defining cautionary tales of o
 
 === Origin: January 1995
 
-The first proposal for PNG appeared on January 4, 1995 --- just ten days after CompuServe's
-Christmas Eve announcement --- in a Usenet post on comp.graphics by Thomas Boutell. The
+The first proposal for PNG appeared on January 4, 1995 (just ten days after CompuServe's
+Christmas Eve announcement), in a Usenet post on comp.graphics by Thomas Boutell. The
 specification that followed was authored by twenty-three people. Their mandate was explicit:
 create a format that is:
 
@@ -312,8 +312,8 @@ Before any compression, PNG processes the image one row at a time, replacing raw
 with prediction errors. This is exactly the DPCM idea from Chapter 40 applied to images.
 
 A *filter* is applied independently to each row. The filter replaces each byte value with the
-difference between that byte and a predicted value. If the prediction is good --- if it guesses
-the pixel's color well based on its neighbors --- the difference will be small, and small
+difference between that byte and a predicted value. If the prediction is good (if it guesses
+the pixel's color well based on its neighbors), the difference will be small, and small
 numbers compress much better than large ones (they have fewer non-zero bits for DEFLATE to
 encode).
 
@@ -325,52 +325,52 @@ neighbor; Up uses the pixel above; Average uses the mean of both; Paeth picks th
 of three neighbors to a linear estimate.],
 cetz.canvas({
   import cetz.draw: *
-  // Draw five mini-grids
+  // Draw five mini-grids - spacing 2.4 so 5 grids fit within ~12cm
   let draw_mini(xo, label, hi_left, hi_up, hi_ul) = {
     // "Previous row" cells
     let labels_above = ("c","b",".")
     let labels_row   = ("a","x",".")
     for col in range(3) {
-      let xi = xo + col * 0.85
+      let xi = xo + col * 0.78
       let highlight = (col == 0 and hi_ul) or (col == 1 and hi_up)
-      rect((xi, 1.2),(xi+0.75, 1.95),
+      rect((xi, 1.2),(xi+0.68, 1.95),
            fill: if highlight { rgb("#ffe066") } else { rgb("#e8e8e8") },
            stroke: 0.5pt)
-      content((xi+0.375, 1.575))[#text(size:6.5pt)[#labels_above.at(col)]]
+      content((xi+0.34, 1.575))[#text(size:6pt)[#labels_above.at(col)]]
     }
     for col in range(3) {
-      let xi = xo + col * 0.85
+      let xi = xo + col * 0.78
       let highlight = col == 0 and hi_left
       let is_x = col == 1
-      rect((xi, 0.3),(xi+0.75, 1.1),
+      rect((xi, 0.3),(xi+0.68, 1.1),
            fill: if is_x { rgb("#74c0fc") }
                  else if highlight { rgb("#ffa94d") }
                  else { rgb("#e8e8e8") },
            stroke: 0.5pt)
-      content((xi+0.375, 0.7))[#text(size:6.5pt)[#labels_row.at(col)]]
+      content((xi+0.34, 0.7))[#text(size:6pt)[#labels_row.at(col)]]
     }
-    content((xo+0.85, -0.1))[#text(size:6.5pt, weight:"bold")[#label]]
+    content((xo+0.78, -0.1))[#text(size:6pt, weight:"bold")[#label]]
   }
   draw_mini(0.0,  "None",    false, false, false)
-  draw_mini(2.8,  "Sub",     true,  false, false)
-  draw_mini(5.6,  "Up",      false, true,  false)
-  draw_mini(8.4,  "Average", true,  true,  false)
-  draw_mini(11.2, "Paeth",   true,  true,  true)
+  draw_mini(2.4,  "Sub",     true,  false, false)
+  draw_mini(4.8,  "Up",      false, true,  false)
+  draw_mini(7.2,  "Average", true,  true,  false)
+  draw_mini(9.6,  "Paeth",   true,  true,  true)
 }))
 
-+ *None* --- store raw pixel bytes. No prediction, no transformation. Used when the data is
++ *None*: store raw pixel bytes. No prediction, no transformation. Used when the data is
   already random or nearly so (rare in practice).
 
-+ *Sub* --- predict each byte from the byte directly to its left (the same channel of the
++ *Sub*: predict each byte from the byte directly to its left (the same channel of the
   previous pixel in the same row). Works well on gradients that change primarily left-to-right.
 
-+ *Up* --- predict each byte from the byte directly above it (same position, previous row).
++ *Up*: predict each byte from the byte directly above it (same position, previous row).
   Works well on vertically-striped or slowly changing content.
 
-+ *Average* --- predict from the arithmetic mean of left and above: `predict = floor((a + b)/2)`.
++ *Average*: predict from the arithmetic mean of left and above: `predict = floor((a + b)/2)`.
   Balances horizontal and vertical correlation.
 
-+ *Paeth* --- the most sophisticated filter, named after its inventor Alan W. Paeth (1991).
++ *Paeth*: the most sophisticated filter, named after its inventor Alan W. Paeth (1991).
   Predicts from whichever of `a` (left), `b` (above), or `c` (upper-left) is numerically
   closest to the linear prediction `p = a + b - c`. This performs best on images with diagonal
   gradients and smooth blending.
@@ -393,7 +393,7 @@ cetz.canvas({
 ]
 
 The encoder tries all five filters on every row and picks the one that produces the smallest
-sum of absolute filter values --- a fast heuristic for which filter will compress best
+sum of absolute filter values, a fast heuristic for which filter will compress best
 downstream. An encoder can even use different filters on different rows of the same image.
 
 This per-row adaptivity is one of PNG's key advantages over GIF. GIF just compresses the raw
@@ -403,14 +403,14 @@ than large pixel values spread across 0-255.
 
 ==== Stage 2: DEFLATE Compression
 
-After filtering, the residual bytes are compressed with DEFLATE --- the same algorithm used by
+After filtering, the residual bytes are compressed with DEFLATE, the same algorithm used by
 gzip, zlib, and ZIP (Chapter 30). DEFLATE combines LZ77 sliding-window matching (finding
 repeated byte sequences and encoding them as back-references) with Huffman coding of the
 tokens.
 
 #pyrecall[
   In Chapter 30 we saw that DEFLATE uses a 32 KB sliding window. A match is encoded as
-  `(distance, length)` --- "the bytes starting 1,200 positions back, 18 bytes long."
+  `(distance, length)`, meaning "the bytes starting 1,200 positions back, 18 bytes long."
   Literals (bytes that do not match anything) and length-distance pairs share a single Huffman
   tree. The filtered scanlines from PNG are concatenated into one byte stream and fed to this
   engine.
@@ -457,11 +457,11 @@ After the signature, the file is a sequence of *chunks*. Each chunk has four fie
 
 The critical (required) chunks in a standard PNG are:
 
-- `IHDR` --- Image header: width, height, bit depth (1-16 bits per channel), color type
+- `IHDR`: Image header: width, height, bit depth (1-16 bits per channel), color type
   (grayscale, RGB, palette, or with alpha), and compression, filter, and interlace methods.
-- `IDAT` --- Image data: one or more chunks containing the zlib-wrapped DEFLATE stream of
+- `IDAT`: Image data: one or more chunks containing the zlib-wrapped DEFLATE stream of
   filtered scanlines. Multiple `IDAT` chunks are concatenated before decompression.
-- `IEND` --- Image end: an empty marker chunk signaling the end of the PNG.
+- `IEND`: Image end: an empty marker chunk signaling the end of the PNG.
 
 Optional ancillary chunks carry metadata: `PLTE` (the palette for indexed-color images),
 `tEXt` and `iTXt` (text metadata), `gAMA` (gamma), `cHRM` (chromaticity), `sRGB`
@@ -512,14 +512,14 @@ Sub residuals:  100    3    3    2    2  255  255
 DEFLATE will compress sequences of small numbers much more efficiently than the original values
 ranging from 100 to 110.
 
-Now try the *Up* filter instead --- subtract the pixel above:
+Now try the *Up* filter instead (subtract the pixel above):
 
 ```
 Up residuals:     2    4    5    4    3    1  254
 ```
 
 All small. The encoder computes the sum of absolute values for each filter (using signed
-interpretation of byte residuals --- values over 127 are treated as negative):
+interpretation of byte residuals, where values over 127 are treated as negative:
 
 - Sub: $|100| + |3| + |3| + |2| + |2| + |-1| + |-1| = 112$
 - Up: $|2| + |4| + |5| + |4| + |3| + |1| + |-2| = 21$
@@ -553,7 +553,7 @@ The Mozilla Foundation developed the APNG (Animated PNG) extension in 2008. Rath
 changing the core PNG specification, APNG adds three new optional chunk types: `acTL` for
 animation control, `fcTL` for per-frame timing and disposal, and `fdAT` for frame image data.
 A non-APNG-aware decoder simply ignores these chunks and displays the first frame as a still
-image --- backward compatibility preserved.
+image, preserving backward compatibility.
 
 APNG reached universal browser support by 2024. On June 24, 2025, the World Wide Web
 Consortium published the third edition of the PNG specification, officially incorporating APNG
@@ -562,7 +562,7 @@ and adding HDR/wide-gamut support. After thirty years, PNG now formally supports
 #aside[
   The PNG specification's third edition (2025) is the first major update since the second
   edition in 2003. It adds APNG animation, ICC color profiles at version 4, and Rec. 2100
-  HDR metadata. The core compression algorithm --- filters plus DEFLATE --- is unchanged, a
+  HDR metadata. The core compression algorithm (filters plus DEFLATE) is unchanged, a
   tribute to how well it was designed.
 ]
 
@@ -575,7 +575,7 @@ PNG is the right choice when:
   the equivalent JPEG).
 - An archival master is needed (before a JPEG export).
 
-PNG is _not_ the right choice for photographs destined for web delivery --- JPEG (at medium
+PNG is _not_ the right choice for photographs destined for web delivery. JPEG (at medium
 quality), AVIF, or JPEG XL will all be smaller and equally good-enough visually.
 
 == The Compression Pipeline: Code Examples
@@ -587,8 +587,8 @@ Let us look at the filter step in Python to make the inner workings tangible.
   pixel is 10, the residual is $10 - 200 = -190$, stored as $-190 + 256 = 66$ (one unsigned
   byte). On decoding, we add 200 + 66 = 266, then take 266 mod 256 = 10. Correct!
 
-  The modular wrap-around is crucial: it ensures residuals are always 0-255 regardless of how
-  far the prediction misses, so no extra bits are needed to represent negative residuals.
+  The modular wrap-around matters: residuals are always 0-255 regardless of how far the
+  prediction misses, so no extra bits are needed to represent negative residuals.
 
   ```python
   def sub_filter(row: bytes) -> bytes:
@@ -655,21 +655,21 @@ Let us look at the filter step in Python to make the inner workings tangible.
 
 === The Weekend Project That Went Viral
 
-On November 24, 2021, Dominic Szablewski --- a game developer known for the IMPACT JavaScript
-game engine --- published a blog post titled "QOI --- The Quite OK Image Format." He had built a
+On November 24, 2021, Dominic Szablewski, a game developer known for the IMPACT JavaScript
+game engine, published a blog post titled "QOI - The Quite OK Image Format." He had built a
 new lossless image format over a long weekend, implemented encoder and decoder in about 300
 lines of C, and posted benchmarks showing it encoded images 20 to 50 times faster than libpng
 while achieving similar compression ratios.
 
 The post went viral in the software community. Within days, independent implementations
-appeared in dozens of languages. The full specification --- every decision documented --- was
+appeared in dozens of languages. The full specification, with every decision documented, was
 published on December 20, 2021, as a single-page PDF. Szablewski donated it to the public
 domain under CC0. By 2024, QOI had been adopted by FFmpeg (v5.1+), GIMP (v3.0+),
 ImageMagick (v7.1.0-20+), IrfanView, and numerous game engines and texture pipelines.
 
 What made it so appealing? The answer is that Szablewski made a very specific trade-off: he
 optimized for *speed and simplicity* rather than for maximum compression ratio. QOI is not the
-smallest format --- it is larger than PNG for most images. But for pipelines where images are
+smallest format: it is larger than PNG for most images. But for pipelines where images are
 loaded, processed, and saved repeatedly (game assets, video textures, real-time compositing),
 encode/decode speed matters far more than the last few kilobytes of compression ratio.
 
@@ -686,29 +686,29 @@ The first 2-8 bits of the tag byte identify the type.],
 cetz.canvas({
   import cetz.draw: *
   let rows = (
-    ("QOI_OP_RGB",   "0xFE",     "Full pixel: next 3 bytes are R,G,B. Alpha unchanged. (4 bytes)"),
-    ("QOI_OP_RGBA",  "0xFF",     "Full pixel: next 4 bytes are R,G,B,A. (5 bytes)"),
-    ("QOI_OP_INDEX", "00xxxxxx", "Index into 64-pixel cache. (1 byte)"),
-    ("QOI_OP_DIFF",  "01xxxxxx", "Tiny delta dr,dg,db in -2..+1 each. (1 byte)"),
-    ("QOI_OP_LUMA",  "10xxxxxx", "Medium luminance delta. (2 bytes)"),
+    ("QOI_OP_RGB",   "0xFE",     "Full pixel: R,G,B bytes follow. Alpha unchanged. (4 bytes total)"),
+    ("QOI_OP_RGBA",  "0xFF",     "Full pixel: R,G,B,A bytes follow. (5 bytes total)"),
+    ("QOI_OP_INDEX", "00xxxxxx", "6-bit index into 64-pixel cache. (1 byte)"),
+    ("QOI_OP_DIFF",  "01xxxxxx", "Tiny delta dr,dg,db each in -2..+1. (1 byte)"),
+    ("QOI_OP_LUMA",  "10xxxxxx", "Medium luminance delta; dg in -32..+31. (2 bytes)"),
     ("QOI_OP_RUN",   "11xxxxxx", "Run of 1-62 identical pixels. (1 byte)"),
   )
-  // Header
-  rect((0, 6.2), (13.0, 7.0), fill: rgb("#c8d8f0"), stroke: 0.8pt)
-  content((1.5, 6.6))[#text(size:7pt, weight:"bold")[Chunk Type]]
-  content((4.0, 6.6))[#text(size:7pt, weight:"bold")[Tag]]
-  content((8.5, 6.6))[#text(size:7pt, weight:"bold")[Meaning]]
+  // Header - total width 12.0 cm
+  rect((0, 6.2), (12.0, 7.0), fill: rgb("#c8d8f0"), stroke: 0.8pt)
+  content((1.5, 6.6))[#box(width: 2.8cm, align(center, text(size:7pt, weight:"bold")[Chunk Type]))]
+  content((4.0, 6.6))[#box(width: 1.8cm, align(center, text(size:7pt, weight:"bold")[Tag]))]
+  content((8.0, 6.6))[#box(width: 5.8cm, align(center, text(size:7pt, weight:"bold")[Meaning]))]
   for i in range(6) {
     let (name, tag, desc) = rows.at(i)
     let y0 = 5.3 - i * 0.9
     let y1 = y0 + 0.8
     let ymid = y0 + 0.4
-    rect((0, y0), (13.0, y1),
+    rect((0, y0), (12.0, y1),
          fill: if calc.rem(i, 2) == 0 { rgb("#edf2fb") } else { rgb("#e2eafc") },
          stroke: 0.5pt)
-    content((1.5, ymid))[#text(size:6.5pt, weight:"bold")[#name]]
-    content((4.0, ymid))[#text(size:6.5pt)[#tag]]
-    content((8.5, ymid))[#text(size:6.5pt)[#desc]]
+    content((1.5, ymid))[#box(width: 2.8cm, align(center, text(size:6.5pt, weight:"bold")[#name]))]
+    content((4.0, ymid))[#box(width: 1.8cm, align(center, text(size:6.5pt)[#tag]))]
+    content((8.0, ymid))[#box(width: 5.8cm, inset: 1pt, align(center, text(size:6.5pt)[#desc]))]
   }
 }))
 
@@ -723,7 +723,7 @@ instead of storing the color at all. The hash is
 $(r times 3 + g times 5 + b times 7 + a times 11) mod 64$.
 
 #mathrecall[
-  A *hash function* (Chapter 14) scrambles a key --- here the four bytes of an RGBA pixel ---
+  A *hash function* (Chapter 14) scrambles a key (here the four bytes of an RGBA pixel)
   into an index in a fixed range, so a 64-bucket array can be looked up in one step instead of
   searched. QOI's hash mixes the channels with small primes and takes the result $mod 64$ to
   land in $[0, 63]$. Two different pixels can collide into the same slot; QOI does not chain
@@ -750,7 +750,7 @@ and RGBA tags.
   recently (INDEX), tiny change (DIFF), moderate change (LUMA), or completely new (RGB/RGBA).
   A real image is almost entirely runs, cache hits, and small diffs, so most pixels cost 1-2
   bytes rather than 3-4. The key insight is that you do not need a complex model to exploit
-  locality --- just these six cases cover nearly all realistic patterns.
+  locality. These six cases cover nearly all realistic patterns.
 ]
 
 === The QOI 64-Entry Pixel Cache
@@ -760,8 +760,8 @@ values, initially all zeros. Every time a new pixel is decoded (by any chunk typ
 stored in `seen[hash(pixel)]`, overwriting whatever was there. This acts as a tiny, fast cache
 of recently-used colors.
 
-If the current pixel happens to equal `seen[hash(pixel)]` --- because that exact color was seen
-recently and still occupies its slot --- the entire pixel is stored as a single byte. For images
+If the current pixel happens to equal `seen[hash(pixel)]` (because that exact color was seen
+recently and still occupies its slot), the entire pixel is stored as a single byte. For images
 with a small active palette (logos, pixel art, screenshots), this hits very frequently. Even for
 photographs, sky tones, skin tones, and ground often repeat enough colors that the cache saves
 substantial space.
@@ -790,7 +790,7 @@ A QOI file begins with a 14-byte header:
 After the header, the chunk stream follows. The file ends with the 8-byte end marker
 `0x00 0x00 0x00 0x00 0x00 0x00 0x00 0x01`.
 
-The colorspace field is informational only --- QOI does not perform color conversion. It simply
+The colorspace field is informational only; QOI does not perform color conversion. It simply
 records what color model the values are in so that downstream software knows how to interpret
 them.
 
@@ -804,11 +804,11 @@ them.
   weaknesses: "Larger files than PNG by roughly 20-40% on typical photographs; no interlacing or progressive display; no metadata chunks; RGB/RGBA only (no 16-bit or grayscale)",
   superseded: "Not yet superseded; serves a different niche than PNG (speed vs ratio)",
 )[
-  For each pixel in raster order: (1) check if it equals the previous pixel --- if so, extend
-  RUN counter (flush RUN chunk when run ends or reaches 62). (2) Check `seen[hash(pixel)]` ---
+  For each pixel in raster order: (1) check if it equals the previous pixel; if so, extend
+  RUN counter (flush RUN chunk when run ends or reaches 62). (2) Check `seen[hash(pixel)]`:
   emit INDEX chunk if match. (3) Compute delta from previous pixel; if all channels fit in
-  $[-2,+1]$ and alpha unchanged --- emit DIFF chunk. (4) If green delta fits in $[-32,+31]$
-  and $d r - d g$ and $d b - d g$ both fit in $[-8,+7]$ and alpha unchanged --- emit LUMA
+  $[-2,+1]$ and alpha unchanged, emit DIFF chunk. (4) If green delta fits in $[-32,+31]$
+  and $d r - d g$ and $d b - d g$ both fit in $[-8,+7]$ and alpha unchanged, emit LUMA
   chunk. (5) Otherwise, emit RGB or RGBA chunk. After each pixel, store it in
   `seen[hash(pixel)]`.
 ]
@@ -853,11 +853,11 @@ of image content.
 colors, all three formats encode losslessly, and GIF can achieve 4 bits per pixel just from
 the palette encoding. PNG's filter step plus DEFLATE generally beats GIF's LZW anyway, because
 DEFLATE is a strictly more powerful compressor. QOI's INDEX chunks fire constantly (the 64-
-entry cache covers 16 colors trivially) and RUN chunks handle solid areas --- QOI is very
+entry cache covers 16 colors trivially) and RUN chunks handle solid areas. QOI is very
 competitive here and dramatically faster.
 
 *Screenshots and interface graphics*: These have large solid regions, sharp edges, and many
-repeated colors. PNG typically compresses well --- ratios of 5:1 to 10:1 are common. QOI is not
+repeated colors. PNG typically compresses well, with ratios of 5:1 to 10:1 common. QOI is not
 far behind (4:1 to 8:1) but encodes ten times faster. GIF struggles because palette
 quantization degrades anti-aliased text, and 256 colors are rarely enough for modern UI.
 
@@ -867,19 +867,37 @@ but photographic noise is genuinely random and hard to compress. QOI will produc
 larger than PNG (so roughly 1.5:1 to 2:1). Neither is competitive with JPEG or AVIF for
 photographic web delivery.
 
-#scoreboard(caption: "Format comparison for lossless image encoding (approximate, depends heavily on image content)",
-[*Format*],[*Max colors*],[*Alpha*],[*Animation*],[*Ratio (UI)*],[*Enc. speed*],[*Patents*],
-[GIF 89a],[256/frame],[1-bit on/off],[Yes],[Moderate],[Fast],[Expired 2003-2004],
-[PNG],[16.7M+ (24-bit)],[8-bit full],[APNG (2025)],[Excellent],[Moderate],[None],
-[QOI],[16.7M (24-bit)],[8-bit full],[No],[Good],[Very fast],[None (CC0)],
-)
+#block(width: 100%, breakable: true, above: 12pt, below: 12pt)[
+  #text(weight: "bold", fill: c-accent2, size: 9.5pt)[SCOREBOARD: Format comparison for lossless image encoding (approximate)]
+  #v(3pt)
+  #text(size: 8pt)[
+  #table(
+    columns: (auto, 1fr, auto, auto, auto, auto, auto),
+    inset: 5pt,
+    align: (left, left, left, left, left, left, left),
+    fill: (_, row) => if row == 0 { c-accent.lighten(85%) } else { none },
+    [*Format*],[*Max colors*],[*Alpha*],[*Animation*],[*Ratio (UI)*],[*Enc. speed*],[*Patents*],
+    [GIF 89a],[256/frame],[1-bit],[Yes],[Moderate],[Fast],[Expired 2003],
+    [PNG],[16.7M (24-bit)],[8-bit],[APNG (2025)],[Excellent],[Moderate],[None],
+    [QOI],[16.7M (24-bit)],[8-bit],[No],[Good],[Very fast],[None (CC0)],
+  )]
+]
 
-#scoreboard(caption: "QOI vs PNG encode/decode throughput benchmark (single-threaded, Linux x86-64, 2022 data, approximate)",
-[*Format*],[*Encode speed*],[*Decode speed*],[*File size vs PNG*],[*Notes*],
-[PNG (libpng, level 6)],[~15 MB/s],[~100 MB/s],[1.00x],[Default zlib level 6],
-[PNG (stb\_image\_write)],[~200 MB/s],[~200 MB/s],[1.15x],[Faster but slightly worse ratio],
-[QOI],[~300-400 MB/s],[~400-700 MB/s],[1.20-1.40x],[Larger files; much faster],
-)
+#block(width: 100%, breakable: true, above: 12pt, below: 12pt)[
+  #text(weight: "bold", fill: c-accent2, size: 9.5pt)[SCOREBOARD: QOI vs PNG throughput benchmark (single-threaded, Linux x86-64, 2022, approximate)]
+  #v(3pt)
+  #text(size: 8pt)[
+  #table(
+    columns: (auto, auto, auto, auto, 1fr),
+    inset: 5pt,
+    align: (left, right, right, right, left),
+    fill: (_, row) => if row == 0 { c-accent.lighten(85%) } else { none },
+    [*Format*],[*Encode speed*],[*Decode speed*],[*File size vs PNG*],[*Notes*],
+    [PNG (libpng level 6)],[~15 MB/s],[~100 MB/s],[1.00x],[Default zlib level 6],
+    [PNG (stb\_image\_write)],[~200 MB/s],[~200 MB/s],[1.15x],[Faster; slightly worse ratio],
+    [QOI],[~300-400 MB/s],[~400-700 MB/s],[1.20-1.40x],[Larger files; much faster],
+  )]
+]
 
 === Decision Guide
 
@@ -887,7 +905,7 @@ photographic web delivery.
 - You need a looping animation that works everywhere, including very old email clients and
   ancient systems.
 - The art style is genuinely palette-limited (pixel art, cartoons).
-- In any new design, prefer APNG over animated GIF --- APNG offers full 24-bit color with alpha,
+- In any new design, prefer APNG over animated GIF. APNG offers full 24-bit color with alpha,
   better compression, and is now part of the official PNG standard.
 
 *Use PNG when:*
@@ -909,7 +927,7 @@ photographic web delivery.
   The opposite is true. GIF supports at most 256 colors per frame, and only fully-on/fully-off
   transparency. PNG supports up to 16.7 million colors (24-bit RGB) or 281 trillion colors
   (48-bit RGB), plus full 8-bit or 16-bit alpha. The confusion may arise because GIF animation
-  was ubiquitous while early PNG support was sometimes limited or buggy --- but in terms of
+  was ubiquitous while early PNG support was sometimes limited or buggy, but in terms of
   color capability, PNG is strictly more expressive in every dimension.
 ]
 
@@ -917,12 +935,12 @@ photographic web delivery.
 
 GIF's story is a cautionary tale that compression engineers still tell. A technically solid
 format, widely deployed, suddenly found itself behind a toll booth. The community's response
-was swift and ultimately succeeded --- but it took years, and in the meantime the landscape
+was swift and in the end succeeded, but it took years, and in the meantime the field
 fragmented. PNG was built by volunteers working against a deadline imposed not by technical need
 but by legal threat.
 
 The patent story did not end with GIF. As we will see in Chapter 53, the same drama played out
-again with HEVC (H.265) --- a technically superior codec hobbled by a fractured patent pool
+again with HEVC (H.265), a technically superior codec hobbled by a fractured patent pool
 that handed market share to the royalty-free AV1 (Chapter 54). And JPEG 2000 itself, which we
 met in Chapter 43, is a case where patent _uncertainty_ (not even actual licensing demands) was
 enough to drive developers to alternatives.
@@ -1056,7 +1074,7 @@ formats achieve in a decade.
   A large solid region: most pixels equal the previous pixel. RUN chunks fire constantly, each
   encoding up to 62 pixels in 1 byte. 1,000,000 pixels divided by 62 is roughly 16,130 RUN
   chunks, approximately 16 KB for the blue regions. Cloud pixels have small deltas relative to
-  the sky color --- changing slightly at cloud edges --- producing DIFF or LUMA chunks (1-2 bytes
+  the sky color, changing slightly at cloud edges, producing DIFF or LUMA chunks (1-2 bytes
   each). Perhaps 10% of pixels are cloud-edge pixels: 100,000 pixels times 2 bytes = 200 KB.
   Total rough estimate: 50-300 KB, representing 10:1 to 80:1 compression. RUN chunks dominate.
   This type of image is where QOI excels most dramatically.
@@ -1109,29 +1127,24 @@ formats achieve in a decade.
 
 == Further Reading
 
-#link("https://www.w3.org/TR/png/")[PNG Specification, Third Edition (W3C, June 2025)] --- The
+#link("https://www.w3.org/TR/png/")[PNG Specification, Third Edition (W3C, June 2025)]. The
 authoritative PNG standard, now including APNG and HDR support.
 
-#link("https://www.w3.org/Graphics/GIF/spec-gif89a.txt")[GIF89a Specification (CompuServe, 1990)] ---
-The original specification document; a surprisingly concise read.
+#link("https://www.w3.org/Graphics/GIF/spec-gif89a.txt")[GIF89a Specification (CompuServe, 1990)]. The original specification document; a surprisingly concise read.
 
-#link("https://qoiformat.org/qoi-specification.pdf")[QOI Specification v1.0 (Dominic Szablewski, 2021)] ---
-A single-page PDF; worth reading in its entirety as a model of clear specification writing.
+#link("https://qoiformat.org/qoi-specification.pdf")[QOI Specification v1.0 (Dominic Szablewski, 2021)]. A single-page PDF, and worth reading in full as a model of clear specification writing.
 
-#link("https://phoboslab.org/log/2021/11/qoi-fast-lossless-image-compression")[QOI --- The Quite OK Image Format (Szablewski, 2021)] ---
-The original blog post with benchmarks, the weekend-project story, and the code repository link.
+#link("https://phoboslab.org/log/2021/11/qoi-fast-lossless-image-compression")[QOI: The Quite OK Image Format (Szablewski, 2021)]. The original blog post with benchmarks, the weekend-project story, and the code repository link.
 
-#link("http://www.libpng.org/pub/png/pnghist.html")[History of the PNG Format (libpng.org)] ---
-The inside story of how PNG was designed, written by those who built it.
+#link("http://www.libpng.org/pub/png/pnghist.html")[History of the PNG Format (libpng.org)]. The inside story of how PNG was designed, written by those who built it.
 
-#link("https://www.cast-inc.com/blog/lossless-compression-efficiency-jpeg-ls-png-qoi-and-jpeg2000-comparative-study")[Comparative Study: JPEG-LS, PNG, QOI, and JPEG 2000 (CAST, 2023)] ---
-A rigorous benchmark comparison across lossless image codecs with detailed numerical analysis.
+#link("https://www.cast-inc.com/blog/lossless-compression-efficiency-jpeg-ls-png-qoi-and-jpeg2000-comparative-study")[Comparative Study: JPEG-LS, PNG, QOI, and JPEG 2000 (CAST, 2023)]. A rigorous benchmark comparison across lossless image codecs with detailed numerical analysis.
 
 #bridge[
   We have now covered the palette and lossless end of the image format spectrum. In Chapter 45
-  we turn to the modern image format wars: WebP, HEIC, AVIF, and JPEG XL --- the wave of formats
+  we turn to the modern image format wars: WebP, HEIC, AVIF, and JPEG XL, the wave of formats
   that arrived after 2010, each claiming to be JPEG's true successor. You will see the same
-  forces we met here --- patents, ecosystem inertia, browser politics --- play out again at higher
+  forces we met here (patents, ecosystem inertia, browser politics) play out again at higher
   quality levels and on a web large enough to make the stakes enormous. And you will see how one
   format, JPEG XL, was removed from Chrome in 2023 and then restored in February 2026 after a
   memory-safe Rust decoder resolved the safety objections.

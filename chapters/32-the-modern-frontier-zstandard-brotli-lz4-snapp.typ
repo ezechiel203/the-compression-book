@@ -4,29 +4,29 @@
 = The Modern Frontier: Zstandard, Brotli, LZ4, Snappy
 
 #epigraph[
-  "The purpose of computing is insight, not numbers — but the numbers had better be small."
+  "The purpose of computing is insight, not numbers - but the numbers had better be small."
 ][Adapted from Richard Hamming]
 
 Picture this: it is 2010, and you work in infrastructure at a large internet company.
 Every day your servers compress and send terabytes of data to users. Your tool of choice
-is gzip, because gzip is what exists. It is fast enough — barely — and the ratio is
-acceptable — barely. But storage costs are climbing, and users in mobile markets have
+is gzip, because gzip is what exists. It is fast enough (barely), and the ratio is
+acceptable (barely). But storage costs are climbing, and users in mobile markets have
 slow connections. You need something better. The question is: better *how*? Better
 compression ratio? Better speed? Both? At what cost in memory?
 
 This chapter is the story of how four modern compressors answered that question four
-different ways — and why one of them, Zstandard, ended up winning almost everywhere.
+different ways, and why one of them, Zstandard, ended up winning almost everywhere.
 By the end, you will understand not just what these tools do, but *why* each design
 choice was made, and how to pick the right one for any job.
 
 #recap[
   In Chapter 28 we built the fundamental idea of LZ77: a sliding window over recent
   data, encoding matches as (distance, length) back-references. Chapter 30 showed how
-  DEFLATE combines LZ77 with Huffman coding and became the engine of gzip and PNG — the
+  DEFLATE combines LZ77 with Huffman coding and became the engine of gzip and PNG, the
   most-deployed compressor in history for thirty years. Chapter 31 revealed LZMA: a
   huge dictionary plus arithmetic-style range coding that pushes ratio much further, at
   the cost of slow encoding and heavy memory. Now we meet the generation that came after
-  DEFLATE — four codecs that collectively cover every point on the speed-vs-ratio map
+  DEFLATE: four codecs that collectively cover every point on the speed-vs-ratio map
   that DEFLATE left uncovered.
 ]
 
@@ -46,19 +46,19 @@ Before diving into individual codecs, it helps to look at the territory they inh
 Every lossless compressor makes a promise: *the decoded output equals the input exactly*.
 Within that constraint, you have freedom to choose how hard you try. Trying harder means
 slower encoding, more memory, and (usually) a better ratio. Trying less hard means faster
-encoding, less memory, and a worse ratio. Decoding speed is mostly independent — a well-designed
+encoding, less memory, and a worse ratio. Decoding speed is mostly independent. A well-designed
 decoder can run fast even when the encoder was slow, because decoding is simpler: you are
 *following* the recipe the encoder wrote, not *searching* for it.
 
 So the map has at least four axes:
 
-+ *Compression ratio* — how small does the output get?
-+ *Compression speed* — how fast can the encoder run?
-+ *Decompression speed* — how fast can the decoder run?
-+ *Memory footprint* — how much RAM does the codec need?
++ *Compression ratio*: how small does the output get?
++ *Compression speed*: how fast can the encoder run?
++ *Decompression speed*: how fast can the decoder run?
++ *Memory footprint*: how much RAM does the codec need?
 
 DEFLATE (Chapter 30) sits near the middle on all four axes. It is not the fastest, not
-the smallest, not the most memory-efficient — but it is *good enough* at everything.
+the smallest, not the most memory-efficient, but it is *good enough* at everything.
 That is why it ran the world for three decades. The modern frontier exploits the corners
 DEFLATE ignores.
 
@@ -83,7 +83,7 @@ DEFLATE ignores.
 
     // codec dots
     set-style(stroke: none)
-    // LZ4   — fast, low ratio
+    // LZ4   - fast, low ratio
     circle((7.6, 1.5), radius: 0.18, fill: rgb("#e67e22"))
     content((7.6, 1.05), text(size: 8pt)[LZ4])
     // Snappy
@@ -140,12 +140,12 @@ Like all dictionary coders from LZ77 (Chapter 28), LZ4 looks for sequences that 
 earlier and replaces them with (distance, length) tokens. But where DEFLATE uses a
 hash-chain match finder (which checks many candidates), LZ4 uses a *hash table with only
 one slot per hash value*. If two positions hash to the same slot, the old one is simply
-overwritten — no collision chain to follow. This is faster but misses many matches.
+overwritten, with no collision chain to follow. This is faster but misses many matches.
 
 The resulting token stream is also simple: LZ4 defines a binary format where each token
 is a literal run followed by a match. There is *no entropy-coding stage at all*. DEFLATE
 compresses LZ tokens with Huffman; LZ4 writes them raw. This shaves another major
-overhead — no symbol counts to gather, no tree to build or decode.
+overhead: no symbol counts to gather, no tree to build or decode.
 
 #fig(
   [LZ4 token layout. Each sequence is one literal run (variable length) followed by one
@@ -159,23 +159,23 @@ overhead — no symbol counts to gather, no tree to build or decode.
 
     // Token byte
     rect((0, y), (1.2, y + box-h), fill: rgb("#f39c12").lighten(60%))
-    content((0.6, y + box-h/2), text(size: 7.5pt)[Token\ byte])
+    content((0.6, y + box-h/2), box(width: 0.9cm, inset: 1pt, align(center, text(size: 7pt)[Token byte])))
 
     // Literal length ext
     rect((1.3, y), (2.5, y + box-h), fill: rgb("#f39c12").lighten(80%))
-    content((1.9, y + box-h/2), text(size: 7.5pt)[Len\ ext?])
+    content((1.9, y + box-h/2), box(width: 0.9cm, inset: 1pt, align(center, text(size: 7pt)[Len ext?])))
 
     // Literals
     rect((2.6, y), (4.5, y + box-h), fill: rgb("#27ae60").lighten(70%))
-    content((3.55, y + box-h/2), text(size: 7.5pt)[Literal\ bytes])
+    content((3.55, y + box-h/2), box(width: 1.6cm, inset: 1pt, align(center, text(size: 7pt)[Literal bytes])))
 
     // Offset
     rect((4.6, y), (6.0, y + box-h), fill: rgb("#2980b9").lighten(70%))
-    content((5.3, y + box-h/2), text(size: 7.5pt)[Offset\ (2 B)])
+    content((5.3, y + box-h/2), box(width: 1.1cm, inset: 1pt, align(center, text(size: 7pt)[Offset (2 B)])))
 
     // Match length ext
     rect((6.1, y), (7.3, y + box-h), fill: rgb("#8e44ad").lighten(70%))
-    content((6.7, y + box-h/2), text(size: 7.5pt)[Mlen\ ext?])
+    content((6.7, y + box-h/2), box(width: 0.9cm, inset: 1pt, align(center, text(size: 7pt)[Mlen ext?])))
 
     // labels
     content((0.6, y - 0.3), text(size: 7pt)[header])
@@ -198,13 +198,13 @@ overhead — no symbol counts to gather, no tree to build or decode.
   complexity: "O(n) encode and decode; hash-table operations are O(1)",
   strengths: "Extremely fast encoder and decoder; tiny, simple decoder; very low latency; multi-threaded since v1.10",
   weaknesses: "Compression ratio 10–30% worse than DEFLATE; no entropy coding stage; poor on random data",
-  superseded: "Not superseded — occupies a unique speed niche; LZ4 HC (high-compression mode) improves ratio at lower speed",
+  superseded: "Not superseded (occupies a unique speed niche); LZ4 HC (high-compression mode) improves ratio at lower speed",
 )[
   LZ4 is the go-to codec whenever CPU is the bottleneck and you cannot afford to slow
   down the data path: in-memory databases (RocksDB, Cassandra, Kafka), live RPC
   compression, filesystem transparent compression (ZFS optional), and GPU data transfers.
   Its HC (High Compression) variant uses a linked-list match finder like DEFLATE's hash
-  chains, giving DEFLATE-class ratios at DEFLATE-class speed — useful when you need
+  chains, giving DEFLATE-class ratios at DEFLATE-class speed, which is useful when you need
   slightly better ratio but still much faster decoding.
 ]
 
@@ -221,18 +221,17 @@ is a back-reference: distance = 5, length = 5. The token stream has one literal-
 bytes, then four match-references of (distance=5, length=5). The overhead per reference
 in the LZ4 format is only 3 bytes (1 token byte + 2-byte offset), so four references
 cost 12 bytes. Total compressed size: 5 (literals) + 12 (references) + header ≈ 20 bytes,
-versus 27 raw — about a 26% reduction, achieved with a decoder that runs in nanoseconds
-per byte.
+versus 27 raw: about a 26% reduction. The decoder runs in nanoseconds per byte.
 
 #checkpoint[
   LZ4 has no entropy-coding stage. Does this mean it can never compress something below
   its LZ77-match representation? What does that imply for highly repetitive input versus
   already-random input?
 ][
-  Yes — LZ4 relies entirely on the match references being shorter than the data they
+  Yes. LZ4 relies entirely on the match references being shorter than the data they
   replace. For highly repetitive input (long runs of the same pattern) this is very
   effective. For already-random or encrypted data, matches are rare and short, so LZ4
-  barely reduces size — sometimes it even expands slightly due to overhead. Entropy coding
+  barely reduces size; sometimes it even expands slightly due to overhead. Entropy coding
   would help with non-uniform symbol distributions, but LZ4 trades that away for speed.
 ]
 
@@ -242,7 +241,7 @@ per byte.
 
 Where LZ4 was born from Collet's personal speed quest, Snappy (released by Google in 2011,
 open-sourced the same year) comes from a corporate engineering philosophy: *good enough is
-perfect*. Google's engineering blog was explicit — Snappy does *not* aim for maximum
+perfect*. Google's engineering blog was explicit: Snappy does *not* aim for maximum
 compression. It aims for very high speeds while producing "reasonable" compression.
 The latest version is 1.2.2 (March 2024), which also introduced configurable levels
 (0 = classic speed, 2 = 5–10% denser at 20–30% slower encode).
@@ -274,8 +273,8 @@ differences are subtle:
 )[
   Snappy compresses at ~250 MB/s and decompresses at ~500 MB/s on a single core of an
   Intel i7 (single-threaded, no SIMD). It is not the fastest option today, but its
-  battle-hardened codebase — handling petabytes in Google's production Bigtable,
-  MapReduce, and RPC systems — earns it trust. Cassandra, CouchBase, Hadoop, MongoDB,
+  battle-hardened codebase, which has handled petabytes in Google's production Bigtable,
+  MapReduce, and RPC systems, earns it trust. Cassandra, CouchBase, Hadoop, MongoDB,
   RocksDB, Lucene, Spark, and Parquet all support or default to Snappy.
 ]
 
@@ -288,7 +287,7 @@ Both codecs are designed for the same niche. As of 2024–2026:
 - *Cross-platform*: Snappy's simple format and battle-tested code make it reliable on exotic architectures (ARM, RISC-V, POWER).
 
 #misconception[
-  "LZ4 and Snappy are interchangeable — they both sacrifice ratio for speed."
+  "LZ4 and Snappy are interchangeable; they both sacrifice ratio for speed."
 ][
   They are *similar in philosophy* but not interchangeable in format. A stream compressed
   with LZ4 cannot be decoded by Snappy and vice versa. LZ4 is consistently 10–20%
@@ -306,7 +305,7 @@ HTML pages use a few hundred HTML tag names (`<div>`, `</div>`, `<script src=`, 
 JavaScript files use JavaScript keywords (`function`, `return`, `var`, `const`, `this`).
 URLs follow patterns. CSS properties repeat. A general-purpose compressor like gzip
 builds a dictionary from the data it has already seen in the *current file*. But at
-the start of a small file — a 3 KB HTML fragment — the LZ77 window is nearly empty,
+the start of a small file (a 3 KB HTML fragment), the LZ77 window is nearly empty,
 and gzip spends its first few thousand bytes just learning what words appear.
 
 What if you shipped the encoder with a dictionary of common web tokens *already loaded*?
@@ -319,7 +318,7 @@ standardised as RFC 7932 in July 2016) combines three ideas:
 
 + *A static 120 KB dictionary* of common substrings drawn from a large corpus of web
   content: HTTP headers, HTML, CSS, JavaScript, and plain text. This dictionary is baked
-  into every encoder and decoder, so it is "free" — it costs no transmission overhead.
+  into every encoder and decoder, so it is "free": it costs no transmission overhead.
   On the very first byte of a file, Brotli can already reference these tokens.
 
 + *LZ77 with a larger window* (up to 16 MiB, versus DEFLATE's 32 KB). This catches
@@ -387,11 +386,11 @@ almost as fast as gzip while still beating it by 10–15%.
 )
 
 #history[
-  The name "Brotli" is the Swiss-German word for "small bread roll" — a nod to both
+  The name "Brotli" is the Swiss-German word for "small bread roll," a nod to both
   Alakuijala's Swiss connections and a tradition of naming compression tools after
   food (gzip contains no actual food reference, but deflate is followed by zlib,
   and Snappy is named for feeling "snappy"). The 120 KB static dictionary took
-  considerable engineering effort to curate — it was assembled from a large crawl of
+  considerable engineering effort to curate. It was assembled from a large crawl of
   the web, frequency-analyzing which n-grams appeared most in HTML/CSS/JS.
 ]
 
@@ -423,8 +422,7 @@ Accept-Encoding: gzip, deflate, br, zstd
 
 The server picks the best format it has. For a modern CDN serving pre-compressed static
 files, the response comes with `Content-Encoding: br`, and the browser decompresses on
-the fly with its built-in Brotli decoder — because RFC 7932 is mandatory in all modern
-browsers.
+the fly with its built-in Brotli decoder; RFC 7932 is mandatory in all modern browsers.
 
 #gopython("Returning a `dict`, and the f-string width/type format spec")[
   The following snippet sketches how you might measure what a Brotli encoder saves
@@ -467,8 +465,8 @@ No single existing compressor was good at all of these.
 
 Collet's insight was: *the levels are the product*. Instead of building one compressor
 optimised for one point on the speed-ratio map, build an algorithm with a wide range of
-levels — from faster-than-gzip all the way to near-LZMA — and make the decoder equally
-fast at all levels. That last constraint is crucial: data is compressed once but often
+levels (from faster-than-gzip all the way to near-LZMA) and make the decoder equally
+fast at all levels. That last constraint matters: data is compressed once but often
 decompressed many times.
 
 Zstandard v1.0 was released on August 31, 2016, under a BSD+GPLv2 dual license.
@@ -483,16 +481,16 @@ It became an IETF standard as RFC 8878 (January 2021).
   or real-time paths where even LZ4 is slightly too slow.
 ]
 
-*Innovation 1 — Levels without separate codebases.* Other compressors (gzip, bzip2,
+*Innovation 1: Levels without separate codebases.* Other compressors (gzip, bzip2,
 LZMA) achieve different levels by tuning the *same* algorithm. Zstd is the same:
 at low levels it uses a simple hash table like LZ4; at high levels it uses multiple
-hash tables, binary trees, and optimal parsing. But crucially, *the bitstream format
-is identical across levels* — a level-22 archive decodes with exactly the same decoder
-as a level-1 archive. This is a big deal for deployment: you ship one decoder library,
+hash tables, binary trees, and optimal parsing. The key point is that *the bitstream format
+is identical across levels*: a level-22 archive decodes with exactly the same decoder
+as a level-1 archive. This matters for deployment: you ship one decoder library,
 and encoders can choose levels per-file or even per-block.
 
-*Innovation 2 — Finite State Entropy (FSE).* The entropy coding stage in DEFLATE is
-Huffman coding — fast, but it wastes bits because code lengths are integers (you cannot
+*Innovation 2: Finite State Entropy (FSE).* The entropy coding stage in DEFLATE is
+Huffman coding. It is fast, but it wastes bits because code lengths are integers (you cannot
 give a symbol a code of, say, 2.3 bits). Arithmetic coding fixes this but is slower.
 FSE (Finite State Entropy), Collet's implementation of Jarek Duda's Asymmetric Numeral
 Systems (Chapter 27), achieves arithmetic-coding-level efficiency with table-lookup
@@ -500,12 +498,12 @@ speed: each symbol update is one array read and one integer operation. The resul
 an entropy stage that is faster than Huffman in hardware and as accurate as arithmetic
 coding in ratio.
 
-*Innovation 3 — Trained dictionaries.* For compressing many small similar objects
+*Innovation 3: Trained dictionaries.* For compressing many small similar objects
 (log lines, JSON API responses, HTTP headers, database rows), a pure LZ77 approach
 is nearly useless: there is not enough history within a single small payload to find
 matches. Zstd's answer is *training*: you give the `zstd --train` command a sample
-of your real data (hundreds of examples), and it builds a compact "dictionary" — typically
-100 KB to 1 MB — capturing the most common patterns. Encoder and decoder both load
+of your real data (hundreds of examples), and it builds a compact "dictionary" (typically
+100 KB to 1 MB) capturing the most common patterns. Encoder and decoder both load
 this dictionary before processing any payload. On 1 KB JSON objects, a trained
 dictionary can improve ratio by 30–50% compared to untraining.
 
@@ -555,9 +553,9 @@ dictionary can improve ratio by 30–50% compared to untraining.
   })
 )
 
-*Innovation 4 — Long-Distance Matching (LDM).* Standard LZ77 with a 128 KB window
-catches repeats within the last 128 KB. For very large files — a 10 GB database dump,
-a Linux kernel build — the same string might appear millions of bytes apart. Zstd's
+*Innovation 4: Long-Distance Matching (LDM).* Standard LZ77 with a 128 KB window
+catches repeats within the last 128 KB. For very large files (a 10 GB database dump,
+a Linux kernel build), the same string might appear millions of bytes apart. Zstd's
 `--long` mode (enabled by `--long=27` to specify a 128 MiB window) maintains a second,
 coarser hash table that tracks *long-distance* matches. Enabling it on a kernel source
 archive can reduce the compressed size by another 5–10%.
@@ -582,10 +580,10 @@ HTML, binaries, and text) measured on a modern x86 desktop in 2025:
 )
 
 Notice three things in this table. First, zstd level 3 matches gzip level 6 in ratio
-while encoding 2.5× faster and decoding 3.5× faster — that is the baseline "free upgrade."
-Second, zstd level 19 nearly matches xz in ratio, while decoding 20× faster — that
-is the high-end case. Third, LZ4's ratio is the worst of the group, but its decode speed
-is 2–4× faster than everything else — which is exactly why it is used inside databases
+while encoding 2.5× faster and decoding 3.5× faster. That is the baseline "free upgrade."
+Second, zstd level 19 nearly matches xz in ratio, while decoding 20× faster, which is
+the high-end case. Third, LZ4's ratio is the worst of the group, but its decode speed
+is 2–4× faster than everything else. That is exactly why it is used inside databases
 where decompression latency matters more than ratio.
 
 === Zstd's Explosive Adoption
@@ -611,14 +609,13 @@ It is rare for a new compressor to be adopted this broadly this quickly. Some mi
   compression.
 
 #history[
-  Yann Collet's journey is a remarkable one: a French engineer who wrote LZ4 as a side
+  Yann Collet's career is an unusual one: a French engineer who wrote LZ4 as a side
   project while working in finance, published it in 2011 as a blog post at
   *fastcompression.blogspot.com*, and watched it get embedded in dozens of open-source
   projects. Facebook hired him specifically to build Zstandard, which he did from 2014
   to 2016, and he remains the primary maintainer of both codecs to this day. The
-  unusual arc — a solo engineer twice producing the de facto industry-standard lossless
-  compressor — is a testament to the power of publishing good, well-documented open
-  source code.
+  unusual arc (a solo engineer twice producing the de facto industry-standard lossless
+  compressor) speaks to the power of publishing good, well-documented open source code.
 ]
 
 === Zstd's Format in Brief
@@ -638,7 +635,7 @@ The LZ77 stage in a compressed block produces two types of sequences:
 These literals and sequences are then entropy-coded with FSE tables. The clever detail:
 *literals and sequences are coded with separate FSE tables*, and the tables themselves
 are stored inside the block header (either as explicit distributions or as special
-"predefined" tables — a kind of mini static dictionary for the entropy stage).
+"predefined" tables, which act as a mini static dictionary for the entropy stage).
 
 #gopython("Python's new compression.zstd module (Python 3.14)")[
   Python 3.14 added `compression.zstd` to the standard library. Here is a quick tour:
@@ -681,7 +678,7 @@ The practical answer is simpler than it looks:
 
 #keyidea[
   The "right" compression level is the highest level you can *afford to run* given your
-  CPU budget — not the highest level that exists. Benchmark your actual workload: on
+  CPU budget, not the highest level that exists. Benchmark your actual workload: on
   many real-world tasks, level 3 is already as good as level 9 because the data has
   limited structure, and the extra search time yields no ratio benefit.
 ]
@@ -690,7 +687,7 @@ The practical answer is simpler than it looks:
 
 TINYZIP.md assigns Chapter 32 Step 14: "compression levels + optional trained dictionary hook."
 We extend `deflate.py` (built in Chapter 30) with a `level` parameter, and we add a
-`preset_dict` optional argument that the caller can use to pre-seed LZ77 history — a minimal
+`preset_dict` optional argument that the caller can use to pre-seed LZ77 history, a minimal
 version of zstd's trained-dictionary idea.
 
 #gopython("Keyword-only arguments (the bare `*`) and `zip()`")[
@@ -704,13 +701,13 @@ version of zstd's trained-dictionary idea.
       ...
   def encode(data, *, level=6):     # the * forces: encode(x, level=9)
       ...
-  encode(x, 9)        # ERROR with the second form — 9 is not named
+  encode(x, 9)        # ERROR with the second form - 9 is not named
   encode(x, level=9)  # OK
   ```
 
   Why bother? It makes call sites self-documenting (`encode(buf, level=9)` reads
   better than `encode(buf, 9)`) and lets us add more options later without callers
-  accidentally passing them in the wrong slot. The `*` itself is not an argument —
+  accidentally passing them in the wrong slot. The `*` itself is not an argument;
   it is just a separator.
 
   *`zip()`* walks several sequences in lock-step, handing you one item from each at
@@ -723,7 +720,7 @@ version of zstd's trained-dictionary idea.
   ```
 
   Here `sizes[1:]` is the list shifted left by one (Chapter 16 slicing), so
-  `zip(sizes, sizes[1:])` yields each adjacent pair — exactly what the self-test
+  `zip(sizes, sizes[1:])` yields each adjacent pair, which is exactly what the self-test
   uses to check that a higher level never blows the file up.
 ]
 
@@ -732,12 +729,12 @@ version of zstd's trained-dictionary idea.
   that mirrors zlib's convention: level 1 uses a fast hash-only match finder, levels 4–6
   use hash chains (the default), and levels 7–9 do deeper chain searches. Second, an
   optional `preset_dict` argument: if provided, we prepend it to the sliding window before
-  encoding begins — effectively a mini trained dictionary.
+  encoding begins, effectively a mini trained dictionary.
 
   ```python
-  # tinyzip/deflate.py  (Step 14 additions — full file context shown below)
+  # tinyzip/deflate.py  (Step 14 additions - full file context shown below)
   """
-  deflate.py  —  LZ77 + Huffman (gzip-class) with compression levels.
+  deflate.py  -  LZ77 + Huffman (gzip-class) with compression levels.
   Step 14 adds:
     * level parameter (1-9) controlling match-search depth
     * optional preset_dict for dictionary-seeded compression
@@ -864,7 +861,7 @@ version of zstd's trained-dictionary idea.
   Run with `python -m tinyzip.deflate` to see the self-test output. A typical run shows
   the dictionary-seeded version 0–5% smaller than the plain version for this sample
   (because the seed is short and repetitive content is easily found in window anyway),
-  but for small, diverse payloads the benefit can be dramatic — matching the same
+  but for small, diverse payloads the benefit can be dramatic, matching the same
   effect that motivated zstd's trained dictionaries at much larger scale.
 ]
 
@@ -875,7 +872,7 @@ version of zstd's trained-dictionary idea.
   In Python's `zlib` module, `wbits` controls both the window size and the framing format.
   A positive value wraps the output in a zlib header+trailer (the "zlib format"); adding
   16 produces gzip framing. A *negative* value uses the same window size (15 = 32 KB
-  window) but produces *raw DEFLATE* with no framing — just the compressed bitstream. We
+  window) but produces *raw DEFLATE* with no framing, just the compressed bitstream. We
   want raw DEFLATE because our `container.py` already provides the outer header and CRC-32;
   adding a second zlib or gzip frame would double-wrap the data unnecessarily.
 ]
@@ -888,7 +885,7 @@ Here is a practical decision tree for 2026:
 
 Use LZ4 when decompression latency is the primary concern: in-memory caches (Redis),
 database page compression (RocksDB, ClickHouse), live network RPCs where you cannot
-afford milliseconds, or GPU memory transfers. The decode speed — 4–6 GB/s single-core —
+afford milliseconds, or GPU memory transfers. The decode speed (4–6 GB/s single-core)
 means decompression is virtually free on modern hardware.
 
 === When does Snappy win?
@@ -923,7 +920,7 @@ Zstd wins almost everywhere else:
   One notable outlier: the *Linux kernel module* compressed format. Until kernel 5.9
   (2020), modules were gzip-compressed. Starting with 5.9, xz was added. Starting
   with 5.17 (2022), zstd was added and is now recommended in most distributions because
-  modules decompress 20× faster at boot — shaving measurable milliseconds from boot
+  modules decompress 20× faster at boot, shaving measurable milliseconds from boot
   time. On a phone with a slow CPU, this matters.
 ]
 
@@ -940,7 +937,7 @@ reminder of why it matters specifically for zstd.
   $s$ in a bounded range $[L, 2L)$.
 ]
 
-Zstd's FSE (Finite State Entropy) is a *tANS* implementation — table ANS. It pre-builds
+Zstd's FSE (Finite State Entropy) is a *tANS* implementation (table ANS). It pre-builds
 a small table (typically 256–4096 entries) from the symbol frequency distribution. Each
 entry stores the next state and the number of bits to emit. Encoding is a table lookup
 plus a right-shift; decoding is a table lookup plus a left-shift with bit input. On a
@@ -949,14 +946,14 @@ Huffman but with arithmetic-coding accuracy.
 
 The practical consequence: zstd wastes roughly 0.002 bits per symbol compared to the
 mathematical optimum (Shannon entropy). Huffman wastes up to 1 bit per symbol in
-pathological cases. For a 100 MB file this difference can be 2–10 MB — not nothing.
+pathological cases. For a 100 MB file this difference can be 2–10 MB, which is not nothing.
 
 Where does that "up to 1 bit" gap come from? Huffman must give every symbol a
-*whole number* of bits — 1, 2, 3, and so on — but the ideal length for a symbol of
+*whole number* of bits (1, 2, 3, and so on), but the ideal length for a symbol of
 probability $p$ is $log_2(1/p)$ bits (Chapter 18), which is almost never a whole
 number. Picture a two-symbol source where `A` occurs 90% of the time: its ideal
 length is $log_2(1/0.9) approx 0.15$ bits, yet Huffman cannot spend fewer than 1
-whole bit on it — a waste of about 0.85 bits *every time* `A` appears. FSE, like
+whole bit on it, a waste of about 0.85 bits *every time* `A` appears. FSE, like
 arithmetic coding, can spend a *fractional* number of bits on average (it lets the
 state integer carry the leftover fraction forward to the next symbol), so it pays
 the true $0.15$ bits and pockets the difference. That is the entire reason zstd's
@@ -977,7 +974,7 @@ This is the kind of tiny JSON payload that breaks simple compressors.
 LZ77 scans the string. It finds a few short matches: the quote characters `"` repeat,
 the `:` repeats, and there are two 5-character spans (`"user"` and `"city"`) that share
 a `"` + some structure. With no history, the window is nearly empty. zstd level 3 at
-best reduces this to ~40 bytes — barely any compression, because 44 bytes gives the
+best reduces this to ~40 bytes, barely any compression, because 44 bytes gives the
 LZ77 stage almost nothing to work with, and FSE needs a long stream to amortize its
 table overhead.
 
@@ -986,12 +983,12 @@ table overhead.
 Suppose we have trained a 32 KB dictionary on 10 000 similar JSON payloads. The
 dictionary already contains `{"user":"`, `","age":`, `","city":"`, `"}` as common
 patterns. Now zstd references these dictionary entries directly: the 44-byte JSON payload
-might compress to 12–18 bytes — a 3–4× reduction on a tiny payload. The dictionary is
+might compress to 12–18 bytes, a 3–4× reduction on a tiny payload. The dictionary is
 shared out-of-band; neither the 12-byte compressed payload nor the decoder need to
 transmit the dictionary.
 
-This is why companies serving millions of small similar API responses — GitHub, Twitter,
-Meta, Cloudflare — train zstd dictionaries. The ratio improvement on tiny payloads
+This is why companies serving millions of small similar API responses (GitHub, Twitter,
+Meta, Cloudflare) train zstd dictionaries. The ratio improvement on tiny payloads
 can be more valuable than any algorithmic innovation.
 
 #gomaths("Asymptotic Overhead of Header Fixed Costs")[
@@ -1006,17 +1003,17 @@ can be more valuable than any algorithmic innovation.
 
   Trained dictionaries reduce $h$ to near zero *for the repeated parts of the content*,
   because those patterns are already in the shared dictionary and cost 0 bits in the
-  payload — only a reference index is stored.
+  payload; only a reference index is stored.
 
   *Numeric example:* a 1 KB zstd frame without a dictionary has roughly 12–30 bytes of
   header overhead. With a trained dictionary, the same frame header is similar in size,
-  but the content bytes $C(1000)$ might shrink from 700 bytes to 350 bytes — because
+  but the content bytes $C(1000)$ might shrink from 700 bytes to 350 bytes, because
   the most common 100 byte patterns are "free." The ratio doubles for the same header cost.
 ]
 
 == 2024–2026 Developments
 
-The landscape continued evolving between 2024 and mid-2026:
+Between 2024 and mid-2026 the field continued moving:
 
 - *zstd v1.5.6* (March 2024): celebrated as the release marking Chrome's adoption of
   `Content-Encoding: zstd`.
@@ -1044,8 +1041,8 @@ The landscape continued evolving between 2024 and mid-2026:
   data, Brotli is often *worse* than gzip at similar encode speeds. On very small payloads
   (< 1 KB) the static dictionary helps, but on large binary files (images, video, already-compressed
   archives), gzip may beat Brotli at the same quality level. More importantly, Brotli's
-  level-11 encode speed (1–3 MB/s) is far too slow for dynamic content — generating
-  responses on-the-fly. Use Brotli for pre-compressed static assets; use zstd (or gzip)
+  level-11 encode speed (1–3 MB/s) is far too slow for generating dynamic responses
+  on the fly. Use Brotli for pre-compressed static assets; use zstd (or gzip)
   for dynamic server responses.
 ]
 
@@ -1081,7 +1078,7 @@ The landscape continued evolving between 2024 and mid-2026:
       )
       content(
         (i * col-w + col-w/2, (rows.len()) * row-h + row-h/2),
-        text(size: 8pt, weight: "bold")[#h]
+        box(width: 3.0cm, inset: 2pt, align(center, text(size: 8pt, weight: "bold")[#h]))
       )
     }
 
@@ -1097,7 +1094,7 @@ The landscape continued evolving between 2024 and mid-2026:
         )
         content(
           (ci * col-w + col-w/2, ri * row-h + row-h/2),
-          text(size: 7.5pt)[#cell]
+          box(width: 3.0cm, inset: 2pt, align(center, text(size: 7pt)[#cell]))
         )
       }
     }
@@ -1130,7 +1127,7 @@ The landscape continued evolving between 2024 and mid-2026:
   - Sacrifices decompression speed: xz/LZMA (gains ratio); note LZMA is from Chapter 31
     but appears in the scoreboard for comparison.
   - Sacrifices memory: LZ4 and Snappy (their hash tables are tiny).
-  (Note: zstd is unusual in not deeply sacrificing any axis — it spans the whole range
+  (Note: zstd is unusual in not deeply sacrificing any axis; it spans the whole range
   with its level dial.)
 ]
 
@@ -1165,7 +1162,7 @@ The landscape continued evolving between 2024 and mid-2026:
   - Small random binary blobs.
 
   To prevent catastrophic expansion, LZ4 defines a maximum expansion bound: the compressed
-  output is guaranteed to be at most `LZ4_compressBound(inputSize)` bytes — approximately
+  output is guaranteed to be at most `LZ4_compressBound(inputSize)` bytes, approximately
   `inputSize + inputSize/255 + 16`. In the worst case (all literals, zero matches) the
   token overhead adds about 0.4% plus a 16-byte constant. The LZ4 spec also allows writing
   an "uncompressed" block type if compression would expand. Most production wrappers detect
@@ -1191,7 +1188,7 @@ The landscape continued evolving between 2024 and mid-2026:
   frame header so mismatches are detected.
 
   Best use of Brotli dict: any standard web asset, served to anonymous browsers.
-  Best use of zstd dict: internal microservices, log pipelines, API responses — anywhere
+  Best use of zstd dict: internal microservices, log pipelines, API responses, anywhere
   you control both encoder and decoder and can share the dictionary file.
 ]
 
@@ -1256,7 +1253,7 @@ The landscape continued evolving between 2024 and mid-2026:
   *Predicted ratios*: on highly repetitive structured JSON:
   - gzip -6: ratio ~4–6× (LZ77 finds repeated keys and values).
   - zstd -3 no dict: similar or slightly better (5–7×).
-  - zstd -3 + dict: ratio 8–12× — the dictionary pre-loads the repeated JSON schema so
+  - zstd -3 + dict: ratio 8–12×. The dictionary pre-loads the repeated JSON schema so
     every key name and the structural skeleton are free references, saving 50–100 bytes
     per 400-byte line.
 
@@ -1268,32 +1265,32 @@ The landscape continued evolving between 2024 and mid-2026:
 
 == Further reading
 
-- #link("https://facebook.github.io/zstd/")[Zstandard Reference Manual and GitHub], Yann Collet et al. — the authoritative source including the frame format specification, FSE description, and dictionary training documentation.
+- #link("https://facebook.github.io/zstd/")[Zstandard Reference Manual and GitHub], Yann Collet et al. The authoritative source including the frame format specification, FSE description, and dictionary training documentation.
 
-- #link("https://www.rfc-editor.org/rfc/rfc8878")[RFC 8878 — Zstandard Compression and the application/zstd Media Type], Collet & Kucherawy (2021) — the IETF standard.
+- #link("https://www.rfc-editor.org/rfc/rfc8878")[RFC 8878: Zstandard Compression and the application/zstd Media Type], Collet & Kucherawy (2021). The IETF standard.
 
-- #link("https://www.rfc-editor.org/rfc/rfc7932")[RFC 7932 — Brotli Compressed Data Format], Alakuijala & Szabadka (2016) — the official Brotli specification, including the static dictionary format.
+- #link("https://www.rfc-editor.org/rfc/rfc7932")[RFC 7932: Brotli Compressed Data Format], Alakuijala & Szabadka (2016). The official Brotli specification, including the static dictionary format.
 
-- #link("https://github.com/lz4/lz4")[LZ4 source and documentation], Yann Collet — includes the format specification, C reference implementation, and benchmark methodology.
+- #link("https://github.com/lz4/lz4")[LZ4 source and documentation], Yann Collet. Includes the format specification, C reference implementation, and benchmark methodology.
 
-- #link("https://github.com/google/snappy")[Snappy source and README], Google — the specification, benchmarks, and format description.
+- #link("https://github.com/google/snappy")[Snappy source and README], Google. The specification, benchmarks, and format description.
 
-- #link("https://engineering.fb.com/2018/12/19/core-infra/zstandard/")[Zstandard: How Facebook increased compression speed while saving storage], Meta Engineering Blog (2018) — the first public account of zstd's impact at petabyte scale.
+- #link("https://engineering.fb.com/2018/12/19/core-infra/zstandard/")[Zstandard: How Facebook increased compression speed while saving storage], Meta Engineering Blog (2018). The first public account of zstd's impact at petabyte scale.
 
-- #link("https://gregoryszorc.com/blog/2017/03/07/better-compression-with-zstandard/")[Better Compression with Zstandard], Gregory Szorc — a detailed technical walkthrough comparing zstd to alternatives with real benchmarks.
+- #link("https://gregoryszorc.com/blog/2017/03/07/better-compression-with-zstandard/")[Better Compression with Zstandard], Gregory Szorc. A detailed technical walkthrough comparing zstd to alternatives with real benchmarks.
 
-- #link("https://docs.python.org/3.14/library/compression.zstd.html")[compression.zstd — Python 3.14 documentation] — the official API reference for the new stdlib module.
+- #link("https://docs.python.org/3.14/library/compression.zstd.html")[compression.zstd: Python 3.14 documentation]. The official API reference for the new stdlib module.
 
-- #link("https://www.phoronix.com/news/Zstd-Zstandard-1.5.7")[Zstd 1.5.7 Pushing Compression Performance Even Further], Phoronix (February 2025) — covers the v1.5.7 benchmark improvements and Intel QAT integration.
+- #link("https://www.phoronix.com/news/Zstd-Zstandard-1.5.7")[Zstd 1.5.7 Pushing Compression Performance Even Further], Phoronix (February 2025). Covers the v1.5.7 benchmark improvements and Intel QAT integration.
 
 #bridge[
-  We have now toured the full landscape of general-purpose lossless compression: from
+  We have now covered general-purpose lossless compression end to end: from
   the elegant theory of entropy (Chapter 18) through Huffman and arithmetic coding
   (Chapters 24–27), LZ77 dictionary coding (Chapter 28), DEFLATE (Chapter 30), LZMA
   (Chapter 31), and now the modern speed-and-ratio champions. The next chapter, Chapter 33,
   turns to a completely different philosophy: *statistical modeling*. Instead of asking
   "where did I see this byte sequence before?" (the LZ question), it asks "what is the
-  probability of the next byte given everything I have seen?" — and answers with PPM
+  probability of the next byte given everything I have seen?" and answers with PPM
   (Prediction by Partial Matching) and context mixing, the techniques behind the highest
   ratio compressors that predate the neural era.
 ]

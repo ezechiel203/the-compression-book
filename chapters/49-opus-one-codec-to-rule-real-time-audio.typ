@@ -10,11 +10,11 @@
 ]
 
 It is 2011. You are trying to call a friend over the internet. You have four choices, none of
-them satisfying. You could use G.711 — a phone codec from 1972 that sounds like you are speaking
-through a tin can. You could use Speex, which sounds fine for speech but collapses on music.
+them satisfying. You could use G.711 (a phone codec from 1972 that sounds like you are speaking
+through a tin can). You could use Speex, which sounds fine for speech but collapses on music.
 You could use G.722, which sounds better but has a mandatory 35 ms delay that makes
 conversations awkward and echo-prone. Or you could use AAC, which sounds great but requires
-paying patent royalties and introduces 60 ms or more of algorithmic delay — far too slow for
+paying patent royalties and introduces 60 ms or more of algorithmic delay, which is far too slow for
 interactive voice.
 
 What you really want is a single codec that is free of patents, covers every bitrate from a
@@ -29,7 +29,7 @@ the bitstream format.
 
 #recap[
   Chapter 46 taught us the science Opus depends on: the basilar membrane, critical bands, the
-  absolute threshold of hearing, simultaneous masking, and temporal masking — together these
+  absolute threshold of hearing, simultaneous masking, and temporal masking. Together these
   define which sounds are truly inaudible and therefore expendable. Chapter 47 showed how MP3
   exploits those limits via a hybrid polyphase-plus-MDCT filterbank, a psychoacoustic model, and
   Huffman-coded quantised coefficients. Chapter 48 showed how AAC improved on MP3 with a pure
@@ -43,14 +43,14 @@ the bitstream format.
   "Explain why existing codecs in 2010 could not serve real-time internet audio well.",
   "Trace the origins of SILK (Skype's speech coder) and CELT (Xiph's music coder) separately.",
   "Describe the Opus hybrid architecture: how the three modes are chosen frame-by-frame.",
-  "Understand SILK's linear predictive model — short-term LPC, long-term pitch predictor, NLSF quantisation — and what it sends on the wire.",
-  "Understand CELT's MDCT approach — energy bands, pyramid vector quantisation, the bit allocation algorithm — and why it achieves 5 ms delay.",
+  "Understand SILK's linear predictive model (short-term LPC, long-term pitch predictor, NLSF quantisation) and what it sends on the wire.",
+  "Understand CELT's MDCT approach (energy bands, pyramid vector quantisation, the bit allocation algorithm) and why it achieves 5 ms delay.",
   "Read the Opus packet format and understand how the TOC byte controls mode selection.",
   "Follow the ML additions in Opus 1.5 (LACE, NoLACE, DRED, deep PLC) and Opus 1.6 (bandwidth extension, Opus HD).",
   "Write Python code that encodes and decodes audio through the opuslib bindings, round-tripping a speech clip at different bitrates.",
 ))
 
-== The Problem Landscape in 2009
+== The Problem Space in 2009
 
 Before we can appreciate Opus, we need to feel the pain it was built to relieve. In the late
 2000s, the internet audio codec space was a mess of specialisation. Each codec was designed for
@@ -67,13 +67,13 @@ specific network jitter buffers. Its algorithmic delay, including the lookahead 
 sub-band splitting, was not zero.
 
 *G.729* was a CELP (Code Excited Linear Prediction) codec targeting 8 kbit/s for mobile phone
-backhaul — highly compressed speech, but speech only, and subject to heavy patent royalties.
+backhaul: highly compressed speech, but speech only, and subject to heavy patent royalties.
 
 *Speex* (the Xiph project before Opus) was royalty-free and covered a wide bitrate range for
 speech, but it was designed purely around linear predictive models and sounded terrible on music.
 
-*AAC and HE-AAC* were the best general-purpose codecs for music, but their algorithmic delay —
-the time between the input sample and when the encoder can output bits about it — was 60 ms or
+*AAC and HE-AAC* were the best general-purpose codecs for music, but their algorithmic delay
+(the time between the input sample and when the encoder can output bits about it) was 60 ms or
 more in practice. That is catastrophic for two-way voice. If the codec adds 60 ms at each end,
 the round-trip delay from mouth to ear is over 120 ms, which makes conversations feel unnatural
 and causes speakers to interrupt each other constantly.
@@ -87,15 +87,15 @@ had tried to bridge the gap in one unified, royalty-free format.
 
 #keyidea[
   Opus's core insight is that speech and music need fundamentally different internal
-  representations — speech is best modelled as the output of a resonant tube (the vocal tract),
-  music is best modelled as a sum of frequency-domain components — but a single bitstream format
+  representations: speech is best modelled as the output of a resonant tube (the vocal tract),
+  while music is best modelled as a sum of frequency-domain components. A single bitstream format
   can select the right representation for each 20 ms frame of audio, switching seamlessly as
   content changes.
 ]
 
 == Two Codecs, One Destiny
 
-The hybrid at the heart of Opus did not emerge from scratch. It was assembled from two existing
+The hybrid core of Opus did not emerge from scratch. It was assembled from two existing
 codecs that were, almost accidentally, designed to complement each other.
 
 === SILK: The Voice of Skype
@@ -103,14 +103,14 @@ codecs that were, almost accidentally, designed to complement each other.
 *SILK* (from the Skype engineering team, led by Koen Vos with Søren Skak Jensen and Karsten
 Vandborg Sørensen) was developed starting around 2006 as Skype's next-generation speech codec.
 Skype needed something royalty-free that could deliver excellent voice quality across the
-wildly variable internet — from 6 kbit/s over a congested mobile connection to 40 kbit/s on
-broadband — and survive packet loss gracefully.
+wildly variable internet (from 6 kbit/s over a congested mobile connection to 40 kbit/s on
+broadband) and survive packet loss gracefully.
 
 SILK's architecture is squarely in the CELP (Code-Excited Linear Prediction) family, the speech-coding
 lineage we will study in full in Chapter 50. The key idea in CELP is to model the human vocal tract as a
 linear filter: a mathematical model of how the throat, mouth, and nasal cavity shape raw
 vibrations from the vocal cords into the sounds of speech. If you can send that model's
-parameters rather than the raw audio, you save a great deal of bandwidth — because the model is
+parameters rather than the raw audio, you save a great deal of bandwidth, because the model is
 far more compact than the waveform it explains.
 
 #gomaths("Linear Prediction and the LPC Model")[
@@ -119,13 +119,13 @@ far more compact than the waveform it explains.
 
   $ hat(x)[n] = sum_(k=1)^(p) a_k dot x[n-k] $
 
-  where $a_1, a_2, dots, a_p$ are the *LPC coefficients* — $p$ numbers that describe the
-  resonances of the vocal tract at this moment. The *prediction residual* (what the model
+  where $a_1, a_2, dots, a_p$ are the *LPC coefficients* ($p$ numbers that describe the
+  resonances of the vocal tract at this moment). The *prediction residual* (what the model
   gets wrong) is:
 
   $ e[n] = x[n] - hat(x)[n] $
 
-  For voiced speech (a vowel), the residual is small and periodic — it looks like
+  For voiced speech (a vowel), the residual is small and periodic: it looks like
   little clicks at the pitch period. For unvoiced speech (like "ssss"), the residual is
   noisy. For silence, it is nearly zero.
 
@@ -134,7 +134,7 @@ far more compact than the waveform it explains.
   the LPC filter captures most of the signal's variance, leaving only a small residual
   to encode.
 
-  In SILK (and in Opus's SILK layer), $p = 16$ for wideband speech — sixteen coefficients
+  In SILK (and in Opus's SILK layer), $p = 16$ for wideband speech. Sixteen coefficients
   capture the sixteen most prominent resonances (formants and their interactions) of the
   human vocal tract at a given moment. Those sixteen numbers often describe a 20 ms frame
   far more compactly than the 320 raw samples they summarise.
@@ -153,7 +153,7 @@ handles the case where the pitch period is not a whole number of samples (fracti
   A *FIR filter* (Finite Impulse Response) is just a weighted sum of a handful of input samples:
   output$[n] = sum_(k) c_k dot "input"[n-k]$. "5-tap" means it uses five weights $c_0, dots, c_4$.
   Here the five taps blend the samples around the best pitch lag, so the predictor can land
-  between two whole-sample positions — that is what "fractional pitch" means. The linear-predictor
+  between two whole-sample positions; that is what "fractional pitch" means. The linear-predictor
   sum from the LPC box above is itself a FIR filter; this is the same machinery applied to the
   long-term (pitch-period) structure instead of the short-term one.
 ]
@@ -168,7 +168,7 @@ more numerically stable, more amenable to interpolation between frames, and easi
 with a vector quantiser trained on a large speech database. The conversion and quantisation keeps
 the filter stable (which is not guaranteed if you quantise raw LPC coefficients carelessly).
 
-Finally, the residual signal — what is left after both short-term and long-term prediction —
+Finally, the residual signal (what is left after both short-term and long-term prediction)
 is quantised using a *lattice codebook search* and entropy-coded with a range coder
 (Chapter 26 machinery). At 12–16 kbit/s, the resulting reconstructed speech is indistinguishable
 from the original for most listeners.
@@ -181,13 +181,13 @@ through super-wideband). It was great at speech and hopeless at music.
 
 *CELT* (Constrained Energy Lapped Transform) was Jean-Marc Valin's project at the Xiph.Org
 Foundation, begun in 2007. The driving requirement was different from SILK's: CELT had to
-achieve very low latency — under 10 ms algorithmic delay — while delivering good quality on
+achieve very low latency (under 10 ms algorithmic delay) while delivering good quality on
 *any audio*, including music, at medium bitrates (32–128 kbit/s).
 
 Low latency is incompatible with long MDCT frames. AAC-LC uses a 1024-sample frame at 48 kHz
 (about 21 ms), which is already too long for interactive applications. CELT uses a 120-sample to
 960-sample frame (2.5 ms to 20 ms), dramatically shrinking the delay. The cost of shorter frames
-is less frequency resolution — with fewer samples, the MDCT produces fewer coefficients, and
+is less frequency resolution: with fewer samples, the MDCT produces fewer coefficients, and
 each one covers a wider frequency range.
 
 CELT's answer to coarse frequency resolution is *band-based energy coding*, borrowed from ideas
@@ -196,12 +196,12 @@ in parametric audio coding.
 #gomaths("CELT's Band Energy Coding")[
   The MDCT of a short frame produces $N/2$ coefficients, where $N$ is the frame size.
   CELT groups those coefficients into $M$ *critical bands* (approximately following the
-  Bark scale from Chapter 46) — typically 21 bands for a 20 ms frame at 48 kHz.
+  Bark scale from Chapter 46), typically 21 bands for a 20 ms frame at 48 kHz.
 
   For each band $b$ containing $n_b$ coefficients $X_b[0], dots, X_b[n_b - 1]$:
 
   1. Compute the *band energy*: $E_b = sqrt(sum_k X_b[k]^2)$.
-  2. Normalise: $bold(v)_b = bold(X)_b / E_b$ — the normalised band is a unit vector in
+  2. Normalise: $bold(v)_b = bold(X)_b / E_b$. The normalised band is a unit vector in
      $n_b$-dimensional space (a point on the unit sphere).
   3. Encode $E_b$ separately (using coarse energy quantisation, ~6 dB/step, predicted
      from the previous frame). #footnote[#mathrecall[A *decibel* (dB), defined in Chapters 39 and
@@ -222,7 +222,7 @@ in parametric audio coding.
 
 The PVQ has two remarkable properties. First, all vectors with the same $K$ and $n_b$ form a
 closed enumerable set, so CELT can convert directly between vector and integer index using a fast
-combinatorial algorithm — no lookup table needed. Second, the decoder can invert the index to the
+combinatorial algorithm, with no lookup table needed. Second, the decoder can invert the index to the
 vector without ambiguity. This is the compression primitive at the core of all CELT frames.
 
 CELT also handles *temporal fine structure* within each band using a technique called
@@ -251,7 +251,7 @@ royalty-free status was audited by the IETF's IPR process and confirmed by contr
 Broadcom, Google, and Microsoft, all of which declared no known patent claims.
 
 #history[
-  The name "Opus" was chosen partly because it means "a work" in Latin — suggesting both a
+  The name "Opus" was chosen partly because it means "a work" in Latin, suggesting both a
   musical composition and something produced by labour. It also had no pre-existing trademark in
   audio codecs, unlike "Harmony", which clashed with a Facebook product. Jean-Marc Valin has
   written that the name felt right because the codec was, in a sense, the final work: the codec
@@ -282,13 +282,13 @@ cetz.canvas({
   let divs = (5.625, 6.75, w)  // at bit 3, bit 2, end
   line((5.625, 0), (5.625, y), stroke: (dash: "dashed"))
   line((6.75, 0), (6.75, y), stroke: (dash: "dashed"))
-  content((2.8125, 0.6), [config (5 bits)])
-  content((6.1875, 0.6), [s])
-  content((7.875, 0.6), [c (2 bits)])
+  content((2.8125, 0.6), box(width: 5.2cm, inset: 2pt, align(center, text(size: 8pt)[config (5 bits)])))
+  content((6.1875, 0.6), box(width: 1.0cm, inset: 1pt, align(center, text(size: 8pt)[s])))
+  content((7.875, 0.6), box(width: 2.0cm, inset: 2pt, align(center, text(size: 8pt)[c (2 bits)])))
   // Labels below
-  content((2.8125, -0.3), text(size: 8pt)[mode + bandwidth + frame size])
-  content((6.1875, -0.3), text(size: 8pt)[stereo])
-  content((7.875, -0.3), text(size: 8pt)[frame count])
+  content((2.8125, -0.3), box(width: 5.2cm, inset: 2pt, align(center, text(size: 7pt)[mode + bw + frame size])))
+  content((6.1875, -0.3), box(width: 1.0cm, inset: 1pt, align(center, text(size: 7pt)[stereo])))
+  content((7.875, -0.3), box(width: 2.0cm, inset: 2pt, align(center, text(size: 7pt)[frame count])))
   // Bit numbers
   content((0.5625, y + 0.3), text(size: 7pt)[7])
   content((5.0625, y + 0.3), text(size: 7pt)[3])
@@ -312,7 +312,7 @@ clean and the latency minimal.
 
 When the config byte selects SILK mode, the packet carries only the output of Opus's SILK layer,
 operating at 6–20 kbit/s (narrowband to wideband speech). This is the codec's "telephone call
-in a basement" mode — it sacrifices music quality entirely in exchange for intelligible voice at
+in a basement" mode: it sacrifices music quality entirely in exchange for intelligible voice at
 the smallest possible bitrate.
 
 The SILK layer inside Opus is a modified version of the standalone SILK codec, with the key
@@ -324,7 +324,7 @@ A single 20 ms SILK frame at 16 kHz (wideband) contains:
   per coefficient after vector quantisation, so ~80 bits for 16 coefficients).
 - *Pitch lag and pitch filter coefficients* for each 5 ms subframe (long-term predictor).
 - *Gains per subframe:* how loud each 5 ms chunk of excitation is.
-- *Excitation signal:* the quantised, coded residual after both predictors — this is the bulk
+- *Excitation signal:* the quantised, coded residual after both predictors. This is the bulk
   of the bits at higher bitrates.
 
 The range coder wraps everything. There is no separate entropy-coding pass; each parameter is
@@ -374,7 +374,7 @@ In hybrid mode, Opus processes the same frame twice:
    This produces a good perceptual model of the voice (formants, pitch, voicing) at very few bits.
 2. The *residual* from the SILK model (what the LPC prediction did not capture) plus the
    high-frequency content above 8 kHz are encoded with CELT. CELT gets the upper part of the
-   spectrum — the "air" and "brightness" of the voice — as well as any musical content.
+   spectrum (the "air" and "brightness" of the voice) as well as any musical content.
 
 The bit budget is split between the two layers by the encoder, with SILK getting priority at low
 bitrates and CELT getting an increasing share as the bitrate rises. The decoder runs both
@@ -408,13 +408,13 @@ cetz.canvas({
   // Coloured bars for modes
   // SILK-only: 0-2.1
   rect((0, 0.3), (2.1, 0.3 + h * 0.5), fill: rgb("#c8e6c9"), stroke: 1pt)
-  content((1.05, 0.3 + h * 0.25), text(size: 8pt, fill: rgb("#1b5e20"))[SILK-only])
+  content((1.05, 0.3 + h * 0.25), box(width: 1.7cm, inset: 2pt, align(center, text(size: 8pt, fill: rgb("#1b5e20"))[SILK-only])))
   // Hybrid: 2.1-5.0
   rect((2.1, 0.3), (5.0, 0.3 + h * 0.5), fill: rgb("#fff9c4"), stroke: 1pt)
-  content((3.55, 0.3 + h * 0.25), text(size: 8pt, fill: rgb("#f57f17"))[Hybrid])
+  content((3.55, 0.3 + h * 0.25), box(width: 2.5cm, inset: 2pt, align(center, text(size: 8pt, fill: rgb("#f57f17"))[Hybrid])))
   // CELT-only: 3.0-9.5
   rect((3.0, 0.3 + h * 0.5 + 0.1), (9.5, 0.3 + h), fill: rgb("#bbdefb"), stroke: 1pt)
-  content((6.25, 0.3 + h * 0.75 + 0.05), text(size: 8pt, fill: rgb("#0d47a1"))[CELT-only])
+  content((6.25, 0.3 + h * 0.75 + 0.05), box(width: 6.1cm, inset: 2pt, align(center, text(size: 8pt, fill: rgb("#0d47a1"))[CELT-only])))
   // Dashed boundary
   line((3.0, 0.1), (3.0, 0.3 + h + 0.1), stroke: (dash: "dashed"))
   line((5.0, 0.1), (5.0, 0.3 + h + 0.1), stroke: (dash: "dashed"))
@@ -424,11 +424,11 @@ cetz.canvas({
 
 The genius of the hybrid is that SILK and CELT fail in complementary ways.
 
-SILK's failure mode at high bitrates is *musical noise* — a harsh, metallic ringing that appears
+SILK's failure mode at high bitrates is *musical noise*: a harsh, metallic ringing that appears
 when you try to quantise the LPC residual finely enough for music. SILK can model speech formants
 beautifully but cannot represent the rich frequency texture of instruments.
 
-CELT's failure mode at very low bitrates is *smeared, hollow speech* — CELT's MDCT cannot
+CELT's failure mode at very low bitrates is *smeared, hollow speech*. CELT's MDCT cannot
 capture the fine temporal structure of voiced speech as efficiently as a pitch predictor. At
 8 kbit/s, CELT speech sounds like someone talking through a flute.
 
@@ -445,7 +445,7 @@ Neither alone would sound good. Together, they cover the gap.
   frequency resolution in exchange for faster processing. AAC-LC's 1024-coefficient MDCT gives
   21 Hz per bin, which enables a fine masking model but requires a long frame. CELT uses as few
   as 60 coefficients (for a 2.5 ms frame) but compensates with the band-energy + PVQ structure.
-  Short latency comes at a cost in frequency resolution — CELT pays that cost and uses a
+  Short latency comes at a cost in frequency resolution. CELT pays that cost and uses a
   different quantisation structure to hide it.
 ]
 
@@ -482,8 +482,9 @@ beats every other standardised general-purpose codec by a factor of three.
 Opus maps bitrate to audio bandwidth using a ladder of five quality levels, each adding more
 high-frequency content:
 
+#text(size: 8pt)[
 #table(
-  columns: (auto, auto, auto, auto),
+  columns: (1fr, auto, auto, auto),
   inset: 6pt,
   [*Bandwidth name*], [*Frequency range*], [*Sample rate*], [*Typical bitrate*],
   [Narrowband (NB)], [0–4 kHz], [8 kHz], [6–12 kbit/s],
@@ -492,8 +493,9 @@ high-frequency content:
   [Super-wideband (SWB)], [0–12 kHz], [24 kHz], [16–32 kbit/s],
   [Fullband (FB)], [0–20 kHz], [48 kHz], [24–510 kbit/s],
 )
+]
 
-Human voices are intelligible even at narrowband — that is why telephone calls have worked at
+Human voices are intelligible even at narrowband, which is why telephone calls have worked at
 64 kbit/s for 50 years. But the "presence" and naturalness of a voice come from the 4–8 kHz
 range (wideband). Above 8 kHz, voices have an "airy" quality that matters for naturalness but
 not intelligibility. Music requires fullband: cymbal crashes, string brightness, and sub-bass
@@ -515,14 +517,14 @@ RFC 6716 defines a remarkably simple container. An Opus packet is:
    encoded audio.
 
 The *range coder* from the arithmetic coding world (Chapter 26) is the single entropy coding
-engine for all three modes. All parameters — NLSF vectors, energy values, PVQ indices,
-excitation codebook entries — are range-coded by the same state machine. This simplifies the
+engine for all three modes. All parameters (NLSF vectors, energy values, PVQ indices,
+excitation codebook entries) are range-coded by the same state machine. This simplifies the
 decoder considerably: there is only one entropy coder to maintain, and it naturally produces a
 self-synchronising bitstream that can detect corruption.
 
 #pitfall[
   Do not confuse the Opus container (RFC 6716 packets) with the Ogg container format (RFC
-  7845). Opus packets are raw bytes, like H.264 NAL units — they contain no metadata, no
+  7845). Opus packets are raw bytes, like H.264 NAL units: they contain no metadata, no
   timestamp, no track information. For file storage, Opus packets are wrapped in Ogg pages,
   which add timestamps, logical bitstream IDs, and page sequencing. For WebRTC, Opus packets
   are wrapped in RTP (Real-time Transport Protocol) instead. The same Opus *codec* is used in
@@ -539,8 +541,8 @@ self-synchronising bitstream that can detect corruption.
   weaknesses: "The SILK layer at the lowest bitrates sounds worse than dedicated CELP codecs (G.729) in the worst network conditions; no native multi-channel surround (Opus stores multi-channel as separate streams in a container); CELT at very short frames has modest frequency resolution",
   superseded: "Nothing has superseded Opus for real-time interactive audio as of 2026. Neural codecs (EnCodec, SoundStream) achieve better quality at very low bitrates but have much higher CPU requirements and longer latency."
 )[
-  Opus unifies two architecturally different codecs — SILK (LPC-based speech) and CELT
-  (MDCT-based music) — under a single TOC-byte-controlled frame format and a shared range
+  Opus unifies two architecturally different codecs, SILK (LPC-based speech) and CELT
+  (MDCT-based music), under a single TOC-byte-controlled frame format and a shared range
   coder. The encoder selects mode, bandwidth, and frame size per packet; the decoder follows the
   TOC byte to the right path. The bitstream is self-synchronising and supports padding for
   network compatibility.
@@ -581,7 +583,7 @@ self-synchronising bitstream that can detect corruption.
 == Python: Encoding and Decoding with Opus
 
 There is no assigned TINYZIP step for this chapter, but we can demonstrate Opus
-encoding and decoding using the `opuslib` Python bindings — a thin wrapper around libopus,
+encoding and decoding using the `opuslib` Python bindings, a thin wrapper around libopus,
 the reference implementation.
 
 #gopython("Installing and using opuslib")[
@@ -597,12 +599,12 @@ the reference implementation.
   - Windows: install from the libopus website or use conda.
 
   `opuslib` exposes two main classes:
-  - `opuslib.Encoder(fs, channels, application)` — creates an encoder.
+  - `opuslib.Encoder(fs, channels, application)`: creates an encoder.
     `fs` is sample rate (8000, 12000, 16000, 24000, or 48000).
     `channels` is 1 or 2.
     `application` is `opuslib.APPLICATION_VOIP`, `APPLICATION_AUDIO`, or
     `APPLICATION_RESTRICTED_LOWDELAY`.
-  - `opuslib.Decoder(fs, channels)` — creates a decoder.
+  - `opuslib.Decoder(fs, channels)`: creates a decoder.
 
   Both use raw PCM: 16-bit signed integers packed as little-endian bytes.
 
@@ -628,14 +630,14 @@ the reference implementation.
   # prints: Opus at 32 kbit/s
   ```
 
-  The `{bits // 1000}` inside the braces is a Python expression — `//` means integer division
+  The `{bits // 1000}` inside the braces is a Python expression; `//` means integer division
   (discard the remainder). Anything inside `{...}` is evaluated and inserted as text. This is
   how we will display encoding statistics.
 ]
 
 ```python
 """
-opus_demo.py — encode and decode a sine-wave tone with opuslib,
+opus_demo.py: encode and decode a sine-wave tone with opuslib,
                then measure compression ratio at two bitrates.
 """
 import struct
@@ -712,9 +714,9 @@ Original PCM: 96,000 bytes (1s, 48 kHz, 16-bit mono)
   128 kbit/s → compression ratio  6.0:1  (~16.0 kB encoded)
 ```
 
-The ratios here are exact (CBR mode, 20 ms frames, 1 second of audio) — each packet is exactly
+The ratios here are exact (CBR mode, 20 ms frames, 1 second of audio): each packet is exactly
 `bitrate / 8 / (1000 / frame_ms)` bytes. The remarkable thing is that at 8 kbit/s (96:1 ratio),
-the decoded speech remains *intelligible* — not high-fidelity, but comprehensible. At 32 kbit/s,
+the decoded speech remains *intelligible* (not high-fidelity, but comprehensible). At 32 kbit/s,
 trained listeners cannot distinguish it from the original in a double-blind test (wideband voice
 quality). At 128 kbit/s, the coded audio is virtually transparent for music.
 
@@ -722,7 +724,7 @@ quality). At 128 kbit/s, the coded audio is virtually transparent for music.
   "Higher compression ratio always means worse quality."
 ][
   With Opus, a 96:1 ratio at 8 kbit/s produces *intelligible speech* because the codec exploits
-  everything the ear cannot hear — the silent gaps between phonemes, the predictable periodicity
+  everything the ear cannot hear: the silent gaps between phonemes, the predictable periodicity
   of voiced speech, the masking of quiet sounds by loud ones. The ratio says nothing about
   perceptual quality; perceptual quality depends on how well the bits are allocated relative to
   what the ear actually needs.
@@ -735,8 +737,8 @@ years of RFC 6716, it was:
 
 - *Mandatory in WebRTC:* The W3C and IETF jointly declared in 2014 that all WebRTC
   implementations must support Opus for audio. Every major web browser (Chrome, Firefox, Safari,
-  Edge) ships Opus support, which means every website using WebRTC — from simple click-to-call
-  buttons to full video conferencing systems — uses Opus.
+  Edge) ships Opus support, which means every website using WebRTC, from simple click-to-call
+  buttons to full video conferencing systems, uses Opus.
 
 - *Default in Discord (since 2015):* Discord uses Opus at 64 kbit/s for voice channels and
   128 kbit/s for the "high quality audio" stream. The company has spoken publicly about how Opus
@@ -754,7 +756,7 @@ years of RFC 6716, it was:
   format families. Opus is the mandatory audio codec in the WebM container.
 
 The scale of Opus deployment is staggering. A conservative estimate is that, by 2025, more than
-four billion voice calls per day traverse Opus codecs — between WebRTC, WhatsApp, Discord, Zoom,
+four billion voice calls per day traverse Opus codecs, across WebRTC, WhatsApp, Discord, Zoom,
 and the hundreds of smaller platforms built on these stacks.
 
 #aside[
@@ -768,7 +770,7 @@ and the hundreds of smaller platforms built on these stacks.
 
 == ML Meets the Codec: Opus 1.5 (March 2024)
 
-For the first decade of Opus's life, the codec was a purely classical signal-processing system —
+For the first decade of Opus's life, the codec was a purely classical signal-processing system:
 no machine learning, no neural networks. This changed dramatically with libopus 1.5, released on
 March 4, 2024. Version 1.5 is the first release to integrate deep learning tools, and it does so
 in a way that preserves full backwards compatibility with the RFC 6716 bitstream.
@@ -782,32 +784,32 @@ single bit of the compressed packets.
 
 *LACE* (Linear Adaptive Coding Enhancer) and *NoLACE* (Non-Linear Adaptive Coding Enhancer) are
 small neural network post-filters that run after the CELT or SILK decoder reconstructs the raw
-PCM. Their job is to remove artifacts — ringing, muddiness, quantisation noise — that the
+PCM. Their job is to remove artifacts (ringing, muddiness, quantisation noise) that the
 classical decoder leaves behind.
 
 The networks are trained on pairs of (degraded decoded speech, original speech) to learn a
 mapping from "what the decoder produced" to "what the speaker actually said." Because they run
-purely in the decoder, they need no extra bits in the bitstream — the encoder does not change
+purely in the decoder, they need no extra bits in the bitstream. The encoder does not change
 at all. The decoded audio simply goes through the post-filter before reaching the speaker.
 
 LACE is a *linear* post-filter with dynamically chosen coefficients. At decoder complexity
-setting 6 (out of 10), it runs at roughly 100 MFLOPS — cheap enough for any modern phone.
+setting 6 (out of 10), it runs at roughly 100 MFLOPS, cheap enough for any modern phone.
 NoLACE is a *non-linear* variant (a small feedforward network) that runs at setting 7 with
 about 400 MFLOPS. Neither is a large model: both fit in a few kilobytes of weights. (A *FLOP* is
-one floating-point arithmetic operation — an add or a multiply on decimal numbers; *MFLOPS* is
+one floating-point arithmetic operation (an add or a multiply on decimal numbers); *MFLOPS* is
 millions of FLOPs per second. 400 MFLOPS is a few hundredths of what a single phone CPU core can
 do, which is why these networks are essentially free to run.)
 
 The quality improvement is most audible at low bitrates (8–16 kbit/s) where the classical
 decoder produces the most artifacts. A listening test conducted by the Opus team showed
 approximately 0.15–0.3 MUSHRA (MUltiple Stimuli with Hidden Reference and Anchor) points of
-improvement with LACE and 0.3–0.6 points with NoLACE — meaningful gains.
+improvement with LACE and 0.3–0.6 points with NoLACE, which are meaningful gains.
 
 === Deep PLC: Neural Packet Loss Concealment
 
 When a network packet is lost, the decoder must "conceal" the gap. The classical Opus PLC
 (Packet Loss Concealment) extrapolates the last decoded frame forward in time using the pitch
-and LPC model — it works well for loss rates up to about 5% and loss bursts up to about 40 ms.
+and LPC model. It works well for loss rates up to about 5% and loss bursts up to about 40 ms.
 
 Opus 1.5's *Deep PLC* replaces this extrapolation with a recurrent neural network trained to
 generate plausible continuations of the speech signal. It learns from thousands of hours of
@@ -816,12 +818,12 @@ others. The result is much more natural-sounding concealment, especially for con
 transitions where the classical linear model fails.
 
 #note[
-  A *recurrent neural network* (RNN) is a predictor that carries a small "memory" — a vector of
+  A *recurrent neural network* (RNN) is a predictor that carries a small "memory": a vector of
   numbers it updates as it reads each new sample, so its guess for the next sample depends on the
   whole recent history, not just the last one. We build neural networks properly in Chapter 56;
   for now, picture the classical pitch-plus-LPC predictor replaced by a learned function that has
   heard far more speech than any hand-tuned formula and so extrapolates a lost frame more
-  convincingly. The bitstream is unchanged — only the decoder's guessing machine got smarter.
+  convincingly. The bitstream is unchanged; only the decoder's guessing machine got smarter.
 ]
 
 === DRED: Deep REDundancy
@@ -831,7 +833,7 @@ happen, but how to recover from *long* loss bursts (100 ms or more) that defeat 
 PLC.
 
 DRED works by embedding *extra, lossy compressed audio* inside the Opus packet's padding field.
-This padding does not affect decoders that do not understand DRED — they simply ignore it. But
+This padding does not affect decoders that do not understand DRED; they simply ignore it. But
 a DRED-aware decoder can recover from loss bursts that are many seconds long by decoding the
 embedded audio.
 
@@ -853,8 +855,8 @@ reconstruct intelligible (if low-fidelity) audio from the surviving packets.
               underbrace(D_"KL"(q(bold(z)|bold(x)) || p(bold(z))), "regularisation") $
 
   The first term keeps the reconstruction close to the original. The second term (the KL
-  divergence from Chapter 20) keeps the distribution of latent codes close to a standard Gaussian
-  — which means the latent space is smooth and can be efficiently entropy-coded.
+  divergence from Chapter 20) keeps the distribution of latent codes close to a standard Gaussian,
+  which means the latent space is smooth and can be efficiently entropy-coded.
 
   #mathrecall[KL divergence $D_"KL"(q || p) = sum_z q(z) log_2 (q(z))/(p(z))$, defined in
   Chapter 20, measures the extra bits wasted when you code data drawn from $q$ using a code built
@@ -874,7 +876,7 @@ mlcodec-opus-dred). As of late 2025, it is already deployed in several WebRTC im
 Libopus 1.6, released December 15, 2025, adds two experimental features:
 
 *Bandwidth Extension (BWE):* A small neural network that generates the 8–20 kHz portion of
-speech from only the 0–8 kHz wideband signal — with no extra bits sent. The decoder runs the
+speech from only the 0–8 kHz wideband signal, with no extra bits sent. The decoder runs the
 BWE model on the decoded wideband signal and adds the predicted high-frequency content, making
 the speech sound "fullband" even when the encoder was configured for wideband. This is useful
 when the encoder is constrained to wideband (say, to save bandwidth in a congested network) but
@@ -892,8 +894,8 @@ full 96 kHz signal.
   Jean-Marc Valin is the central figure across virtually every evolution of Opus. He led the
   CELT project at Xiph.Org (2007), co-authored RFC 6716 (2012), and continues to drive the ML
   extensions. His blog at jmvalin.dreamwidth.org is an unusually candid record of the engineering
-  decisions and the dead ends. He has also published LPCNet (arXiv:1810.11846, 2019) — a
-  neural vocoder that replaces the classical SILK decoder with a recurrent neural network — which
+  decisions and the dead ends. He has also published LPCNet (arXiv:1810.11846, 2019), a
+  neural vocoder that replaces the classical SILK decoder with a recurrent neural network, which
   influenced the deep PLC work in Opus 1.5. Valin joined Amazon (AWS AI Research) after
   Mozilla, and the Opus work continues under his leadership there.
 ]
@@ -905,21 +907,23 @@ Hidden Reference and Anchor) as defined in ITU-R BS.1534. Listeners rate excerpt
 scale against a hidden reference. A score of 80+ is "excellent" (transparent or near-transparent
 to most listeners); 60–80 is "good"; below 60 is "fair" or "poor".
 
+#text(size: 8pt)[
 #table(
-  columns: (auto, auto, auto, auto, auto),
+  columns: (auto, auto, 1fr, auto, 1fr),
   inset: 6pt,
-  [*Codec*], [*Bitrate*], [*Content*], [*MUSHRA score (approx.)*], [*Notes*],
+  [*Codec*], [*Bitrate*], [*Content*], [*MUSHRA*], [*Notes*],
   [Opus 1.3], [64 kbit/s], [Speech (wideband)], [≈91], [Transparent for most listeners],
   [Opus 1.3], [32 kbit/s], [Speech (wideband)], [≈83], [High quality],
-  [Opus 1.3], [128 kbit/s], [Music (stereo)], [≈88], [Matches AAC-LC at 160],
-  [Opus 1.5 + NoLACE], [16 kbit/s], [Speech (wideband)], [≈74], [6 pts above Opus 1.3 at same rate],
+  [Opus 1.3], [128 kbit/s], [Music (stereo)], [≈88], [Matches AAC-LC at 160 kbit/s],
+  [Opus 1.5 + NoLACE], [16 kbit/s], [Speech (wideband)], [≈74], [+6 pts vs Opus 1.3 at same rate],
   [AAC-LC], [128 kbit/s], [Music (stereo)], [≈87], [Reference comparison],
-  [MP3], [128 kbit/s], [Music (stereo)], [≈82], [Versus 128k AAC/Opus],
+  [MP3], [128 kbit/s], [Music (stereo)], [≈82], [vs 128k AAC/Opus],
   [G.711], [64 kbit/s], [Speech (narrowband)], [≈69], [The telephone standard],
 )
+]
 
 The headline message: Opus at 64 kbit/s wideband speech matches or beats G.711 narrowband at the
-same bitrate — in other words, it delivers twice the audio bandwidth for the same network cost.
+same bitrate. In other words, it delivers twice the audio bandwidth for the same network cost.
 At 128 kbit/s stereo music, it competes directly with AAC-LC. These are the numbers that explain
 why it was chosen for WebRTC.
 
@@ -949,13 +953,13 @@ why it was chosen for WebRTC.
 
 #exercise("49.2", 1)[
   Explain in plain words why the Opus hybrid mode (Mode 2) uses SILK for the *low-frequency*
-  portion of the audio and CELT for the *high-frequency* portion — rather than the other way
+  portion of the audio and CELT for the *high-frequency* portion, rather than the other way
   around.
 ]
 
 #solution("49.2")[
   SILK is based on the linear prediction model of the vocal tract, which is most accurate for
-  the low-frequency resonances (formants) of human speech — typically 80 Hz to 4 kHz. These
+  the low-frequency resonances (formants) of human speech, typically 80 Hz to 4 kHz. These
   formants carry the intelligibility of speech. CELT's MDCT-based approach is better suited to
   coding spectral texture at higher frequencies, where the ear is less sensitive to phase and
   pitch and more sensitive to energy distribution across bands. So SILK handles the part of the
@@ -988,7 +992,7 @@ why it was chosen for WebRTC.
 #solution("49.4")[
   Total bits: 640. Energy bits: $21 times 6 = 126$. Shape bits remaining: $640 - 126 = 514$.
   If shared equally across 21 bands: $514 / 21 approx 24.5$ bits per band. In practice the
-  allocation is not equal — the psychoacoustic model gives more bits to perceptually important
+  allocation is not equal: the psychoacoustic model gives more bits to perceptually important
   bands and fewer (sometimes zero) to masked bands. But 24 bits is a rough average budget for
   the PVQ shape of each MDCT band.
 ]
@@ -1001,7 +1005,7 @@ why it was chosen for WebRTC.
 
 #solution("49.5")[
   RFC 6716 specifies that the Opus packet's padding bytes (signalled by the multi-frame header)
-  must be ignored by the decoder — they carry no audio information and must be discarded. An
+  must be ignored by the decoder; they carry no audio information and must be discarded. An
   older decoder, encountering an Opus packet with DRED data embedded in the padding field, will
   read the TOC byte, process the regular Opus frames, and then discard the padding. It will not
   attempt to interpret or decode the neural codes. The DRED data is invisible to it. Only a
@@ -1070,25 +1074,25 @@ why it was chosen for WebRTC.
 
   Expected trend: SNR increases monotonically with bitrate. At 8 kbit/s you might see 15–20 dB
   (low fidelity); at 128 kbit/s, 35–45 dB (near-transparent). Note that SNR is a poor
-  perceptual metric for audio — Opus optimises for perceptual quality, not SNR — so the SNR
+  perceptual metric for audio. Opus optimises for perceptual quality, not SNR, so the SNR
   numbers do not tell the full story of perceived quality.
 ]
 
 == Further Reading
 
-#link("https://www.rfc-editor.org/rfc/rfc6716")[Valin, Vos & Terriberry (2012). *Definition of the Opus Audio Codec*, RFC 6716. IETF.] — The full normative specification. Read the introduction and architecture sections; the rest is a codec implementor's reference.
+#link("https://www.rfc-editor.org/rfc/rfc6716")[Valin, Vos & Terriberry (2012). *Definition of the Opus Audio Codec*, RFC 6716. IETF.] The full normative specification. Read the introduction and architecture sections; the rest is a codec implementor's reference.
 
-#link("https://arxiv.org/abs/1602.04845")[Valin, Maxwell, Terriberry & Vos (2016). *High-Quality, Low-Delay Music Coding in the Opus Codec*. arXiv:1602.04845.] — The AES paper describing CELT's algorithm and MDCT choices in depth.
+#link("https://arxiv.org/abs/1602.04845")[Valin, Maxwell, Terriberry & Vos (2016). *High-Quality, Low-Delay Music Coding in the Opus Codec*. arXiv:1602.04845.] The AES paper describing CELT's algorithm and MDCT choices in depth.
 
-#link("https://arxiv.org/abs/2212.04453")[Valin et al. (2022). *DRED: Deep REDundancy Coding of Speech Using a Rate-Distortion-Optimized Variational Autoencoder*. arXiv:2212.04453.] — The technical paper behind Opus 1.5's most interesting ML feature.
+#link("https://arxiv.org/abs/2212.04453")[Valin et al. (2022). *DRED: Deep REDundancy Coding of Speech Using a Rate-Distortion-Optimized Variational Autoencoder*. arXiv:2212.04453.] The technical paper behind Opus 1.5's most notable ML feature.
 
-#link("https://opus-codec.org/release/stable/2024/03/04/libopus-1_5.html")[Opus.org (2024). *libopus 1.5 Release Notes*.] — Official announcement of all ML features in the 1.5 release, including benchmark numbers.
+#link("https://opus-codec.org/release/stable/2024/03/04/libopus-1_5.html")[Opus.org (2024). *libopus 1.5 Release Notes*.] Official announcement of all ML features in the 1.5 release, including benchmark numbers.
 
-#link("https://opus-codec.org/release/stable/2025/12/15/libopus-1_6.html")[Opus.org (2025). *libopus 1.6 Release Notes*.] — The Opus HD and bandwidth extension announcement.
+#link("https://opus-codec.org/release/stable/2025/12/15/libopus-1_6.html")[Opus.org (2025). *libopus 1.6 Release Notes*.] The Opus HD and bandwidth extension announcement.
 
-#link("https://jmvalin.dreamwidth.org/16616.html")[Valin, J.-M. *How Opus Came To Be*.] — Jean-Marc Valin's personal account of the IETF standardisation process; essential context for the politics and engineering choices.
+#link("https://jmvalin.dreamwidth.org/16616.html")[Valin, J.-M. *How Opus Came To Be*.] Jean-Marc Valin's personal account of the IETF standardisation process; essential context for the politics and engineering choices.
 
-#link("https://arxiv.org/abs/1810.11846")[Valin, J.-M. & Skoglund, J. (2018). *LPCNet: Improving Neural Speech Synthesis Through Linear Prediction*. arXiv:1810.11846.] — The neural vocoder work that preceded Opus 1.5's deep PLC.
+#link("https://arxiv.org/abs/1810.11846")[Valin, J.-M. & Skoglund, J. (2018). *LPCNet: Improving Neural Speech Synthesis Through Linear Prediction*. arXiv:1810.11846.] The neural vocoder work that preceded Opus 1.5's deep PLC.
 
 #takeaways((
   "Opus is a hybrid codec combining SILK (LPC-based speech) and CELT (MDCT-based music) in a single royalty-free bitstream, standardised as RFC 6716 in September 2012.",
@@ -1097,7 +1101,7 @@ why it was chosen for WebRTC.
   "CELT uses a short MDCT (as little as 2.5 ms), codes each critical band's energy separately, and uses Pyramid Vector Quantisation for spectral shape; this gives it algorithmic delay as low as 5 ms.",
   "Opus's bitrate range (6–510 kbit/s) and latency range (5–60 ms) let a single codec serve VoIP, gaming voice, music streaming, and low-latency stage monitoring.",
   "WebRTC mandates Opus; Discord, Zoom, WhatsApp, Signal, YouTube, and Twitch all use Opus as their primary or exclusive audio codec.",
-  "Opus 1.5 (March 2024) added ML post-filters (LACE, NoLACE), deep packet loss concealment, and DRED — all backwards compatible because they modify only decoder internals or use the RFC-defined padding field.",
+  "Opus 1.5 (March 2024) added ML post-filters (LACE, NoLACE), deep packet loss concealment, and DRED, all backwards compatible because they modify only decoder internals or use the RFC-defined padding field.",
   "Opus 1.6 (December 2025) added a neural bandwidth extension for wideband-to-fullband upscaling and experimental Opus HD support for 96 kHz audio at up to 2 Mbit/s.",
 ))
 
@@ -1106,6 +1110,6 @@ why it was chosen for WebRTC.
   domain it deliberately left aside: *lossless* audio and pure speech modelling using classical
   signal processing. Chapter 50 fills that gap. We will see how FLAC uses LPC prediction and
   Rice coding to achieve bit-perfect reconstruction of any audio source at roughly half the
-  storage of raw PCM — and we will dig into the CELP speech codec family (AMR, EVS) that forms
+  storage of raw PCM. We will also dig into the CELP speech codec family (AMR, EVS) that forms
   the backbone of the cellular telephone network, a world where Opus does not yet reach.
 ]

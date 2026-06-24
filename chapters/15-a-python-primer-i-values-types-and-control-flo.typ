@@ -1,25 +1,25 @@
 #import "../lib.typ": *
 #import "@preview/cetz:0.4.2"
 
-= A Python Primer I — Values, Types, and Control Flow
+= A Python Primer I: Values, Types, and Control Flow
 
 #epigraph[Programs must be written for people to read, and only incidentally for machines to execute.][Harold Abelson, _Structure and Interpretation of Computer Programs_]
 
-Here is a confession that should put you at ease. The entire `tinyzip` project we will build across this book — a real, working compressor that squeezes files and grows them back to the byte — leans on only a small handful of Python ideas. A few kinds of value: whole numbers, fractions, text, true-or-false. A few ways to name things. A way to ask a question and act on the answer. A way to repeat. That is very nearly the whole toolbox, and you can fit it in your head.
+Here is a confession that should put you at ease. The entire `tinyzip` project we will build across this book (a real, working compressor that squeezes files and grows them back to the byte) leans on only a small handful of Python ideas. A few kinds of value: whole numbers, fractions, text, true-or-false. A few ways to name things. A way to ask a question and act on the answer. A way to repeat. That is very nearly the whole toolbox, and you can fit it in your head.
 
-So why does code look so forbidding from the outside? Because every program is written in a tiny, exact dialect, and a single misplaced character can stop it cold. The cure is not cleverness — it is *familiarity*. The way you became fluent at reading English was not by memorising a dictionary but by seeing the same small words a thousand times until they stopped being symbols and started being meaning. This chapter does that for the small words of Python. By the end, a line like `if count > 0: print(count)` will read as plainly to you as "if the count is above zero, show it."
+So why does code look so forbidding from the outside? Because every program is written in a tiny, exact dialect, and a single misplaced character can stop it cold. The cure is not cleverness. It is *familiarity*. The way you became fluent at reading English was not by memorising a dictionary but by seeing the same small words a thousand times until they stopped being symbols and started being meaning. This chapter does that for the small words of Python. By the end, a line like `if count > 0: print(count)` will read as plainly to you as "if the count is above zero, show it."
 
-We pick Python for three honest reasons. It reads almost like careful English, so it gets out of the way of the *ideas*, which are the real subject of this book. It is the language the whole compression-and-machine-learning world actually writes in, so when we later reach neural codecs in Volume IV you will already speak the local tongue. And it comes with a real compressor or two built right in — by the end of this book you will understand the machinery underneath them, and Python's own standard library will be a place you go to check your work.
+We pick Python for three honest reasons. It reads almost like careful English, so it gets out of the way of the *ideas*, which are the real subject of this book. It is the language the whole compression-and-machine-learning world actually writes in, so when we later reach neural codecs in Volume IV you will already speak the local tongue. And it comes with a real compressor or two built right in. By the end of this book you will understand the machinery underneath them, and Python's own standard library will be a place you go to check your work.
 
-We will use *Python 3.14*, released on 7 October 2025. You do not need to memorise version numbers, but it is worth knowing this one is modern: it even ships a brand-new `compression.zstd` module for the Zstandard algorithm we will meet in Chapter 32. We will write in the clean, current style — the type hints, the f-strings, the `match` statements — so that what you learn here is what you will see in real code for years to come.
+We will use *Python 3.14*, released on 7 October 2025. You do not need to memorise version numbers, but it is worth knowing this one is modern: it even ships a brand-new `compression.zstd` module for the Zstandard algorithm we will meet in Chapter 32. We will write in the clean, current style (the type hints, the f-strings, the `match` statements) so that what you learn here is what you will see in real code for years to come.
 
 #recap[
-This is the first of three Python chapters, and it is where the book's *second spine* — Python taught from scratch, exactly the way we have taught the maths — properly begins. In *Chapter 4* we built binary numbers and saw that a *bit* is a single 0-or-1 choice; Python's integers are made of those bits, and we will lean on that. In *Chapter 5* we built the logic of `and`, `or`, `not`, and `xor` with truth tables; Python spells those operators almost identically, and this chapter cashes that in. From *Chapter 7* we keep the idea that a logarithm is "how many bits," and from *Chapter 13* (How Computers Represent Things) we keep bytes, ASCII, and two's-complement integers — Python sits one comfortable layer above all of that. We need no compression theory here; we are sharpening the single tool, the Python language, that every later build chapter will swing.
+This is the first of three Python chapters, and it is where the book's *second spine* begins: Python taught from scratch, exactly the way we have taught the maths. In *Chapter 4* we built binary numbers and saw that a *bit* is a single 0-or-1 choice; Python's integers are made of those bits, and we will lean on that. In *Chapter 5* we built the logic of `and`, `or`, `not`, and `xor` with truth tables; Python spells those operators almost identically, and this chapter cashes that in. From *Chapter 7* we keep the idea that a logarithm is "how many bits," and from *Chapter 13* (How Computers Represent Things) we keep bytes, ASCII, and two's-complement integers. Python sits one comfortable layer above all of that. We need no compression theory here; we are sharpening the single tool, the Python language, that every later build chapter will swing.
 ]
 
 #objectives((
   [Run Python in the _REPL_ and in a _script_, and read its output,],
-  [Tell apart the four core _value types_ — `int`, `float`, `str`, `bool` — and convert between them on purpose,],
+  [Tell apart the four core _value types_ (`int`, `float`, `str`, `bool`) and convert between them on purpose,],
   [Bind values to _names_ with `=`, and explain why a name is a label, not a box,],
   [Use the arithmetic, comparison, and logical _operators_, including integer division `//`, remainder `%`, and power `**`,],
   [Build readable text with _f-strings_ and call basic _functions_ like `print`, `len`, and `input`,],
@@ -32,7 +32,7 @@ This is the first of three Python chapters, and it is where the book's *second s
 
 Before a single idea about values, you need somewhere to *try things*. Python gives you two. They are not rivals; you will use both every day.
 
-The first is the *REPL*, a four-letter acronym worth unpacking because the four letters are exactly what it does. *R*ead: it reads one line you type. *E*val: it evaluates that line — works out what it means. *P*rint: it prints the answer back. *L*oop: it goes round again, waiting for your next line. It is a conversation. You type a scrap of Python, press Enter, and Python answers instantly. There is no better place to poke at a new idea and see what it does.
+The first is the *REPL*, a four-letter acronym worth unpacking because the four letters are exactly what it does. *R*ead: it reads one line you type. *E*val: it evaluates that line, working out what it means. *P*rint: it prints the answer back. *L*oop: it goes round again, waiting for your next line. It is a conversation. You type a scrap of Python, press Enter, and Python answers instantly. There is no better place to poke at a new idea and see what it does.
 
 You start it by running `python` (or `python3` on some systems) at your terminal. It greets you with three characters, `>>>`, called the *prompt*, meaning "your turn." Whatever follows `>>>` in this book is something *you* type; a line with no prompt is Python's *answer*.
 
@@ -45,16 +45,16 @@ You start it by running `python` (or `python3` on some systems) at your terminal
 'compression'
 ```
 
-Three conversations. You asked for two plus two and Python said four. You asked for seventeen times twenty-three and it did the multiplication. You glued two pieces of text together — more on that soon — and got one. The REPL is your laboratory bench; reach for it whenever you wonder "what would Python do here?"
+Three conversations. You asked for two plus two and Python said four. You asked for seventeen times twenty-three and it did the multiplication. You glued two pieces of text together (more on that soon) and got one. The REPL is your laboratory bench; reach for it whenever you wonder "what would Python do here?"
 
-The second way is the *script*: a plain text file, by convention ending in `.py`, holding many lines of Python to be run top to bottom, all at once. This is how real programs — and `tinyzip` — are stored and shared. You write the file once, save it, and run the whole thing as often as you like with `python myfile.py`. The REPL is for exploring; the script is for keeping.
+The second way is the *script*: a plain text file, by convention ending in `.py`, holding many lines of Python to be run top to bottom, all at once. This is how real programs, including `tinyzip`, are stored and shared. You write the file once, save it, and run the whole thing as often as you like with `python myfile.py`. The REPL is for exploring; the script is for keeping.
 
-There is one visible difference that surprises everyone at first. In the REPL, typing `2 + 2` shows `4` because the REPL prints every answer for you. In a script, the same line computes 4 and then silently throws it away — a script only shows what you *explicitly* ask it to show, with the `print` function we meet shortly. Keep that distinction in mind and a hundred small confusions vanish.
+There is one visible difference that surprises everyone at first. In the REPL, typing `2 + 2` shows `4` because the REPL prints every answer for you. In a script, the same line computes 4 and then silently throws it away. A script only shows what you *explicitly* ask it to show, with the `print` function we meet shortly. Keep that distinction in mind and a hundred small confusions vanish.
 
-How does Python find and run a script? You hand the file to the interpreter: typing `python tinyzip/count_bytes.py` at your terminal means "run the Python interpreter, and feed it this file." Python reads the file from the first line to the last, carrying out each instruction in order, and then exits. There is no "main" ceremony to learn, no compilation step to wait through, no separate "build" — write, save, run, see the result. That tight loop, from idea to output in seconds, is a large part of why Python is such a comfortable language to *learn* in, and why every build chapter of this book will simply ask you to run a small script and read what it prints. You will spend far more time thinking about compression than wrestling with the language, which is exactly the balance we want.
+How does Python find and run a script? You hand the file to the interpreter: typing `python tinyzip/count_bytes.py` at your terminal means "run the Python interpreter, and feed it this file." Python reads the file from the first line to the last, carrying out each instruction in order, and then exits. There is no "main" ceremony to learn, no compilation step to wait through, no separate "build": write, save, run, see the result. That tight loop, from idea to output in seconds, is a large part of why Python is such a comfortable language to *learn* in, and why every build chapter of this book will simply ask you to run a small script and read what it prints. You will spend far more time thinking about compression than wrestling with the language, which is exactly the balance we want.
 
 #gopython("Comments and the `#` sign")[
-Any text after a `#` on a line is a *comment*: Python ignores it utterly. Comments are notes to humans — your future self, mostly — explaining *why* a line exists. They never affect what the program does.
+Any text after a `#` on a line is a *comment*: Python ignores it utterly. Comments are notes to humans (your future self, mostly) explaining *why* a line exists. They never affect what the program does.
 
 ```python
 # This whole line is a note; Python skips it.
@@ -65,12 +65,12 @@ Use them to explain intent, not to restate the obvious. `x = x + 1  # add one to
 ]
 
 #tryit[
-Open a terminal and type `python`. At the `>>>` prompt, try `2 ** 10` (two to the tenth power). You should see `1024` — the number of bytes in a kibibyte, and a number that will haunt this book happily. Then type `quit()` and press Enter to leave. You have now run Python.
+Open a terminal and type `python`. At the `>>>` prompt, try `2 ** 10` (two to the tenth power). You should see `1024`, the number of bytes in a kibibyte, and a number that will haunt this book happily. Then type `quit()` and press Enter to leave. You have now run Python.
 ]
 
 == Values and their types
 
-Everything Python works with is a *value*: a single piece of data. The number `42` is a value. The text `"hello"` is a value. The truth-or-falsehood `True` is a value. And every value has a *type* — a category that decides what the value *can do*. You can divide one number by another; you cannot divide one word by another. The type is the rulebook for the value.
+Everything Python works with is a *value*: a single piece of data. The number `42` is a value. The text `"hello"` is a value. The truth-or-falsehood `True` is a value. And every value has a *type*, a category that decides what the value *can do*. You can divide one number by another; you cannot divide one word by another. The type is the rulebook for the value.
 
 There are four core types you must know cold, because almost everything else is built from them. We take them one at a time, with the REPL as our bench.
 
@@ -89,7 +89,7 @@ An *integer* is a whole number, positive, negative, or zero: `-3`, `0`, `7`, `10
 
 That last one shows a small kindness: you may sprinkle underscores into a long number to group the digits, exactly as you would write a comma in "1,000,000". Python ignores the underscores; they are purely for your eyes. `1_000_000` and `1000000` are the very same value.
 
-Here is a fact that will matter later and delights newcomers: Python integers have *no size limit*. In most languages an integer overflows once it grows past a fixed number of bits — we saw two's-complement wrap-around in Chapter 13. Python simply grows the number as large as your memory allows.
+Here is a fact that will matter later and delights newcomers: Python integers have *no size limit*. In most languages an integer overflows once it grows past a fixed number of bits (we saw two's-complement wrap-around in Chapter 13). Python simply grows the number as large as your memory allows.
 
 ```python
 >>> 2 ** 1000
@@ -99,7 +99,7 @@ Here is a fact that will matter later and delights newcomers: Python integers ha
 Two raised to the thousandth power, computed exactly, every digit. We just printed a 302-digit number without breaking a sweat. When we build entropy calculations and arithmetic coders later, this freedom from overflow will quietly save us from a whole class of bugs.
 
 #gopython("Asking a value its type: the `type` function")[
-Whenever you are unsure what kind of value you are holding — and you will be, especially when data arrives from a file — ask Python directly with the `type` function. It hands back the value's type, which you can print or compare:
+Whenever you are unsure what kind of value you are holding (and you will be, especially when data arrives from a file) ask Python directly with the `type` function. It hands back the value's type, which you can print or compare:
 
 ```python
 >>> type(42)
@@ -112,7 +112,7 @@ Whenever you are unsure what kind of value you are holding — and you will be, 
 True
 ```
 
-The word `class` in the output is just Python's formal name for "type" — we will not need full classes until much later, so read `<class 'int'>` as simply "this is an `int`." When a calculation misbehaves, `type(...)` is the first diagnostic to reach for: nine times out of ten the surprise is that a value you thought was a number is secretly a `str`.
+The word `class` in the output is just Python's formal name for "type." We will not need full classes until much later, so read `<class 'int'>` as simply "this is an `int`." When a calculation misbehaves, `type(...)` is the first diagnostic to reach for: nine times out of ten the surprise is that a value you thought was a number is secretly a `str`.
 ]
 
 #gomaths("Powers and the `**` operator")[
@@ -125,12 +125,12 @@ We met exponents properly in Chapter 7. A quick reminder, because Python uses th
 1000
 ```
 
-Read `2 ** 10` as "two to the tenth." Because a bit is a yes/no choice, $n$ bits make $2^n$ different patterns — `2 ** 8` is `256`, the number of distinct bytes — so `**` and bit-counting are old friends.
+Read `2 ** 10` as "two to the tenth." Because a bit is a yes/no choice, $n$ bits make $2^n$ different patterns. `2 ** 8` is `256`, the number of distinct bytes, so `**` and bit-counting are old friends.
 ]
 
 === Floating-point numbers: `float`
 
-Not every number is whole. A probability might be `0.25`; an average codeword length might be `2.7` bits. A number with a decimal point is a *floating-point* number, type `float`. The name comes from the decimal point being allowed to "float" to wherever it is needed — `3.14`, `0.0001`, `2500000.0` are all floats.
+Not every number is whole. A probability might be `0.25`; an average codeword length might be `2.7` bits. A number with a decimal point is a *floating-point* number, type `float`. The name comes from the decimal point being allowed to "float" to wherever it is needed: `3.14`, `0.0001`, `2500000.0` are all floats.
 
 ```python
 >>> 0.25
@@ -143,22 +143,22 @@ Not every number is whole. A probability might be `0.25`; an average codeword le
 
 Notice `3.0`: the `.0` is what tells Python (and you) that this is a float, not the integer `3`. They are different types with different behaviour, and the dot is the tell. Adding two floats gives a float; the answer above is `4.0`, not `4`.
 
-Floats carry a famous wart that you must know about now, because it will bite you in compression code if you do not. They cannot store most decimals *exactly* — they keep only a fixed number of binary digits, so they round.
+Floats carry a famous wart that you must know about now, because it will bite you in compression code if you do not. They cannot store most decimals *exactly*: they keep only a fixed number of binary digits, so they round.
 
 ```python
 >>> 0.1 + 0.2
 0.30000000000000004
 ```
 
-That trailing `...04` is not a Python bug; it is the unavoidable price of squeezing endless decimals into finite bits, the same lesson Chapter 13 taught about floating point. The practical rule: *never test two floats for exact equality.* `0.1 + 0.2 == 0.3` is `False`, to everyone's surprise. When we need exact arithmetic — and entropy coding sometimes does — we reach for integers instead, which is one more reason Python's unbounded `int` is a gift.
+That trailing `...04` is not a Python bug; it is the unavoidable price of squeezing endless decimals into finite bits, the same lesson Chapter 13 taught about floating point. The practical rule: *never test two floats for exact equality.* `0.1 + 0.2 == 0.3` is `False`, to everyone's surprise. When we need exact arithmetic (entropy coding sometimes does) we reach for integers instead, which is one more reason Python's unbounded `int` is a gift.
 
 #pitfall[
-Mixing types quietly turns integers into floats. `6 / 2` gives `3.0`, a float, not `3`, because the single-slash `/` *always* produces a float in Python 3 — even when the division comes out even. If you truly want a whole-number result, use the double slash `//`, which we meet two pages on. Watch your dots.
+Mixing types quietly turns integers into floats. `6 / 2` gives `3.0`, a float, not `3`, because the single-slash `/` *always* produces a float in Python 3, even when the division comes out even. If you truly want a whole-number result, use the double slash `//`, which we meet two pages on. Watch your dots.
 ]
 
 === Text: `str`
 
-A *string* is a piece of text: a sequence of characters. Its type is `str` (short for "string", as in a string of beads). You write a string by wrapping characters in quotes — single `'...'` or double `"..."`, Python accepts either, as long as the pair matches.
+A *string* is a piece of text: a sequence of characters. Its type is `str` (short for "string", as in a string of beads). You write a string by wrapping characters in quotes. Single `'...'` or double `"..."` both work, as long as the pair matches.
 
 ```python
 >>> "hello"
@@ -169,7 +169,7 @@ A *string* is a piece of text: a sequence of characters. Its type is `str` (shor
 'the letter A'
 ```
 
-Strings are how text data enters our compressors before it becomes raw bytes. The word `"banana"` is a string with a lot of repetition — exactly the kind of redundancy compression feeds on. You can glue strings together with `+` (called *concatenation*) and repeat one with `*`:
+Strings are how text data enters our compressors before it becomes raw bytes. The word `"banana"` is a string with a lot of repetition, exactly the kind of redundancy compression feeds on. You can glue strings together with `+` (called *concatenation*) and repeat one with `*`:
 
 ```python
 >>> "ab" + "cd"
@@ -180,10 +180,10 @@ Strings are how text data enters our compressors before it becomes raw bytes. Th
 '===================='
 ```
 
-That last trick — a character times a number — is the quickest way to draw a divider line, and we will use it to format `tinyzip`'s reports.
+That last trick, a character times a number, is the quickest way to draw a divider line, and we will use it to format `tinyzip`'s reports.
 
 #gopython("Indexing a string: `s[i]` and counting from zero")[
-A string is an ordered sequence, so you can reach in and pull out a single character by its *position*, written in square brackets. The catch — and it is the single most common off-by-one trap in all of programming — is that Python counts positions *from zero*, not one:
+A string is an ordered sequence, so you can reach in and pull out a single character by its *position*, written in square brackets. The catch (the single most common off-by-one trap in all of programming) is that Python counts positions *from zero*, not one:
 
 ```python
 >>> word = "banana"
@@ -197,11 +197,11 @@ A string is an ordered sequence, so you can reach in and pull out a single chara
 'a'
 ```
 
-So a six-character string has positions 0 through 5, and `word[6]` is past the end — asking for it raises an `IndexError`. Negative indices are a Python kindness: `word[-1]` is the last character, `word[-2]` the second-to-last, without having to compute the length. This `s[i]` notation is how our compressors will scan a buffer one character at a time, and `range(len(s))` (positions 0 to length−1) is the loop that visits them all.
+So a six-character string has positions 0 through 5, and `word[6]` is past the end. Asking for it raises an `IndexError`. Negative indices are a Python kindness: `word[-1]` is the last character, `word[-2]` the second-to-last, without having to compute the length. This `s[i]` notation is how our compressors will scan a buffer one character at a time, and `range(len(s))` (positions 0 to length−1) is the loop that visits them all.
 ]
 
 #gopython("From character to number and back: `ord` and `chr`")[
-Underneath, every character is really a number — its code point, the ASCII and Unicode values we built in Chapter 13. Two functions cross that bridge. `ord` takes a one-character string and returns its number; `chr` takes a number and returns the character:
+Underneath, every character is really a number: its code point, the ASCII and Unicode values we built in Chapter 13. Two functions cross that bridge. `ord` takes a one-character string and returns its number; `chr` takes a number and returns the character:
 
 ```python
 >>> ord("A")       # what number IS the letter A?
@@ -214,11 +214,11 @@ Underneath, every character is really a number — its code point, the ASCII and
 'b'
 ```
 
-So `chr(ord("a") + 1)` is `"b"` — you can do *arithmetic* on letters by passing through their numbers. This matters enormously for compression: a codec does not really see letters, it sees the *byte values* 0–255, and `ord`/`chr` are how our early, character-based `tinyzip` code reaches the same numbers a byte-based codec works with. When Chapter 17 swaps strings for raw bytes, this is the bridge we cross.
+So `chr(ord("a") + 1)` is `"b"`. You can do *arithmetic* on letters by passing through their numbers. This matters enormously for compression: a codec does not really see letters, it sees the *byte values* 0–255, and `ord`/`chr` are how our early, character-based `tinyzip` code reaches the same numbers a byte-based codec works with. When Chapter 17 swaps strings for raw bytes, this is the bridge we cross.
 ]
 
 #gopython("Quotes inside strings and escape characters")[
-What if your text *contains* a quote? Two cures. First, use the *other* kind of quote on the outside: `"it's fine"` works because the outer quotes are double and the apostrophe is single. Second, put a backslash before the awkward character to *escape* it — to say "this is literal text, not punctuation":
+What if your text *contains* a quote? Two cures. First, use the *other* kind of quote on the outside: `"it's fine"` works because the outer quotes are double and the apostrophe is single. Second, put a backslash before the awkward character to *escape* it, telling Python "this is literal text, not punctuation":
 
 ```python
 >>> 'it\'s fine'
@@ -246,9 +246,9 @@ False
 False
 ```
 
-The capital letters matter: `True` and `False`, not `true` or `TRUE`. Notice how `5 > 3` *computes* a Boolean — you rarely type `True` directly; you ask a question whose answer is a Boolean. That double-equals `==`, meaning "is equal to," is the single most common source of beginner bugs, because it is so easily confused with the single `=` that *names* things. We will draw that line sharply in a moment. For now, hold the picture: four types — whole numbers, decimals, text, and truth — and almost all of `tinyzip` is built from them.
+The capital letters matter: `True` and `False`, not `true` or `TRUE`. Notice how `5 > 3` *computes* a Boolean. You rarely type `True` directly; you ask a question whose answer is a Boolean. That double-equals `==`, meaning "is equal to," is the single most common source of beginner bugs, because it is so easily confused with the single `=` that *names* things. We will draw that line sharply in a moment. For now, hold the picture: four types (whole numbers, decimals, text, and truth) and almost all of `tinyzip` is built from them.
 
-#checkpoint[What type does each of these have: `42`, `4.2`, `"42"`, `4 == 2`?][In order: `int` (whole number), `float` (has a decimal point), `str` (in quotes, so it is text — the *characters* four and two, not the number), and `bool` (a comparison, whose answer is `False`).]
+#checkpoint[What type does each of these have: `42`, `4.2`, `"42"`, `4 == 2`?][In order: `int` (whole number), `float` (has a decimal point), `str` (in quotes, so it is text: the *characters* four and two, not the number), and `bool` (a comparison, whose answer is `False`).]
 
 == Names: binding values to labels
 
@@ -264,7 +264,7 @@ A program that could only compute throwaway answers in the REPL would be useless
 
 The first line says: "compute the value `391`, and attach the name `total` to it." After that, wherever you write `total`, Python reads `391`. We say the name is *bound* to the value, or that we have *assigned* `391` to `total`.
 
-It is tempting — and almost every beginner does this — to picture `total` as a box that the number `391` is dropped into. Resist that picture; it will mislead you later. The truer picture is that the *value* `391` exists somewhere in memory, and the *name* `total` is a sticky label pointing at it. The label is not the value; it is an arrow to the value. This matters because two names can point at the *same* value, and because reassigning a name just moves its arrow — it does not disturb the old value.
+It is tempting to picture `total` as a box that the number `391` is dropped into (almost every beginner does). Resist that picture; it will mislead you later. The truer picture is that the *value* `391` exists somewhere in memory, and the *name* `total` is a sticky label pointing at it. The label is not the value; it is an arrow to the value. This matters because two names can point at the *same* value, and because reassigning a name just moves its arrow without disturbing the old value.
 
 #fig([A name is a label pointing at a value, not a box holding it. Reassigning the label moves the arrow.], cetz.canvas({
   import cetz.draw: *
@@ -279,7 +279,7 @@ It is tempting — and almost every beginner does this — to picture `total` as
   content((2.4,0.8), text(size: 7pt)[points at])
 }))
 
-The rules for a legal name are simple. It may use letters, digits, and the underscore `_`, but may not *start* with a digit, and may not be one of Python's reserved words like `if` or `for`. By strong convention — and we will follow it all book long — multi-word names are written in `snake_case`: all lowercase, words joined by underscores, like `byte_count` or `symbol_frequency`. This is not a rule Python enforces; it is a courtesy to human readers, and good code is dense with it.
+The rules for a legal name are simple. It may use letters, digits, and the underscore `_`, but may not *start* with a digit, and may not be one of Python's reserved words like `if` or `for`. By strong convention (one we will follow all book long) multi-word names are written in `snake_case`: all lowercase, words joined by underscores, like `byte_count` or `symbol_frequency`. This is not a rule Python enforces; it is a courtesy to human readers, and good code is dense with it.
 
 A name can be *reassigned* at any time, and the new value need not even be the same type:
 
@@ -290,7 +290,7 @@ A name can be *reassigned* at any time, and the new value need not even be the s
 15
 ```
 
-That middle line looks like a contradiction in mathematics — `x = x + 5` has no solution! — but it is not an equation. Read `=` as "becomes," not "equals." The line says: "take the current value of `x` (which is 10), add 5 to get 15, then make the name `x` point at 15." The old 10 is discarded. This "take the value, change it, store it back" pattern is the heartbeat of nearly every loop we will write.
+That middle line looks like a contradiction in mathematics (`x = x + 5` has no solution!) but it is not an equation. Read `=` as "becomes," not "equals." The line says: "take the current value of `x` (which is 10), add 5 to get 15, then make the name `x` point at 15." The old 10 is discarded. This "take the value, change it, store it back" pattern is the heartbeat of nearly every loop we will write.
 
 The label-not-box picture pays off the moment two names meet. Watch:
 
@@ -302,10 +302,10 @@ The label-not-box picture pays off the moment two names meet. Watch:
 100
 ```
 
-Assigning `b = a` did not copy the number into a fresh box; it pointed `b` at whatever `a` was pointing at. Then `a = 200` moved *only* `a`'s arrow to a new value, leaving `b` still aimed at the original `100`. For the simple, unchangeable values of this chapter — numbers, strings, Booleans — this never bites you, because you can never alter the value `100` itself, only move arrows around. But in Chapter 16, when we meet *lists* whose contents *can* be changed in place, this same picture explains a famous class of surprises. Learn the arrow now and those surprises will look obvious later.
+Assigning `b = a` did not copy the number into a fresh box; it pointed `b` at whatever `a` was pointing at. Then `a = 200` moved *only* `a`'s arrow to a new value, leaving `b` still aimed at the original `100`. For the simple, unchangeable values of this chapter (numbers, strings, Booleans) this never bites you, because you can never alter the value `100` itself, only move arrows around. But in Chapter 16, when we meet *lists* whose contents *can* be changed in place, this same picture explains a famous class of surprises. Learn the arrow now and those surprises will look obvious later.
 
 #gopython("Augmented assignment: `+=` and friends")[
-Because `x = x + 5` is so common, Python offers a shorthand: `x += 5` means exactly the same thing — "increase `x` by 5." Every arithmetic operator has such a partner:
+Because `x = x + 5` is so common, Python offers a shorthand: `x += 5` means exactly the same thing. "Increase `x` by 5." Every arithmetic operator has such a partner:
 
 ```python
 >>> count = 0
@@ -320,7 +320,7 @@ Because `x = x + 5` is so common, Python offers a shorthand: `x += 5` means exac
 140
 ```
 
-We will lean on `count += 1` constantly when we tally how often each byte appears in a file — the first real step toward compression, since a compressor must know which symbols are common.
+We will lean on `count += 1` constantly when we tally how often each byte appears in a file, the first real step toward compression, since a compressor must know which symbols are common.
 ]
 
 #pitfall[
@@ -329,7 +329,7 @@ We will lean on `count += 1` constantly when we tally how often each byte appear
 
 == Operators: doing things to values
 
-You have already seen operators sneak in — `+`, `*`, `>`. Let us lay them out properly, in three families. An *operator* is a symbol that combines values into a new value.
+You have already seen operators sneak in: `+`, `*`, `>`. Let us lay them out properly, in three families. An *operator* is a symbol that combines values into a new value.
 
 === Arithmetic operators
 
@@ -349,7 +349,7 @@ These do maths. Most are obvious; two have a twist worth dwelling on.
 
 The two stars `**` for powers we met above. The two that newcomers must truly understand are `//` and `%`, because they appear in nearly every byte-level routine in this book.
 
-The double slash `//` is *floor division*: it divides and then throws away any fractional part, keeping only the whole number below. `7 // 2` is `3`, because 2 goes into 7 three whole times. The percent sign `%` is the *remainder* (its proper name is *modulo*): it gives what is *left over* after that division. `7 % 2` is `1`, because after taking out three 2s from 7, one is left. Together they answer "how many whole times, and how much left over" — the exact question you ask when packing bits into bytes.
+The double slash `//` is *floor division*: it divides and then throws away any fractional part, keeping only the whole number below. `7 // 2` is `3`, because 2 goes into 7 three whole times. The percent sign `%` is the *remainder* (its proper name is *modulo*): it gives what is *left over* after that division. `7 % 2` is `1`, because after taking out three 2s from 7, one is left. Together they answer "how many whole times, and how much left over": the exact question you ask when packing bits into bytes.
 
 ```python
 >>> 17 // 5      # how many whole 5s fit in 17?
@@ -365,13 +365,13 @@ The *modulo* operation answers: after dividing $a$ by $b$ and taking only whole 
 
 - `n % 8` tells you a bit's position *within* its byte (bytes hold 8 bits, so positions cycle 0–7).
 - `n % 256` wraps any integer into a single byte value 0–255, exactly the two's-complement wrap of Chapter 13.
-- `n % 2` is `0` for even numbers and `1` for odd — a one-line evenness test.
+- `n % 2` is `0` for even numbers and `1` for odd. A one-line evenness test.
 
 Modulo is the arithmetic of *cycles* and *wrapping*: clock faces, byte boundaries, and ring buffers all run on it. We will use `% 256` the moment we touch real bytes.
 ]
 
 #tryit[
-In the REPL, predict then check: `23 // 4`, `23 % 4`, `100 % 10`, `100 % 7`. The pattern to internalise: `a // b` and `a % b` are the two halves of one division — the whole part and the leftover.
+In the REPL, predict then check: `23 // 4`, `23 % 4`, `100 % 10`, `100 % 7`. The pattern to internalise: `a // b` and `a % b` are the two halves of one division, the whole part and the leftover.
 ]
 
 === Comparison operators
@@ -389,7 +389,7 @@ These ask questions and answer with a `bool`. We met these as the relations of C
   [`>=`], [greater or equal?], [`4 >= 5` → `False`],
 )
 
-Two spellings deserve a note. Equality is `==` (double), because single `=` is already taken for assignment. "Not equal" is `!=`, read aloud as "bang equals" or "not equal" — the exclamation mark is Python's "not." Everything else matches the maths you already know. A pleasant Python bonus is that you may *chain* comparisons the way mathematicians do:
+Two spellings deserve a note. Equality is `==` (double), because single `=` is already taken for assignment. "Not equal" is `!=`, read aloud as "bang equals" or "not equal": the exclamation mark is Python's "not." Everything else matches the maths you already know. A pleasant Python bonus is that you may *chain* comparisons the way mathematicians do:
 
 ```python
 >>> x = 7
@@ -399,11 +399,11 @@ True
 False
 ```
 
-`0 <= x < 256` reads exactly as it would on paper — "is `x` at least 0 and below 256?" — and is the natural way to check that a number is a legal byte. Most languages forbid this; Python encourages it.
+`0 <= x < 256` reads exactly as it would on paper, "is `x` at least 0 and below 256?", and is the natural way to check that a number is a legal byte. Most languages forbid this; Python encourages it.
 
 === Logical operators
 
-To combine Booleans, Python uses three plain English words — `and`, `or`, `not` — the very connectives whose truth tables we built in Chapter 5.
+To combine Booleans, Python uses three plain English words, `and`, `or`, `not`, the very connectives whose truth tables we built in Chapter 5.
 
 ```python
 >>> (5 > 3) and (2 > 1)
@@ -416,7 +416,7 @@ True
 False
 ```
 
-`and` is `True` only when *both* sides are; `or` is `True` when *at least one* side is; `not` flips a Boolean to its opposite. These let you build rich conditions — "the byte is a letter *and* it is lowercase," "we hit the window end *or* ran out of input" — out of simple questions.
+`and` is `True` only when *both* sides are; `or` is `True` when *at least one* side is; `not` flips a Boolean to its opposite. These let you build rich conditions out of simple questions: "the byte is a letter *and* it is lowercase," or "we hit the window end *or* ran out of input."
 
 #gopython("Truthiness: when non-Booleans act like `True` or `False`")[
 Python lets you use *any* value where a Boolean is expected, and quietly decides whether it counts as "true." The rule is short: *empty* and *zero* things are false; everything else is true.
@@ -432,16 +432,16 @@ False
 True
 ```
 
-So `if data:` quietly means "if `data` is non-empty," and `while remaining:` means "while there is anything left." This *truthiness* makes loops and tests read like English — but beware: it means `if x:` and `if x == True:` are not always the same question, so when you mean "is this exactly true," compare explicitly.
+So `if data:` quietly means "if `data` is non-empty," and `while remaining:` means "while there is anything left." This *truthiness* makes loops and tests read like English, but beware: `if x:` and `if x == True:` are not always the same question, so when you mean "is this exactly true," compare explicitly.
 ]
 
-There is one more thing to know about logic: `and` and `or` are *lazy* (the proper word is *short-circuiting*). Python evaluates the left side first and, if that already settles the answer, never even looks at the right. In `x != 0 and total / x > 1`, if `x` is zero the left side is `False`, so Python skips the division entirely — and thereby dodges a divide-by-zero crash. We will use this exact guard later.
+There is one more thing to know about logic: `and` and `or` are *lazy* (the proper word is *short-circuiting*). Python evaluates the left side first and, if that already settles the answer, never even looks at the right. In `x != 0 and total / x > 1`, if `x` is zero the left side is `False`, so Python skips the division entirely, thereby dodging a divide-by-zero crash. We will use this exact guard later.
 
-A word on *precedence* — the order Python applies operators when you mix them, the same "multiply before you add" rule you learned in school. Powers bind tightest, then `*` `/` `//` `%`, then `+` `-`, then the comparisons, then `not`, then `and`, then `or`. So `2 + 3 * 4` is `14`, not `20`, and `5 > 3 and 2 > 1` groups as `(5 > 3) and (2 > 1)` without any parentheses at all. The rules are sensible, but you do not have to memorise them: when in doubt, add parentheses to say exactly what you mean. `(a + b) * c` can never be misread, and clear code beats clever code every time. Throughout this book we parenthesise generously, precisely so a reader new to Python never has to pause and recall the precedence table.
+A word on *precedence*: the order Python applies operators when you mix them follows the same "multiply before you add" rule you learned in school. Powers bind tightest, then `*` `/` `//` `%`, then `+` `-`, then the comparisons, then `not`, then `and`, then `or`. So `2 + 3 * 4` is `14`, not `20`, and `5 > 3 and 2 > 1` groups as `(5 > 3) and (2 > 1)` without any parentheses at all. The rules are sensible, but you do not have to memorise them: when in doubt, add parentheses to say exactly what you mean. `(a + b) * c` can never be misread, and clear code beats clever code every time. Throughout this book we parenthesise generously, precisely so a reader new to Python never has to pause and recall the precedence table.
 
 == Showing and reading: `print`, `input`, and functions
 
-A script that computes silently is no use; it must *speak*. The way it speaks is the `print` *function*. A function is a named, reusable piece of work you *call* by writing its name followed by parentheses, with the things it should act on — its *arguments* — inside:
+A script that computes silently is no use; it must *speak*. The way it speaks is the `print` *function*. A function is a named, reusable piece of work you *call* by writing its name followed by parentheses, with the things it should act on (its *arguments*) inside:
 
 ```python
 >>> print("Hello, tinyzip!")
@@ -467,7 +467,7 @@ a-b-c
 no newline same line
 ```
 
-Setting `end=" "` is the trick that keeps a sequence of `print` calls on a single line — exactly what we use to print a Collatz sequence side by side in this chapter's exercises. Keyword arguments will reappear when we write our *own* functions in Chapter 16; for now, just read `sep="-"` as "with the separator set to a dash."
+Setting `end=" "` is the trick that keeps a sequence of `print` calls on a single line, exactly what we use to print a Collatz sequence side by side in this chapter's exercises. Keyword arguments will reappear when we write our *own* functions in Chapter 16; for now, just read `sep="-"` as "with the separator set to a dash."
 ]
 
 You have already used other functions without naming them so. `len` reports how long something is; `bool`, `int`, `float`, and `str` *convert* a value from one type to another:
@@ -485,10 +485,10 @@ You have already used other functions without naming them so. `len` reports how 
 3
 ```
 
-Those conversions matter more than they look. Text read from a file arrives as a `str`; to do arithmetic you must `int(...)` it first. And `int(3.9)` is `3`, not `4` — converting a float to an int *truncates* (chops the fraction), it does not round. To round properly, there is a separate `round` function. Knowing exactly which way a conversion bends is the difference between correct and almost-correct compression code.
+Those conversions matter more than they look. Text read from a file arrives as a `str`; to do arithmetic you must `int(...)` it first. And `int(3.9)` is `3`, not `4`: converting a float to an int *truncates* (chops the fraction), it does not round. To round properly, there is a separate `round` function. Knowing exactly which way a conversion bends is the difference between correct and almost-correct compression code.
 
 #gopython("Rounding on purpose: the `round` function")[
-Because `int(3.9)` *chops* down to `3`, you need a different tool when you want true rounding to the nearest whole number — `round`:
+Because `int(3.9)` *chops* down to `3`, you need a different tool when you want true rounding to the nearest whole number: `round`.
 
 ```python
 >>> round(3.9)         # nearest whole number
@@ -501,11 +501,11 @@ Because `int(3.9)` *chops* down to `3`, you need a different tool when you want 
 128
 ```
 
-A second argument says *how many decimal places* to keep, which is handy for reporting bit-rates without an f-string. One genuine surprise: Python rounds a tie (a trailing `.5`) to the nearest *even* number — `round(0.5)` is `0`, `round(2.5)` is `2`. This "banker's rounding" avoids a slow upward drift when you round many numbers, and it matters in quantization, the lossy step we reach in Chapter 39. For now: `int` truncates, `round` rounds, and the two disagree on every fraction.
+A second argument says *how many decimal places* to keep, which is handy for reporting bit-rates without an f-string. One genuine surprise: Python rounds a tie (a trailing `.5`) to the nearest *even* number: `round(0.5)` is `0`, `round(2.5)` is `2`. This "banker's rounding" avoids a slow upward drift when you round many numbers, and it matters in quantization, the lossy step we reach in Chapter 39. For now: `int` truncates, `round` rounds, and the two disagree on every fraction.
 ]
 
-#gopython("`len` — the length of any sequence")[
-The `len` function returns *how many items* a sequence holds — characters in a string, and (in Chapter 16) elements in a list. It is the most-used function in this book after `print`:
+#gopython("`len` - the length of any sequence")[
+The `len` function returns *how many items* a sequence holds: characters in a string and (in Chapter 16) elements in a list. It is the most-used function in this book after `print`:
 
 ```python
 >>> len("banana")
@@ -516,10 +516,10 @@ The `len` function returns *how many items* a sequence holds — characters in a
 100
 ```
 
-`len` underpins two patterns you will write hundreds of times. To loop over every position of a sequence: `for i in range(len(s)):` walks `i` from `0` to `len(s) - 1`, exactly the valid index range. To check whether there is anything to process at all: `if len(data) > 0:` — or, leaning on truthiness, simply `if data:`. Because a compressed file's job is to make `len(output)` smaller than `len(input)`, `len` is also how `tinyzip` will *measure its own success* on every run.
+`len` underpins two patterns you will write hundreds of times. To loop over every position of a sequence: `for i in range(len(s)):` walks `i` from `0` to `len(s) - 1`, exactly the valid index range. To check whether there is anything to process at all: `if len(data) > 0:`, or, leaning on truthiness, simply `if data:`. Because a compressed file's job is to make `len(output)` smaller than `len(input)`, `len` is also how `tinyzip` will *measure its own success* on every run.
 ]
 
-#gopython("`input` — reading from the keyboard")[
+#gopython("`input` - reading from the keyboard")[
 The `input` function pauses the program, shows an optional prompt, waits for the user to type a line and press Enter, then hands back what they typed *as a string*:
 
 ```python
@@ -527,7 +527,7 @@ name = input("What file? ")     # waits; user types: data.txt
 print("Compressing", name)      # → Compressing data.txt
 ```
 
-The catch that trips everyone: `input` *always* returns a `str`, even if the user types digits. To get a number you must convert: `count = int(input("How many? "))`. Forget the `int(...)` and you will try to do arithmetic on text and get a confusing error. We will use `input` sparingly — files, not typing, feed real compressors — but it is the quickest way to make a script interactive.
+The catch that trips everyone: `input` *always* returns a `str`, even if the user types digits. To get a number you must convert: `count = int(input("How many? "))`. Forget the `int(...)` and you will try to do arithmetic on text and get a confusing error. We will use `input` sparingly (files, not typing, feed real compressors) but it is the quickest way to make a script interactive.
 ]
 
 == Building text the modern way: f-strings
@@ -543,7 +543,7 @@ Printing `"bytes:", 391` with commas works, but it is clumsy when you want to we
 '391 bytes at ratio 0.62.'
 ```
 
-Inside the braces you may put any expression, not just a name — Python computes it and drops the result into the text:
+Inside the braces you may put any expression, not just a name. Python computes it and drops the result into the text:
 
 ```python
 >>> original = 1000
@@ -552,7 +552,7 @@ Inside the braces you may put any expression, not just a name — Python compute
 'Saved 380 bytes (62.0%).'
 ```
 
-The braces also accept a *format specifier* after a colon, which controls how the value is displayed — how many decimal places, how wide a column, what padding. Two you will use constantly:
+The braces also accept a *format specifier* after a colon, which controls how the value is displayed: how many decimal places, how wide a column, what padding. Two you will use constantly:
 
 ```python
 >>> ratio = 0.6231957
@@ -564,16 +564,16 @@ The braces also accept a *format specifier* after a colon, which controls how th
 '|42    |'
 ```
 
-`:.2f` says "show this as a float with two decimal places" — perfect for percentages and bit-rates that would otherwise sprawl. `:>6` and `:<6` pad a value into a fixed width so columns line up, which is how we will make `tinyzip`'s scoreboard tables readable. F-strings are a small feature with a huge payoff: nearly every line of output in this book is built with one.
+`:.2f` says "show this as a float with two decimal places," perfect for percentages and bit-rates that would otherwise sprawl. `:>6` and `:<6` pad a value into a fixed width so columns line up, which is how we will make `tinyzip`'s scoreboard tables readable. F-strings are a small feature with a huge payoff: nearly every line of output in this book is built with one.
 
 #aside[
-Python 3.14 added a sibling, the *t-string* (template string, written with a `t` instead of `f`), for advanced cases where you want to inspect or transform the pieces of a string *before* they are stitched together — useful for safely building HTML or SQL. We will not need t-strings for `tinyzip`, but it is worth knowing the family has grown, so that `t"..."` in modern code does not surprise you.
+Python 3.14 added a sibling, the *t-string* (template string, written with a `t` instead of `f`), for advanced cases where you want to inspect or transform the pieces of a string *before* they are stitched together, useful for safely building HTML or SQL. We will not need t-strings for `tinyzip`, but it is worth knowing the family has grown, so that `t"..."` in modern code does not surprise you.
 ]
 
 #checkpoint[What does `f"{3 + 4} and {2 ** 3}"` produce?][The string `'7 and 8'`. Each pair of braces holds an expression; Python evaluates `3 + 4` to `7` and `2 ** 3` to `8`, then drops the results into the text.]
 
 #gopython("`import`: borrowing code the standard library already wrote")[
-Python ships with a vast *standard library* — hundreds of ready-made tools — and `import` is how you reach for one. Writing `import sys` at the top of a file makes the `sys` module available, and from then on `sys.argv` means "the `argv` thing inside `sys`." You are not copying code; you are pointing at it, the same label-not-box idea from before.
+Python ships with a vast *standard library* (hundreds of ready-made tools) and `import` is how you reach for one. Writing `import sys` at the top of a file makes the `sys` module available, and from then on `sys.argv` means "the `argv` thing inside `sys`." You are not copying code; you are pointing at it, the same label-not-box idea from before.
 
 ```python
 >>> import math          # the maths toolbox
@@ -581,21 +581,21 @@ Python ships with a vast *standard library* — hundreds of ready-made tools —
 12.0
 ```
 
-The `cli.py` below also wraps its work in `def main(): ...` — a *function definition* (`def` names a reusable block; `return` ends it early). We meet writing our own functions properly in Chapter 16; here, read `def main():` as simply "here is the block to run," and the `if __name__ == "__main__": main()` line at the bottom as "run that block when this file is launched directly."
+The `cli.py` below also wraps its work in `def main(): ...`, a *function definition* (`def` names a reusable block; `return` ends it early). We meet writing our own functions properly in Chapter 16; here, read `def main():` as simply "here is the block to run," and the `if __name__ == "__main__": main()` line at the bottom as "run that block when this file is launched directly."
 ]
 
 #project("Step 1 · The `tinyzip` package skeleton")[
-Time to lay `tinyzip`'s first stones. Every Python project of any size lives in a *package* — a folder of related `.py` files that travel together. Make a folder named `tinyzip`, and inside it create three files. The first, `__init__.py`, may be empty; its mere presence tells Python "this folder is a package," so that later chapters can write `from tinyzip.utils import histogram`. The second, `count_bytes.py`, is the script below. The third, `cli.py`, is the tiny command-line front door that every later step will grow.
+Time to lay `tinyzip`'s first stones. Every Python project of any size lives in a *package*, a folder of related `.py` files that travel together. Make a folder named `tinyzip`, and inside it create three files. The first, `__init__.py`, may be empty; its mere presence tells Python "this folder is a package," so that later chapters can write `from tinyzip.utils import histogram`. The second, `count_bytes.py`, is the script below. The third, `cli.py`, is the tiny command-line front door that every later step will grow.
 
 ```python
-# tinyzip/__init__.py — marks this folder as a package.
+# tinyzip/__init__.py - marks this folder as a package.
 __version__ = "0.1"
 ```
 
-Now the byte counter — the most basic fact about any data: how many characters (and so, naively, how many bytes) it holds, the very number a compressor must shrink.
+Now the byte counter. The most basic fact about any data is how many characters (and so, naively, how many bytes) it holds, the very number a compressor must shrink.
 
 ```python
-# tinyzip/count_bytes.py — our first script.
+# tinyzip/count_bytes.py - our first script.
 # Counts the characters in a fixed sample string and reports it.
 
 sample = "banana bandana"        # our running toy data (a str)
@@ -616,12 +616,12 @@ Length: 14 characters
 Naive size: 112 bits (14 bytes)
 ```
 
-Three new things earn their place here. The `!r` inside `{sample!r}` asks for the *representation* — it shows the string *with its quotes*, so you can see exactly where it begins and ends. The arithmetic `length * 8` is our naive baseline: 8 bits per character, no compression at all. That number, *112 bits*, is the bar every later technique must beat. We have just established `tinyzip`'s first scoreboard entry: the do-nothing size. Everything from here is the art of making it smaller.
+Three new things earn their place here. The `!r` inside `{sample!r}` asks for the *representation*, showing the string *with its quotes* so you can see exactly where it begins and ends. The arithmetic `length * 8` is our naive baseline: 8 bits per character, no compression at all. That number, *112 bits*, is the bar every later technique must beat. We have just established `tinyzip`'s first scoreboard entry: the do-nothing size. Everything from here is the art of making it smaller.
 
-Finally, the front door. A real tool does not hard-code its sample — it reads a *file* the user names. The canonical first job of `cli.py` is exactly that: take a filename, read the file's raw contents, and report their size. We keep it to the few tools this chapter has taught, with one new pair, `open` and `read`, that we will study properly in Chapter 17.
+Finally, the front door. A real tool does not hard-code its sample; it reads a *file* the user names. The canonical first job of `cli.py` is exactly that: take a filename, read the file's raw contents, and report their size. We keep it to the few tools this chapter has taught, with one new pair, `open` and `read`, that we will study properly in Chapter 17.
 
 ```python
-# tinyzip/cli.py — the command-line front door.
+# tinyzip/cli.py - the command-line front door.
 import sys                          # gives us the words typed after the script
 
 def main() -> None:
@@ -636,7 +636,7 @@ if __name__ == "__main__":          # only run when launched, not imported
     main()
 ```
 
-Run it with `python tinyzip/cli.py count_bytes.py` and it prints that file's size in bytes. Three pieces are genuinely new and worth a sentence each. `sys.argv` is the *list of words* typed on the command line — `sys.argv[0]` is the script's name and `sys.argv[1]` is the first thing after it — which is how a program receives input from the outside world without `input`. The `"rb"` in `open(path, "rb")` means "read, in *binary* mode," handing back the file's exact bytes rather than decoded text; `len(data)` then counts those bytes. We are skating one step ahead of ourselves here — *bytes*, files, and binary I/O are the whole subject of Chapter 17, where `open`/`read` get the careful treatment they deserve — but it lets `tinyzip` do, on day one, the real thing a compressor does: open a file and measure it. From here on, every build chapter adds one function to this skeleton.
+Run it with `python tinyzip/cli.py count_bytes.py` and it prints that file's size in bytes. Three pieces are genuinely new and worth a sentence each. `sys.argv` is the *list of words* typed on the command line (`sys.argv[0]` is the script's name and `sys.argv[1]` is the first thing after it), which is how a program receives input from the outside world without `input`. The `"rb"` in `open(path, "rb")` means "read, in *binary* mode," handing back the file's exact bytes rather than decoded text; `len(data)` then counts those bytes. We are skating one step ahead of ourselves here. *Bytes*, files, and binary I/O are the whole subject of Chapter 17, where `open`/`read` get the careful treatment they deserve. But this lets `tinyzip` do, on day one, the real thing a compressor does: open a file and measure it. From here on, every build chapter adds one function to this skeleton.
 ]
 
 == Making decisions: `if`, `elif`, `else`
@@ -654,16 +654,16 @@ Read it as English: "if the count is above zero, then do the indented lines." Tw
 
 The first is the *colon*. The line `if count > 0:` ends in a colon, which announces "a block of dependent code follows." Every `if`, `while`, `for`, function, and class header ends in a colon. Forget it and Python stops with a `SyntaxError`. The colon is Python saying "...and here is what depends on that."
 
-The second, and the one that makes Python unmistakable, is *indentation*. The two `print` lines are pushed in from the left — by convention exactly *four spaces* — and that indentation is *the only thing* that marks them as belonging to the `if`. Most languages use curly braces `{ }` to group lines; Python uses whitespace. Lines indented to the same depth form a *block* and run together. When the indentation steps back out, the block is over.
+The second, and the one that makes Python unmistakable, is *indentation*. The two `print` lines are pushed in from the left, by convention exactly *four spaces*, and that indentation is *the only thing* that marks them as belonging to the `if`. Most languages use curly braces `{ }` to group lines; Python uses whitespace. Lines indented to the same depth form a *block* and run together. When the indentation steps back out, the block is over.
 
 #pitfall[
-Indentation in Python is *meaning*, not decoration. Mixing tabs and spaces, or being sloppy by a space, changes which lines belong to which block — and Python will either error out or, worse, silently do the wrong thing. Pick *four spaces* per level and never mix in tabs. Every good editor can be set to insert four spaces when you press Tab; do that once and forget about it.
+Indentation in Python is *meaning*, not decoration. Mixing tabs and spaces, or being sloppy by a space, changes which lines belong to which block. Python will either error out or, worse, silently do the wrong thing. Pick *four spaces* per level and never mix in tabs. Every good editor can be set to insert four spaces when you press Tab; do that once and forget about it.
 ]
 
-The condition after `if` is anything that evaluates to a Boolean — a comparison, a logical combination, or a truthy value. When it is `True`, the block runs; when `False`, the block is skipped entirely.
+The condition after `if` is anything that evaluates to a Boolean: a comparison, a logical combination, or a truthy value. When it is `True`, the block runs; when `False`, the block is skipped entirely.
 
 #gopython("Reading an error message: the traceback")[
-You *will* make mistakes — everyone does, constantly — so the most useful skill of all is reading Python's complaint, called a *traceback*. When something goes wrong, Python stops and prints the file, the line, and the kind of error:
+You *will* make mistakes. Everyone does, constantly. The most useful skill of all is reading Python's complaint, called a *traceback*. When something goes wrong, Python stops and prints the file, the line, and the kind of error:
 
 ```python
 >>> word = "banana"
@@ -673,7 +673,7 @@ Traceback (most recent call last):
 IndexError: string index out of range
 ```
 
-Read it *from the bottom up*. The last line is the headline: the *error type* (`IndexError`) and a plain-English reason (`string index out of range` — we asked for position 99 of a 6-character word). The lines above point at *where* it happened. A few you will meet often: `SyntaxError` (you mistyped the grammar — a missing colon or quote), `NameError` (you used a name you never assigned), `TypeError` (you mixed incompatible types, like adding a number to a string), and `IndexError` (you reached past the end of a sequence). The error is not a scolding; it is a precise map to the bug. And if a program *hangs* instead of erroring — usually an infinite loop — press `Ctrl-C` to interrupt it. Learning to read tracebacks calmly is the difference between an hour of frustration and a thirty-second fix.
+Read it *from the bottom up*. The last line is the headline: the *error type* (`IndexError`) and a plain-English reason (`string index out of range`, meaning we asked for position 99 of a 6-character word). The lines above point at *where* it happened. A few you will meet often: `SyntaxError` (you mistyped the grammar, a missing colon or quote), `NameError` (you used a name you never assigned), `TypeError` (you mixed incompatible types, like adding a number to a string), and `IndexError` (you reached past the end of a sequence). The error is not a scolding; it is a precise map to the bug. If a program *hangs* instead of erroring (usually an infinite loop) press `Ctrl-C` to interrupt it. Learning to read tracebacks calmly is the difference between an hour of frustration and a thirty-second fix.
 ]
 
 To handle the "otherwise" case, add an `else`:
@@ -683,10 +683,10 @@ length = 0
 if length > 0:
     print("Compressing", length, "characters.")
 else:
-    print("Nothing to do — the file is empty.")
+    print("Nothing to do - the file is empty.")
 ```
 
-Exactly one of the two blocks runs: the `if` block when the condition holds, the `else` block when it does not. And when you have *several* mutually exclusive cases, you chain them with `elif` — a contraction of "else if" — as many as you like, with an optional final `else` to catch everything that slipped through:
+Exactly one of the two blocks runs: the `if` block when the condition holds, the `else` block when it does not. When you have *several* mutually exclusive cases, you chain them with `elif` (a contraction of "else if"), as many as you like, with an optional final `else` to catch everything that slipped through:
 
 ```python
 byte = 200
@@ -704,12 +704,12 @@ Python checks the conditions top to bottom and runs the block for the *first* on
 
 #fig([An `if` / `elif` / `else` ladder: Python takes the first branch whose test is true and skips the rest.], cetz.canvas({
   import cetz.draw: *
-  let box(x,y,w,t,col) = { rect((x,y),(x+w,y+0.8), fill: col); content((x+w/2,y+0.4), text(size:8pt)[#t]) }
-  box(0,3,3.4,"if byte < 32 ?", rgb("#eef4fb"))
-  box(0,1.6,3.4,"elif byte < 127 ?", rgb("#eef4fb"))
-  box(0,0.2,3.4,"elif byte < 160 ?", rgb("#eef4fb"))
-  box(0,-1.2,3.4,"else", rgb("#fbf7ef"))
-  let res(y,t) = { rect((4.4,y),(8.0,y+0.8), fill: rgb("#eef9f3")); content((6.2,y+0.4), text(size:8pt)[#t]) }
+  let drect(x,y,w,t,col) = { rect((x,y),(x+w,y+0.8), fill: col); content((x+w/2,y+0.4), pad(x: 2pt, align(center, text(size:8pt)[#t]))) }
+  drect(0,3,3.4,"if byte < 32 ?", rgb("#eef4fb"))
+  drect(0,1.6,3.4,"elif byte < 127 ?", rgb("#eef4fb"))
+  drect(0,0.2,3.4,"elif byte < 160 ?", rgb("#eef4fb"))
+  drect(0,-1.2,3.4,"else", rgb("#fbf7ef"))
+  let res(y,t) = { rect((4.4,y),(8.0,y+0.8), fill: rgb("#eef9f3")); content((6.2,y+0.4), pad(x: 2pt, align(center, text(size:8pt)[#t]))) }
   res(3,"control char")
   res(1.6,"printable ASCII")
   res(0.2,"more controls")
@@ -724,7 +724,7 @@ Write a tiny grading script in the REPL spirit: set `score = 73`, then print `"A
 
 == Repeating work: the `while` loop
 
-Choice is half of control; *repetition* is the other half. Compression is repetition incarnate — you process byte after byte, symbol after symbol, match after match, for as long as data remains. Python has two looping tools. The first is the `while` loop, which repeats a block *as long as a condition stays true*.
+Choice is half of control; *repetition* is the other half. Compression is repetition incarnate: you process byte after byte, symbol after symbol, match after match, for as long as data remains. Python has two looping tools. The first is the `while` loop, which repeats a block *as long as a condition stays true*.
 
 ```python
 count = 5
@@ -736,13 +736,13 @@ print("Lift-off!")
 
 This prints 5, 4, 3, 2, 1, then "Lift-off!". The shape mirrors `if`: a header ending in a colon, then an indented block. The difference is that after the block runs, Python loops *back* to re-check the condition. As long as `count > 0` holds, the block runs again. When `count` finally reaches 0, the condition is `False`, the loop ends, and the program continues with the un-indented line after it.
 
-The single most important line in that loop is `count -= 1`. It nudges the loop *toward* its ending. Leave it out and `count` stays 5 forever, the condition is always true, and the loop runs without end — an *infinite loop*, the classic beginner trap. Every `while` loop must, somewhere in its body, change something that the condition depends on. Ask yourself, every time: "what makes this stop?"
+The single most important line in that loop is `count -= 1`. It nudges the loop *toward* its ending. Leave it out and `count` stays 5 forever, the condition is always true, and the loop runs without end. That is an *infinite loop*, the classic beginner trap. Every `while` loop must, somewhere in its body, change something that the condition depends on. Ask yourself, every time: "what makes this stop?"
 
 #pitfall[
 An infinite loop is a `while` whose condition never becomes false. If you run a program and it just hangs, printing forever or doing nothing, you have probably written one. Press `Ctrl-C` to interrupt it, then look for the variable in your condition and make sure the loop body actually changes it. "What makes this stop?" is the question that prevents most loop bugs.
 ]
 
-`while` shines when you do not know in advance how many repetitions you need — you loop until *something happens*: until the input runs dry, until a match is found, until a value falls below a threshold. Here is a pattern straight out of number work, halving a value until it is small — exactly the shape of counting how many bits a number needs:
+`while` shines when you do not know in advance how many repetitions you need. You loop until *something happens*: until the input runs dry, until a match is found, until a value falls below a threshold. Here is a pattern straight out of number work, halving a value until it is small, exactly the shape of counting how many bits a number needs:
 
 ```python
 n = 1000
@@ -764,7 +764,7 @@ for letter in "banana":
     print(letter)
 ```
 
-This prints `b`, `a`, `n`, `a`, `n`, `a`, each on its own line. Read it as "for each letter in the string 'banana', do the block." On each pass, the name `letter` is bound to the next character, and the block runs with that value. A string is a sequence of characters, so a `for` loop over a string visits each character — which is precisely how a compressor scans its input.
+This prints `b`, `a`, `n`, `a`, `n`, `a`, each on its own line. Read it as "for each letter in the string 'banana', do the block." On each pass, the name `letter` is bound to the next character, and the block runs with that value. A string is a sequence of characters, so a `for` loop over a string visits each character. That is precisely how a compressor scans its input.
 
 When you want to repeat a fixed number of times, or count through integers, you pair `for` with `range`, a built-in that produces a sequence of whole numbers:
 
@@ -778,7 +778,7 @@ When you want to repeat a fixed number of times, or count through integers, you 
 4
 ```
 
-The crucial, much-tripped-over fact: `range(5)` produces `0, 1, 2, 3, 4` — it *starts at 0* and *stops just before 5*, giving exactly five numbers. This "start at zero, stop before the top" convention runs through all of Python, and once it clicks it stops surprising you. `range` has three forms, growing in power:
+The crucial, much-tripped-over fact: `range(5)` produces `0, 1, 2, 3, 4`. It *starts at 0* and *stops just before 5*, giving exactly five numbers. This "start at zero, stop before the top" convention runs through all of Python, and once it clicks it stops surprising you. `range` has three forms, growing in power:
 
 #table(columns: (auto, 1fr, auto), inset: 6pt, align: (left, left, left),
   fill: (_, row) => if row == 0 { c-accent.lighten(85%) } else { none },
@@ -788,13 +788,13 @@ The crucial, much-tripped-over fact: `range(5)` produces `0, 1, 2, 3, 4` — it 
   [`range(0, 10, 2)`], [0 to 10, stepping by 2], [0 2 4 6 8],
 )
 
-The three-argument form, `range(start, stop, step)`, is a workhorse: `range(0, 256)` walks every byte value, `range(7, -1, -1)` counts *down* from 7 to 0 (stepping by −1) — the order in which we will emit the 8 bits of a byte, most-significant first.
+The three-argument form, `range(start, stop, step)`, is a workhorse: `range(0, 256)` walks every byte value, and `range(7, -1, -1)` counts *down* from 7 to 0 (stepping by -1), the order in which we will emit the 8 bits of a byte, most-significant first.
 
-#gopython("`range` is lazy — it does not build a list")[
-A subtle but important point: `range(1_000_000)` does *not* create a million numbers in memory. A `range` is a *lazy* recipe — it remembers only its start, stop, and step, and produces each number the instant the loop asks for the next one. This is why `range(10 ** 12)` is harmless even though a trillion numbers would never fit in your machine.
+#gopython("`range` is lazy - it does not build a list")[
+A subtle but important point: `range(1_000_000)` does *not* create a million numbers in memory. A `range` is a *lazy* recipe: it remembers only its start, stop, and step, and produces each number the instant the loop asks for the next one. This is why `range(10 ** 12)` is harmless even though a trillion numbers would never fit in your machine.
 
 ```python
->>> range(5)            # not a list — a compact recipe
+>>> range(5)            # not a list - a compact recipe
 range(0, 5)
 >>> list(range(5))      # force it to hand over all its numbers
 [0, 1, 2, 3, 4]
@@ -806,8 +806,8 @@ If you ever want to *see* the numbers a range will produce, wrap it in `list(...
 #gopython("`for` versus `while`: which to reach for")[
 A simple rule of thumb decides between Python's two loops:
 
-- Use `for` when you know *what you are looping over* — a string's characters, the numbers `range(256)`, the items of a list. The loop variable is handed to you; you cannot forget to advance it, so `for` loops cannot accidentally run forever.
-- Use `while` when you loop *until a condition changes* and do not know the count in advance — until input is exhausted, until a match is found, until a value crosses a threshold.
+- Use `for` when you know *what you are looping over*: a string's characters, the numbers `range(256)`, the items of a list. The loop variable is handed to you; you cannot forget to advance it, so `for` loops cannot accidentally run forever.
+- Use `while` when you loop *until a condition changes* and do not know the count in advance: until input is exhausted, until a match is found, until a value crosses a threshold.
 
 In practice you will write `for` loops far more often, because most data comes as a sequence you want to visit once each. We will use `while` chiefly for bit-level work, where we loop "until the buffer is full" or "while bits remain."
 ]
@@ -827,14 +827,14 @@ for i in range(1, n + 1):    # i = 1, 2, ..., 100
 print(total)                 # → 5050
 ```
 
-Note `range(1, n + 1)` to *include* `n`, since `range` stops one short of its top. Whenever you see $sum$ in a later chapter — and entropy, $H = -sum p_i log_2 p_i$, is exactly such a sum — picture this loop: a running total fed one term at a time. The two are interchangeable, and being able to read each as the other is a quiet superpower.
+Note `range(1, n + 1)` to *include* `n`, since `range` stops one short of its top. Whenever you see $sum$ in a later chapter, picture this loop: a running total fed one term at a time. Entropy, $H = -sum p_i log_2 p_i$, is exactly such a sum. The two are interchangeable, and being able to read each as the other is a quiet superpower.
 ]
 
-#checkpoint[How many numbers does `range(3, 12, 3)` produce, and what are they?][Three numbers: `3, 6, 9`. It starts at 3, steps by 3, and stops *before* 12 — so 12 itself is never reached, and 9 is the last value.]
+#checkpoint[How many numbers does `range(3, 12, 3)` produce, and what are they?][Three numbers: `3, 6, 9`. It starts at 3, steps by 3, and stops *before* 12, so 12 itself is never reached, and 9 is the last value.]
 
 == Steering inside a loop: `break`, `continue`, and the loop-`else`
 
-Two small keywords give loops fine control. `break` *stops the loop immediately*, jumping out even if items remain — perfect for "search until found, then quit." `continue` *skips the rest of the current pass* and jumps straight to the next item — perfect for "ignore the ones I do not care about."
+Two small keywords give loops fine control. `break` *stops the loop immediately*, jumping out even if items remain, perfect for "search until found, then quit." `continue` *skips the rest of the current pass* and jumps straight to the next item, perfect for "ignore the ones I do not care about."
 
 ```python
 # Find the first vowel in a word and stop looking.
@@ -847,7 +847,7 @@ else:
     print("No vowels at all!")
 ```
 
-Two things to savour. `break` lets us quit the instant we succeed, instead of pointlessly scanning the rest — the same instinct behind a compressor that stops extending a match once it fails. And Python has an unusual flourish: a `for` (or `while`) loop may carry its *own* `else`, which runs only if the loop finished *without* hitting a `break`. Here, since "rhythm" has no `a e i o u`, the loop never breaks, so the `else` fires and prints "No vowels at all!". Read the loop-`else` as "...and if we never broke out early." It is the cleanest way to say "I searched the whole thing and found nothing."
+Two things to savour. `break` lets us quit the instant we succeed, instead of pointlessly scanning the rest, the same instinct behind a compressor that stops extending a match once it fails. Python also has an unusual flourish: a `for` (or `while`) loop may carry its *own* `else`, which runs only if the loop finished *without* hitting a `break`. Here, since "rhythm" has no `a e i o u`, the loop never breaks, so the `else` fires and prints "No vowels at all!". Read the loop-`else` as "and if we never broke out early." It is the cleanest way to say "I searched the whole thing and found nothing."
 
 `continue` earns its keep when you want to process most items but skip a few:
 
@@ -865,7 +865,7 @@ When `n` is even, `continue` leaps past the `total += n` line to the next pass. 
 
 == Naming a value mid-test: the walrus operator `:=`
 
-One last piece of grammar rounds out our control-flow toolkit, and it is genuinely handy in loops. Normally assignment with `=` is a *statement* — it stands alone on its own line and produces no value you can use. But sometimes you want to *both compute a value and test it* in the same breath. The *walrus operator*, written `:=` (it looks like the eyes and tusks of a walrus, hence the name), does exactly that: it assigns a value to a name *and* hands that value back so the surrounding expression can use it.
+One last piece of grammar rounds out our control-flow toolkit, and it is genuinely handy in loops. Normally assignment with `=` is a *statement*: it stands alone on its own line and produces no value you can use. But sometimes you want to compute a value and test it in the same breath. The *walrus operator*, written `:=` (it looks like the eyes and tusks of a walrus, hence the name), does exactly that: it assigns a value to a name *and* hands that value back so the surrounding expression can use it.
 
 ```python
 # Without the walrus: compute, then test, in two steps.
@@ -879,29 +879,29 @@ while (remaining := len(data)) > 0:
     ...                       # remaining is now usable inside
 ```
 
-The expression `(remaining := len(data))` does two jobs at once: it sets `remaining` to the length, and its *value* is that same length, which the `> 0` then tests. This keeps the computation and the test together, removing the duplicated line that is so easy to forget. The walrus, added in Python 3.8, shines whenever you read a value, name it, and immediately branch on it — reading a chunk from a file and looping "while a chunk was actually returned" is the canonical case, and we will use it when `tinyzip` reads real files in Chapter 17.
+The expression `(remaining := len(data))` does two jobs at once: it sets `remaining` to the length, and its *value* is that same length, which the `> 0` then tests. This keeps the computation and the test together, removing the duplicated line that is so easy to forget. The walrus, added in Python 3.8, shines whenever you read a value, name it, and immediately branch on it. Reading a chunk from a file and looping "while a chunk was actually returned" is the canonical case, and we will use it when `tinyzip` reads real files in Chapter 17.
 
 #pitfall[
-The walrus needs its parentheses in most positions: write `while (n := next_value()) > 0:`, not `while n := next_value() > 0:`, which Python reads in a confusing order. When in doubt, wrap the `:=` part in parentheses. And do not overuse it — if naming the value on its own line reads more clearly, do that instead. The walrus is a scalpel, not a hammer.
+The walrus needs its parentheses in most positions: write `while (n := next_value()) > 0:`, not `while n := next_value() > 0:`, which Python reads in a confusing order. When in doubt, wrap the `:=` part in parentheses. Do not overuse it. If naming the value on its own line reads more clearly, do that instead. The walrus is a scalpel, not a hammer.
 ]
 
 #aside[
-The walrus operator was one of the most hotly debated additions in Python's history — the argument over it in 2018 was heated enough that Python's creator, Guido van Rossum, stepped down as the language's "Benevolent Dictator for Life" shortly after it was accepted. A two-character operator helped end a 27-year reign. Syntax matters to people.
+The walrus operator was one of the most hotly debated additions in Python's history. The argument over it in 2018 was heated enough that Python's creator, Guido van Rossum, stepped down as the language's "Benevolent Dictator for Life" shortly after it was accepted. A two-character operator helped end a 27-year reign. Syntax matters to people.
 ]
 
 == A worked example: counting character frequencies by hand
 
-A compressor's first question about any data is: *which symbols are common, and which are rare?* Common symbols deserve short codes; rare ones can afford long ones — that is the whole secret of entropy coding, which we reach in Volume II. Before we can code anything, we must *count*. The script below counts how often each character appears in our sample, using only the `for` loop, `if`, and assignment you now know.
+A compressor's first question about any data is: *which symbols are common, and which are rare?* Common symbols deserve short codes; rare ones can afford long ones. That is the whole secret of entropy coding, which we reach in Volume II. Before we can code anything, we must *count*. The script below counts how often each character appears in our sample, using only the `for` loop, `if`, and assignment you now know.
 
-This is a *worked example*, not a numbered `tinyzip` step: the real, reusable `histogram()` function is canonically built in *Chapter 16*, once we have the right container (Python's `dict`) for the job. We do it the long way here on purpose, to cement the basics — and Chapter 16 will open by showing how painful this hand-rolled version is, then collapse it to a single line.
+This is a *worked example*, not a numbered `tinyzip` step: the real, reusable `histogram()` function is canonically built in *Chapter 16*, once we have the right container (Python's `dict`) for the job. We do it the long way here on purpose, to cement the basics. Chapter 16 will open by showing how painful this hand-rolled version is, then collapse it to a single line.
 
 ```python
-# tinyzip/histogram.py — count each character's frequency.
+# tinyzip/histogram.py - count each character's frequency.
 
 sample = "banana bandana"
 
 # Walk the sample once, building a parallel pair of lists by hand.
-# (Chapter 16's dict will make this far shorter — for now, basics only.)
+# (Chapter 16's dict will make this far shorter - for now, basics only.)
 seen_chars = ""          # characters we have encountered, in order
 counts = []              # counts[i] is how many times seen_chars[i] appears
 
@@ -936,19 +936,19 @@ Running `python tinyzip/histogram.py` prints:
    d      1
 ```
 
-Read the result like a compressor would. The letter `a` appears six times, `n` four — these are the workhorses that *must* get short codes. The space, `b`, and `d` appear once each and can afford long ones. This little table is the raw material of every entropy coder in this book; in Chapter 24 we will feed exactly such counts to Huffman's algorithm and watch the bits melt. For now, savour that you built a frequency model with nothing but `for`, `if`, `+=`, and an f-string.
+Read the result like a compressor would. The letter `a` appears six times, `n` four. These are the workhorses that *must* get short codes. The space, `b`, and `d` appear once each and can afford long ones. This little table is the raw material of every entropy coder in this book; in Chapter 24 we will feed exactly such counts to Huffman's algorithm and watch the bits melt. For now, savour that you built a frequency model with nothing but `for`, `if`, `+=`, and an f-string.
 
 #scoreboard(caption: "tinyzip baseline (sample = \"banana bandana\", 14 chars)",
   [No compression (8 bits/char)], [112 bits], [1.00×], [The bar to beat; every char a full byte],
-  [Frequency model built], [—], [—], [Counts in hand; coding starts in Ch. 24],
+  [Frequency model built], [n/a], [n/a], [Counts in hand; coding starts in Ch. 24],
 )
 
 == Putting it together: a run-length toy
 
-We have enough Python now to write a *real, if tiny, compression idea* end to end — no new concepts, just the ones from this chapter combined. The idea is *run-length encoding* (RLE): when the same character repeats many times in a row, instead of writing it out, write the character once and a count. `"aaaa"` becomes `"a4"`. It is the simplest compression there is, and it is genuinely used — inside fax machines, inside the PNG image format we will study in Chapter 44, inside the bzip2 pipeline of Chapter 35. We meet it properly there; here it is a worked example to flex every muscle this chapter built.
+We have enough Python now to write a *real, if tiny, compression idea* end to end, using no new concepts beyond the ones from this chapter. The idea is *run-length encoding* (RLE): when the same character repeats many times in a row, instead of writing it out, write the character once and a count. `"aaaa"` becomes `"a4"`. It is the simplest compression there is, and it is genuinely used in fax machines, in the PNG image format we will study in Chapter 44, and in the bzip2 pipeline of Chapter 35. We meet it properly there; here it is a worked example to flex every muscle this chapter built.
 
 ```python
-# tinyzip/rle_toy.py — run-length encode a string.
+# tinyzip/rle_toy.py - run-length encode a string.
 
 data = "aaabbbbbcaaaa"
 
@@ -970,7 +970,7 @@ if len(encoded) < len(data):
     saved = len(data) - len(encoded)
     print(f"Saved {saved} characters.")
 else:
-    print("No saving — runs too short. (RLE can grow data!)")
+    print("No saving - runs too short. (RLE can grow data!)")
 ```
 
 This combines nearly everything: a `while` loop over the data, a *nested* `while` to measure each run (guarded by short-circuiting `and` so we never index past the end), string concatenation, `str(...)` conversion to turn the run count into text, an f-string report, and an `if`/`else` to judge the result. Run it:
@@ -980,29 +980,29 @@ Original : 'aaabbbbbcaaaa'  (13 chars)
 Encoded  : 'a3b5c1a4'  (8 chars)
 ```
 
-Thirteen characters down to eight — a genuine saving, because the data had long runs. But the `else` branch hints at a deep truth: on data *without* runs, like `"abcdef"`, RLE produces `"a1b1c1d1e1f1"` — *twice* the size. No compressor wins on every input; that impossibility was proved by the counting argument in Chapter 8, and RLE is its most vivid small example. A real codec uses RLE only where it helps and switches it off where it hurts — a judgment we will automate later.
+Thirteen characters down to eight, a genuine saving, because the data had long runs. But the `else` branch hints at a deep truth: on data *without* runs, like `"abcdef"`, RLE produces `"a1b1c1d1e1f1"`, which is *twice* the size. No compressor wins on every input; that impossibility was proved by the counting argument in Chapter 8, and RLE is its most vivid small example. A real codec uses RLE only where it helps and switches it off where it hurts, a judgment we will automate later.
 
-It is worth pausing on how much this twenty-line script already does, because it is a fair miniature of every compressor to come. It *scans* its input left to right with an outer loop. It *recognises a pattern* — here, a run of identical characters — with an inner loop. It *emits a shorter description* of that pattern when one exists. And it *measures itself*, comparing input and output length to judge whether it won. Scan, model, emit, measure: those four verbs are the skeleton of Huffman coding, of LZ77, of arithmetic coding, of every technique in Volume II. The models grow vastly more clever, but the shape stays. You have, with nothing but `if` and `while` and a handful of string operations, written a real compressor — a humble one, but real. Everything ahead is variations on this theme, each squeezing a little more redundancy out of the data than the last.
+It is worth pausing on how much this twenty-line script already does. It is a fair miniature of every compressor to come. It *scans* its input left to right with an outer loop. It *recognises a pattern* (here, a run of identical characters) with an inner loop. It *emits a shorter description* of that pattern when one exists. And it *measures itself*, comparing input and output length to judge whether it won. Scan, model, emit, measure: those four verbs are the skeleton of Huffman coding, of LZ77, of arithmetic coding, of every technique in Volume II. The models grow vastly more clever, but the shape stays. You have, with nothing but `if` and `while` and a handful of string operations, written a real compressor, a humble one, but real. Everything ahead is variations on this theme, each squeezing a little more redundancy out of the data than the last.
 
-#misconception[A good enough compressor can shrink any file.][No algorithm shrinks every possible input — Chapter 8's pigeonhole counting forbids it. Our RLE toy is the proof in miniature: it halves `"aaaa..."` but *doubles* `"abcdef"`. Every real compressor, including the ones you use daily, can grow some inputs; they win only by being aimed at the data that actually occurs.]
+#misconception[A good enough compressor can shrink any file.][No algorithm shrinks every possible input. Chapter 8's pigeonhole counting forbids it. Our RLE toy is the proof in miniature: it halves `"aaaa..."` but *doubles* `"abcdef"`. Every real compressor, including the ones you use daily, can grow some inputs; they win only by being aimed at the data that actually occurs.]
 
 #keyidea[
-The whole of Python's control flow is three moves: *choose* with `if`/`elif`/`else`, *repeat-until* with `while`, and *repeat-over* with `for`. Combine them with the four value types and a handful of operators, and you can express any computation at all — including every compressor in this book. The cleverness lives in the *ideas*; the language stays small. That is exactly why we chose it.
+The whole of Python's control flow is three moves: *choose* with `if`/`elif`/`else`, *repeat-until* with `while`, and *repeat-over* with `for`. Combine them with the four value types and a handful of operators, and you can express any computation at all, including every compressor in this book. The cleverness lives in the *ideas*; the language stays small. That is exactly why we chose it.
 ]
 
 #history[
-Python was created by Guido van Rossum over the Christmas holiday of 1989 in the Netherlands, as a successor to a teaching language called ABC, and first released in February 1991. He named it not after the snake but after the British comedy troupe Monty Python's Flying Circus — which is why Python's documentation is sprinkled with spam, dead parrots, and silly walks. Thirty-five years on it is, by most measures, the most widely used programming language on Earth, and the lingua franca of the machine-learning that now sits at compression's frontier. The clean, readable design you have been learning — significant indentation, English-like keywords, "one obvious way to do it" — was deliberate from day one. It is why this book can teach compression *and* its implementation in the same breath.
+Python was created by Guido van Rossum over the Christmas holiday of 1989 in the Netherlands, as a successor to a teaching language called ABC, and first released in February 1991. He named it not after the snake but after the British comedy troupe Monty Python's Flying Circus, which is why Python's documentation is sprinkled with spam, dead parrots, and silly walks. Thirty-five years on it is, by most measures, the most widely used programming language on Earth, and the lingua franca of the machine-learning world that now sits at compression's frontier. The clean, readable design you have been learning (significant indentation, English-like keywords, "one obvious way to do it") was deliberate from day one. It is why this book can teach compression *and* its implementation in the same breath.
 ]
 
 #takeaways((
   [Python offers two homes: the *REPL* (`>>>`) for instant experiments, and *scripts* (`.py` files) run top to bottom for keeping. A script only shows what you `print`.],
-  [Four core *types* carry almost everything: `int` (unbounded whole numbers), `float` (decimals, which round — never test floats for exact equality), `str` (text in quotes), and `bool` (`True`/`False`).],
+  [Four core *types* carry almost everything: `int` (unbounded whole numbers), `float` (decimals that round, so never test them for exact equality), `str` (text in quotes), and `bool` (`True`/`False`).],
   [A *name* is a label pointing at a value, bound with `=` ("becomes"), never confused with `==` ("is equal to?"). `snake_case` for multi-word names.],
   [Operators come in three families: arithmetic (note `//` floor-divide and `%` remainder), comparison (which yield `bool`), and logical (`and`, `or`, `not`, which short-circuit).],
-  [*f-strings* (`f"...{value}..."`) weave values into text, with `:.2f` and `:>6` for formatting — the backbone of every report we print.],
+  [*f-strings* (`f"...{value}..."`) weave values into text, with `:.2f` and `:>6` for formatting, and are the backbone of every report we print.],
   [Control flow is three moves: `if`/`elif`/`else` to *choose*, `while` to *repeat until a condition changes*, `for ... in range(...)` to *repeat over* a known sequence. Indentation (four spaces) marks the blocks.],
   [`break`, `continue`, the loop-`else`, and the walrus `:=` give loops fine control. Every `while` must change something its condition depends on, or it never stops.],
-  [We built three real `tinyzip` scripts — a byte counter, a frequency histogram, and a run-length toy — proving that genuine compression ideas need only the small toolbox of this chapter.],
+  [We built three real `tinyzip` scripts (a byte counter, a frequency histogram, and a run-length toy), proving that genuine compression ideas need only the small toolbox of this chapter.],
 ))
 
 == Exercises
@@ -1011,7 +1011,7 @@ Python was created by Guido van Rossum over the Christmas holiday of 1989 in the
 Predict the *type* (`int`, `float`, `str`, or `bool`) of each value, then check in the REPL: (a) `7 // 2`, (b) `7 / 2`, (c) `"7" + "2"`, (d) `7 > 2`, (e) `7 == 7.0`, (f) `str(7) * 3`.
 ]
 #solution("15.1")[
-(a) `int` — floor division of two ints stays an int: `3`. (b) `float` — single `/` always gives a float: `3.5`. (c) `str` — concatenating two strings: `'72'` (text glued, *not* added). (d) `bool` — a comparison: `True`. (e) `bool` — `True`; numerically `7` equals `7.0` even though one is `int` and one is `float`. (f) `str` — `str(7)` is `'7'`, repeated three times: `'777'`.
+(a) `int`: floor division of two ints stays an int: `3`. (b) `float`: single `/` always gives a float: `3.5`. (c) `str`: concatenating two strings: `'72'` (text glued, *not* added). (d) `bool`: a comparison: `True`. (e) `bool`: `True`; numerically `7` equals `7.0` even though one is `int` and one is `float`. (f) `str`: `str(7)` is `'7'`, repeated three times: `'777'`.
 ]
 
 #exercise("15.2", 1)[
@@ -1026,18 +1026,18 @@ else:
 ```
 ]
 #solution("15.2")[
-It prints `2`, then `3`, then `4`, each on its own line. When `n` reaches `5` the `break` fires and the loop stops — and because the loop ended via `break`, the loop-`else` does *not* run, so `"done"` is never printed. The loop-`else` runs only when a loop finishes without breaking.
+It prints `2`, then `3`, then `4`, each on its own line. When `n` reaches `5` the `break` fires and the loop stops. Because the loop ended via `break`, the loop-`else` does *not* run, so `"done"` is never printed. The loop-`else` runs only when a loop finishes without breaking.
 ]
 
 #exercise("15.3", 1)[
 Explain in one sentence each why (a) `x = x + 1` is not a contradiction, and (b) `0.1 + 0.2 == 0.3` is `False`.
 ]
 #solution("15.3")[
-(a) `=` means "becomes," not "equals": the line takes the current value of `x`, adds 1, and rebinds the name `x` to the new value — it is an instruction, not an equation. (b) Floats store only a fixed number of binary digits, so `0.1` and `0.2` are each stored slightly inexactly; their sum lands at `0.30000000000000004`, which is not bit-for-bit equal to the stored `0.3`.
+(a) `=` means "becomes," not "equals": the line takes the current value of `x`, adds 1, and rebinds the name `x` to the new value. It is an instruction, not an equation. (b) Floats store only a fixed number of binary digits, so `0.1` and `0.2` are each stored slightly inexactly; their sum lands at `0.30000000000000004`, which is not bit-for-bit equal to the stored `0.3`.
 ]
 
 #exercise("15.4", 2)[
-Write a `for` loop that prints every byte value from 0 to 255 that is a printable ASCII letter — that is, in the range `65`–`90` (A–Z) or `97`–`122` (a–z) — together with the letter it represents. (Hint: the function `chr(n)` turns a byte value into its character; we met ASCII in Chapter 13.)
+Write a `for` loop that prints every byte value from 0 to 255 that is a printable ASCII letter, that is, in the range `65`–`90` (A–Z) or `97`–`122` (a–z), together with the letter it represents. (Hint: the function `chr(n)` turns a byte value into its character; we met ASCII in Chapter 13.)
 ]
 #solution("15.4")[
 ```python
@@ -1060,7 +1060,7 @@ while n > 0:
     digits += 1
 print(digits)       # 1000 -> 4
 ```
-Each pass removes one decimal digit by floor-dividing by 10 and tallies it; the loop stops when `n` reaches 0. (Dividing by 2 instead would count *binary* digits — the bit length — as in the chapter's logarithm example.)
+Each pass removes one decimal digit by floor-dividing by 10 and tallies it; the loop stops when `n` reaches 0. (Dividing by 2 instead would count *binary* digits, the bit length, as in the chapter's logarithm example.)
 ]
 
 #exercise("15.6", 2)[
@@ -1079,7 +1079,7 @@ while (remaining := len(buffer)) > 0:
     print(remaining)
     buffer = buffer[1:]        # drop the first character
 ```
-The walrus computes `len(buffer)`, binds it to `remaining`, and yields that value for the `> 0` test — all in the header. This removes the duplicated `remaining = len(buffer)` line (the easy-to-forget one), because the length is recomputed automatically at the top of every pass. (`buffer[1:]` is slicing, which we cover fully in Chapter 16; here it just drops the first character.)
+The walrus computes `len(buffer)`, binds it to `remaining`, and yields that value for the `> 0` test, all in the header. This removes the duplicated `remaining = len(buffer)` line (the easy-to-forget one), because the length is recomputed automatically at the top of every pass. (`buffer[1:]` is slicing, which we cover fully in Chapter 16; here it just drops the first character.)
 ]
 
 #exercise("15.7", 2)[
@@ -1092,7 +1092,7 @@ if len(encoded) < len(data):
 else:
     print("keep raw")
 ```
-A real codec must record *which* form it stored — a single flag bit — because the decoder, seeing only the stored bytes, has no other way to know whether to run the RLE decoder or copy the bytes verbatim. That one flag bit is the small, honest overhead of being allowed to pick the better of two options, and it is why no scheme compresses every input (Chapter 8).
+A real codec must record *which* form it stored, a single flag bit, because the decoder, seeing only the stored bytes, has no other way to know whether to run the RLE decoder or copy the bytes verbatim. That one flag bit is the small, honest overhead of being allowed to pick the better of two options, and it is why no scheme compresses every input (Chapter 8).
 ]
 
 #exercise("15.8", 2)[
@@ -1109,7 +1109,7 @@ The $sum$ sign says "start a running total at 0, and for each $i$ from 1 to 100,
 ]
 
 #exercise("15.9", 3)[
-Write a complete script that, given a string `text`, finds and prints the *single most common character* and how many times it occurs, using only the tools of this chapter (`for`, `if`, assignment, comparison). Build the frequency information by hand as in the histogram project, then make a second pass to find the maximum. Test it on `"mississippi"` (answer: `i` and `s` tie at 4 — print whichever your loop finds first).
+Write a complete script that, given a string `text`, finds and prints the *single most common character* and how many times it occurs, using only the tools of this chapter (`for`, `if`, assignment, comparison). Build the frequency information by hand as in the histogram project, then make a second pass to find the maximum. Test it on `"mississippi"` (answer: `i` and `s` tie at 4; print whichever your loop finds first).
 ]
 #solution("15.9")[
 ```python
@@ -1134,11 +1134,11 @@ for i in range(len(seen)):
 
 print(f"Most common: {best_char!r} ({best_count} times)")
 ```
-The first loop builds parallel `seen`/`counts` lists exactly as the histogram project did. The second loop sweeps them, keeping `best_count` and `best_char` updated whenever it finds a strictly larger count — the classic "track the best so far" pattern. Because the test is *strictly* greater (`>`), the *first* of any tie wins; for `"mississippi"` that is `s` if `s` is encountered before `i` reaches 4, but the printed answer depends on scan order. This "find the most frequent symbol" is the seed of every greedy code-assignment algorithm to come.
+The first loop builds parallel `seen`/`counts` lists exactly as the histogram project did. The second loop sweeps them, keeping `best_count` and `best_char` updated whenever it finds a strictly larger count, the classic "track the best so far" pattern. Because the test is *strictly* greater (`>`), the *first* of any tie wins; for `"mississippi"` that is `s` if `s` is encountered before `i` reaches 4, but the printed answer depends on scan order. This "find the most frequent symbol" is the seed of every greedy code-assignment algorithm to come.
 ]
 
 #exercise("15.10", 3)[
-A *Collatz* sequence starts at any positive integer `n` and repeats: if `n` is even, halve it; if odd, compute `3 * n + 1`; stop when it reaches 1. Write a `while` loop that prints the sequence for `n = 27` and counts how many steps it takes to reach 1. (This famously takes 111 steps — a good test of your loop, and a reminder that "what makes this stop?" is sometimes a deep question.)
+A *Collatz* sequence starts at any positive integer `n` and repeats: if `n` is even, halve it; if odd, compute `3 * n + 1`; stop when it reaches 1. Write a `while` loop that prints the sequence for `n = 27` and counts how many steps it takes to reach 1. (This famously takes 111 steps, a good test of your loop and a reminder that "what makes this stop?" is sometimes a deep question.)
 ]
 #solution("15.10")[
 ```python
@@ -1153,17 +1153,17 @@ while n != 1:
     steps += 1
 print(f"\nReached 1 in {steps} steps.")   # 111 steps
 ```
-The loop tests `n != 1` and stops when `n` reaches 1; each pass uses `n % 2 == 0` to branch between halving (`n //= 2`) and the odd step (`3 * n + 1`), tallying `steps`. The `end=" "` argument to `print` keeps the sequence on one line by replacing the usual newline with a space. Whether *every* starting `n` eventually reaches 1 is the unsolved Collatz conjecture — so in general "what makes this stop?" can be a genuinely hard question, even when the loop is three lines long.
+The loop tests `n != 1` and stops when `n` reaches 1; each pass uses `n % 2 == 0` to branch between halving (`n //= 2`) and the odd step (`3 * n + 1`), tallying `steps`. The `end=" "` argument to `print` keeps the sequence on one line by replacing the usual newline with a space. Whether *every* starting `n` eventually reaches 1 is the unsolved Collatz conjecture, so in general "what makes this stop?" can be a genuinely hard question, even when the loop is three lines long.
 ]
 
 == Further reading
 
-- #link("https://docs.python.org/3/tutorial/")[The Python Tutorial] — the official, free, gentle tour of the language, kept current for Python 3.14. The "Informal Introduction" and "More Control Flow Tools" sections cover exactly this chapter's ground.
-- #link("https://docs.python.org/3/whatsnew/3.14.html")[What's New in Python 3.14] — the release notes for the version we use, including t-strings (PEP 750), free-threading (PEP 779), and the new `compression.zstd` module (PEP 784) we will meet in Chapter 32.
-- #link("https://peps.python.org/pep-0008/")[PEP 8 — Style Guide for Python Code] — the community's conventions, including `snake_case` and four-space indentation. Reading code is easier when everyone writes it the same way.
-- #link("https://peps.python.org/pep-0572/")[PEP 572 — Assignment Expressions] — the proposal that added the walrus operator `:=`, with the design rationale and the debate that surrounded it.
-- Mark Lutz, _Learning Python_ (O'Reilly) — a thorough, beginner-friendly treatment if you want a second voice on the fundamentals, with far more examples than we have room for.
+- #link("https://docs.python.org/3/tutorial/")[The Python Tutorial]: the official, free, gentle tour of the language, kept current for Python 3.14. The "Informal Introduction" and "More Control Flow Tools" sections cover exactly this chapter's ground.
+- #link("https://docs.python.org/3/whatsnew/3.14.html")[What's New in Python 3.14]: the release notes for the version we use, including t-strings (PEP 750), free-threading (PEP 779), and the new `compression.zstd` module (PEP 784) we will meet in Chapter 32.
+- #link("https://peps.python.org/pep-0008/")[PEP 8 - Style Guide for Python Code]: the community's conventions, including `snake_case` and four-space indentation. Reading code is easier when everyone writes it the same way.
+- #link("https://peps.python.org/pep-0572/")[PEP 572 - Assignment Expressions]: the proposal that added the walrus operator `:=`, with the design rationale and the debate that surrounded it.
+- Mark Lutz, _Learning Python_ (O'Reilly): a thorough, beginner-friendly treatment if you want a second voice on the fundamentals, with far more examples than we have room for.
 
 #bridge[
-You can now read and write the *control* of a program — its values, its choices, its loops. But `tinyzip`'s histogram project fought with one hand tied: counting characters by hand in parallel lists was painful, because we lacked the right *container* for the job. In *Chapter 16* we fix that. We meet Python's real data structures — *lists*, *tuples*, *dictionaries*, and *sets* — that hold many values at once; *slicing* to grab pieces of them; *comprehensions* that build them in a single readable line; and *functions* of our own, with *type hints* like `dict[int, int]`, so our code says what it means. The histogram that took twenty lines here will collapse to three. With those containers in hand, and the *bytes* and *files* of Chapter 17 after them, `tinyzip` will be ready to read real files and emit real compressed bits — and Volume II's first true codec, Huffman, will be within reach.
+You can now read and write the *control* of a program: its values, its choices, its loops. But `tinyzip`'s histogram project fought with one hand tied. Counting characters by hand in parallel lists was painful, because we lacked the right *container* for the job. In *Chapter 16* we fix that. We meet Python's real data structures (*lists*, *tuples*, *dictionaries*, and *sets*) that hold many values at once; *slicing* to grab pieces of them; *comprehensions* that build them in a single readable line; and *functions* of our own, with *type hints* like `dict[int, int]`, so our code says what it means. The histogram that took twenty lines here will collapse to three. With those containers in hand, and the *bytes* and *files* of Chapter 17 after them, `tinyzip` will be ready to read real files and emit real compressed bits, and Volume II's first true codec, Huffman, will be within reach.
 ]

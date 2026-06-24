@@ -4,7 +4,7 @@
 = Scientific and Floating-Point Compression
 
 #epigraph[
-  All models are wrong, but some are useful — and a useful model does not need
+  All models are wrong, but some are useful, and a useful model does not need
   seventeen significant digits.
 ][George E. P. Box (paraphrased)]
 
@@ -13,8 +13,8 @@ cores. At midnight on the last day it finishes, and the output lands on disk: on
 hundred terabytes of air-temperature readings, each stored as a 64-bit
 floating-point number to full precision. The scientists need to archive that data
 for twenty years and share it with colleagues around the world. If they try to
-gzip it, they barely gain 2 percent. They need something completely different —
-and that is exactly what this chapter is about.
+gzip it, they barely gain 2 percent. They need something completely different.
+That is exactly what this chapter is about.
 
 The problem with scientific data is not that it is random; it is that it is
 *almost but not quite* regular. Neighboring temperatures are similar, adjacent
@@ -29,7 +29,7 @@ filter plugins, NetCDF chunking) that connects these codecs to the file formats
 that scientists actually use.
 
 No deep neural networks appear in this chapter. The compression power here comes
-from understanding what floating-point numbers look like on the inside — and from
+from understanding what floating-point numbers look like on the inside, and from
 being smart about what "close enough" means when the data is already an
 approximation of the physical world.
 
@@ -39,8 +39,8 @@ approximation of the physical world.
   quantization: rounding a continuous value to the nearest grid point and storing
   an integer index. Chapter 42 (JPEG) combined both ideas: DCT to decorrelate,
   quantization to discard, entropy coding to compact. In this chapter, zfp does
-  almost exactly the same pipeline — but in one, two, or three dimensions, on
-  doubles instead of integers, and with the user setting the error budget rather
+  almost exactly the same pipeline, but applied in one, two, or three dimensions,
+  on doubles instead of integers, with the user setting the error budget rather
   than accepting JPEG's fixed quality table. Chapter 63 met quantization again
   from the model-compression angle: how do we reduce the precision of neural
   network weights? Here we ask the same question about simulation arrays. Finally,
@@ -64,7 +64,7 @@ approximation of the physical world.
 Pull out any line of weather-model output and you might see a temperature value
 like $286.73158462903$ Kelvin. Compress it with gzip, and you will notice
 something uncomfortable: gzip barely helps. In fact, on typical double-precision
-HPC arrays, gzip achieves compression ratios between 1.0× and 1.3× — barely
+HPC arrays, gzip achieves compression ratios between 1.0× and 1.3×, barely
 better than storing the raw bytes directly. Why?
 
 The answer lies in the *mantissa bits*. Let us open up the hood of the
@@ -100,14 +100,14 @@ floating-point format.
 
   The full 64-bit pattern: `0 01111111111 1000000000000000000000000000000000000000000000000000`
 
-  Why does this matter for compression? The *exponent bits* of nearby values are often identical (they live in the same power-of-2 range). The *high mantissa bits* are also similar. But the *low mantissa bits* of a simulation result look essentially random — they accumulate rounding errors from millions of arithmetic operations. Random bits do not compress. Byte-by-byte, the low-order bytes of the mantissa look like noise to gzip's Lempel-Ziv dictionary. The first insight of scientific compression is: *rearrange the bytes so that similar bytes land next to each other*.
+  Why does this matter for compression? The *exponent bits* of nearby values are often identical (they live in the same power-of-2 range). The *high mantissa bits* are also similar. But the *low mantissa bits* of a simulation result look essentially random: they accumulate rounding errors from millions of arithmetic operations. Random bits do not compress. Byte-by-byte, the low-order bytes of the mantissa look like noise to gzip's Lempel-Ziv dictionary. The first insight of scientific compression is: *rearrange the bytes so that similar bytes land next to each other*.
 ]
 
 Think of it this way. If you lay one thousand temperature values end to end in
 memory, the bytes are interleaved: byte 0 of value 0, byte 1 of value 0, ...,
 byte 7 of value 0, byte 0 of value 1, etc. Byte 0 of every temperature is the
-sign-plus-top-exponent byte — nearly identical across all values. Byte 7 of every
-temperature is the lowest-order mantissa byte — essentially random noise. They are
+sign-plus-top-exponent byte, nearly identical across all values. Byte 7 of every
+temperature is the lowest-order mantissa byte, essentially random noise. They are
 seven bytes apart and gzip cannot see the pattern.
 
 The solution is *byte-shuffling*: transpose the byte array so that all the byte-0s
@@ -117,7 +117,7 @@ are contiguous, and a standard entropy coder can compress them effectively.
 == Blosc and Byte-Shuffling: Lossless Float Compression
 
 Blosc (created by Francesc Alted, version 1.0 in 2010, with C-Blosc2 released in
-2021) is not strictly a compressor — it is a *meta-compressor* and a *pipeline*. It
+2021) is not strictly a compressor. It is a *meta-compressor* and a *pipeline*. It
 applies a *shuffle filter* to rearrange bytes (or bits), then feeds the result to a
 fast byte-level compressor (LZ4, Zstandard, or Snappy). The combination runs in
 multiple threads and is specifically designed to be faster than a raw
@@ -195,7 +195,7 @@ compressed but at least they are isolated.
 )
 
 On typical climate simulation data, Blosc with bit-shuffle and LZ4 achieves
-compression ratios around 2–4× while running at 2–8 GB/s — fast enough to
+compression ratios around 2–4× while running at 2–8 GB/s, fast enough to
 decompress data faster than it can arrive from disk. This is the point: Blosc's
 goal is not maximum ratio but *effective bandwidth*, making compressed storage
 faster than uncompressed I/O.
@@ -227,8 +227,8 @@ the actual value.
 
 FPC maintains two predictors simultaneously:
 1. *FCM* (Finite Context Method): a hash-table predictor that maps the last few
-   values' XOR patterns to the most likely next value — effectively a learned LZ
-   dictionary for floating-point streams.
+   values' XOR patterns to the most likely next value (effectively a learned LZ
+   dictionary for floating-point streams).
 2. *DFCM* (Differential FCM): the same idea applied to the *differences* between
    consecutive values, capturing smooth trends.
 
@@ -242,7 +242,7 @@ most values in just 1–3 bytes instead of 8.
   *XOR* (the `^` operator in Python, introduced in Chapter 17) compares two
   numbers bit by bit and outputs a 1 wherever the bits differ and a 0 wherever
   they match. So `a ^ a == 0`: a value XORed with itself is all zeros. If `a` and
-  `b` are nearly equal, `a ^ b` is mostly zeros — only the bit positions where they
+  `b` are nearly equal, `a ^ b` is mostly zeros: only the bit positions where they
   actually differ are set. That is exactly why a near-perfect prediction leaves a
   long run of leading zero bits that costs almost nothing to store.
 ]
@@ -250,8 +250,8 @@ most values in just 1–3 bytes instead of 8.
 #keyidea[
   Predicting-then-XOR-encoding is the floating-point analogue of delta coding.
   XOR isolates the bits that differ; leading zeros tell you how many bits were
-  predicted correctly. A perfect prediction produces a 64-bit zero — one byte to
-  store (with a zero-run-length encoding).
+  predicted correctly. A perfect prediction produces a 64-bit zero, storable in
+  one byte with a zero-run-length encoding.
 ]
 
 FPC achieves compression ratios of 2–5× on smooth scientific streams and runs
@@ -278,7 +278,7 @@ cosmology codes, and fluid solvers need 10×, 50×, even 100× compression just 
 make archiving and sharing feasible. Getting there requires accepting some loss.
 
 But what kind of loss is acceptable for a scientist? It is certainly not the kind
-JPEG introduces in images — blurry blocks, ringing artifacts. Scientists need
+JPEG introduces in images (blurry blocks, ringing artifacts). Scientists need
 something they can *reason about mathematically*: "I compressed this temperature
 field, and I guarantee that no reconstructed value is more than 0.01 Kelvin away
 from the original."
@@ -290,7 +290,7 @@ $ max_i abs(x_i^' - x_i) <= epsilon $
 
 where $x_i$ is the original value and $x_i^'$ is the reconstructed value. Every
 single element in the decompressed array is within $epsilon$ of the original. The
-compressor can do anything it likes in between — as long as it never violates that
+compressor can do anything it likes in between, as long as it never violates that
 contract.
 
 #definition("Absolute Error Bound")[
@@ -331,8 +331,8 @@ $d=3$: $4 times 4 times 4 = 64$). Each block is processed independently, which
 enables random access.
 
 *Step 2: Floating-point alignment.* Within each block, zfp finds the largest
-absolute value and aligns all values to a common exponent — essentially
-representing them as scaled integers. This removes the redundant per-value exponent
+absolute value and aligns all values to a common exponent, representing them
+as scaled integers. This removes the redundant per-value exponent
 field.
 
 *Step 3: Decorrelating transform.* zfp applies a *lifting-based orthogonal
@@ -347,7 +347,7 @@ at a time, most-significant bit first. This is the key difference from JPEG's
 entropy coding: by processing bits in order of significance, zfp can stop at
 any point and still have a valid approximation. In *fixed-accuracy mode*, zfp
 stops writing bit planes once all remaining unwritten bits contribute less than
-$epsilon$ to any coefficient — the error bound is satisfied. In *fixed-rate mode*,
+$epsilon$ to any coefficient; at that point the error bound is satisfied. In *fixed-rate mode*,
 it stops after writing a fixed number of bits per block regardless of error.
 
 *Step 5: Output.* The compressed block is written contiguously. Because each block
@@ -364,16 +364,17 @@ whole array.
     import cetz.draw: *
 
     let boxes = (
-      ((0,0), (1.6,0.7), [*4×4 block*\ float64], rgb("#d0e8f4")),
-      ((2.0,0), (3.8,0.7), [*Align\ exponent*], rgb("#c8e6c9")),
-      ((4.2,0), (5.8,0.7), [*Transform\ (lifting)*], rgb("#ffe0b2")),
-      ((6.2,0), (7.8,0.7), [*Zig-zag\ reorder*], rgb("#f3e5f5")),
-      ((8.2,0), (9.8,0.7), [*Bit-plane\ code*], rgb("#fff9c4")),
+      ((0,0), (1.6,0.7), [*4×4 block* float64], rgb("#d0e8f4")),
+      ((2.0,0), (3.8,0.7), [*Align exponent*], rgb("#c8e6c9")),
+      ((4.2,0), (5.8,0.7), [*Transform* (lifting)], rgb("#ffe0b2")),
+      ((6.2,0), (7.8,0.7), [*Zig-zag* reorder], rgb("#f3e5f5")),
+      ((8.2,0), (9.8,0.7), [*Bit-plane* code], rgb("#fff9c4")),
     )
     for (a, b, lbl, col) in boxes {
+      let w = b.at(0) - a.at(0)
       rect(a, b, fill: col, stroke: 0.7pt + gray, radius: 3pt)
       content(((a.at(0) + b.at(0)) / 2, (a.at(1) + b.at(1)) / 2),
-        text(size: 7.5pt)[#lbl])
+        box(width: (w - 0.2) * 1cm, inset: 1pt, align(center, text(size: 7pt)[#lbl])))
     }
     for i in range(4) {
       let x1 = boxes.at(i).at(1).at(0)
@@ -381,8 +382,8 @@ whole array.
       let y = 0.35
       line((x1, y), (x2, y), mark: (end: ">", size: 5pt))
     }
-    // stop arrow
-    content((9.8, 0.35), text(size: 7pt, fill: rgb("#9a2617"))[ → stop when $epsilon$ met], anchor: "west")
+    // stop label below last box
+    content((9.0, -0.25), box(width: 2.2cm, align(center, text(size: 7pt, fill: rgb("#9a2617"))[stop when $epsilon$ met])), anchor: "center")
   })
 )
 
@@ -412,7 +413,7 @@ $ [100, 97, 103, 99] $
 
 Step 3, the lifting transform along 1-D. A *lifting scheme* is just a way of
 rewriting a transform as a sequence of in-place "predict and update" steps using
-only additions, subtractions, and shifts — no multiplications, so it is exact and
+only additions, subtractions, and shifts (no multiplications), so it is exact and
 reversible on integers. zfp's 1-D transform is a four-point lifting scheme. For
 intuition, ignore the exact coefficients and think of it as separating the four
 values into:
@@ -423,17 +424,17 @@ For our block $[100, 97, 103, 99]$ the four values sit around an average of
 $(100+97+103+99)/4 = 99.75$, and they never stray more than about 3 from it. So
 after the transform we get roughly:
 - one coarse coefficient near $400$ (the sum, $approx 4 times 99.75$), and
-- three detail coefficients that are *small* — on the order of $plus.minus 3$,
+- three detail coefficients that are *small*, on the order of $plus.minus 3$,
   because the values barely deviate from their average.
 
 Here is the payoff. The coarse coefficient is large and must be stored with full
 precision, but there is only *one* of it. The three detail coefficients are small
-numbers, so their most-significant bits are all zero — and bit-plane coding writes
+numbers, so their most-significant bits are all zero. Bit-plane coding writes
 the most-significant bit plane of the whole block first. With an error bound of
 $epsilon = 5$, we can simply *stop* before ever reaching the low bit planes that
 encode those tiny $plus.minus 3$ wiggles: dropping detail smaller than the bound is
 exactly what "fixed-accuracy" means. We keep the coarse level, discard most of the
-detail bits, and the block round-trips to within $plus.minus 5$ — roughly 4×
+detail bits, and the block round-trips to within $plus.minus 5$: roughly 4×
 compression on this block alone. On a real array, where most blocks are this smooth,
 those savings compound.
 
@@ -443,7 +444,7 @@ data, ratios drop to 2–5×.
 
 #pitfall[
   zfp's error bound is guaranteed *per block*, not unconditionally per element in
-  all usage modes. In *fixed-rate mode*, the error bound is not guaranteed — you
+  all usage modes. In *fixed-rate mode*, the error bound is not guaranteed: you
   are just allocating a fixed bit budget. Always use *fixed-accuracy mode* when you
   need the mathematical guarantee.
 ]
@@ -464,7 +465,7 @@ neighbors. The original SZ used *curve fitting* (linear or quadratic); SZ 1.4+
 adopted the *Lorenzo predictor*.
 
 #definition("Lorenzo Predictor")[
-  The *Lorenzo predictor* (introduced by Ibarria, Lindstrom, Rossignac, and Szymczak in 2003) estimates a value from a simple weighted combination of its already-decoded neighbors. In one dimension: $hat(x)_i = 2 x_(i-1) - x_(i-2)$ (linear extrapolation). In two dimensions: $hat(x)_(i,j) = x_(i-1,j) + x_(i,j-1) - x_(i-1,j-1)$ (a bilinear extrapolation from three neighbors). In three dimensions the formula extends similarly. For smooth data, this prediction is extremely accurate — the residual is tiny.
+  The *Lorenzo predictor* (introduced by Ibarria, Lindstrom, Rossignac, and Szymczak in 2003) estimates a value from a simple weighted combination of its already-decoded neighbors. In one dimension: $hat(x)_i = 2 x_(i-1) - x_(i-2)$ (linear extrapolation). In two dimensions: $hat(x)_(i,j) = x_(i-1,j) + x_(i,j-1) - x_(i-1,j-1)$ (a bilinear extrapolation from three neighbors). In three dimensions the formula extends similarly. For smooth data, this prediction is extremely accurate and the residual is tiny.
 ]
 
 *Step 2: Quantization.* The residual $r_i = x_i - hat(x)_i$ is divided by the
@@ -475,18 +476,18 @@ $ q_i = "round"(r_i / epsilon) $
 This integer $q_i$ is small for smooth data. It can be exactly reconstructed to
 within $epsilon$ of the original value. If $q_i$ falls outside a predefined
 range (the residual was too large to quantize reliably), the original value is
-stored losslessly as a fallback — SZ calls these *unpredictable* values.
+stored losslessly as a fallback. SZ calls these *unpredictable* values.
 
 *Step 3: Entropy coding.* The integer sequence $q_i$ is Huffman-coded or
 arithmetic-coded. On smooth simulation data, $q_i = 0$ for most elements (the
 prediction was nearly perfect), so the distribution of $q_i$ values is extremely
-peaked at zero — high redundancy, high compression.
+peaked at zero: high redundancy, high compression.
 
 *Step 4: Metadata and fallback.* The Huffman table, unpredictable values, and
 array dimensions are written into the header.
 
 #algo(
-  name: "SZ (Sheng Di / Cappello Compressor) — SZ3",
+  name: "SZ (Sheng Di / Cappello Compressor) - SZ3",
   year: "2016 (SZ1); 2022 (SZ3 modular framework)",
   authors: "Sheng Di, Franck Cappello (Argonne National Laboratory); Kai Zhao, Robert Underwood and collaborators",
   aim: "Error-bounded lossy compression via pointwise prediction + error-quantization + entropy coding",
@@ -507,7 +508,7 @@ array dimensions are written into the header.
 #scoreboard(
   caption: "Error-bounded lossy compression of a synthetic 3-D temperature field (1000³ doubles, ~8 GB raw; absolute bound ε = 1e-3 × value range)",
   [Method], [Compressed bytes], [Ratio], [Notes],
-  [Raw float64], [8,000,000,000], [1.0×], [Baseline — uncompressed],
+  [Raw float64], [8,000,000,000], [1.0×], [Baseline (uncompressed)],
   [gzip (level 6)], [7,760,000,000], [1.03×], [Near-useless on float arrays],
   [Blosc + bitshuffle + LZ4], [2,400,000,000], [3.3×], [Lossless; fast; byte-shuffle exploits exponent runs],
   [FPC], [2,000,000,000], [4.0×], [Lossless; good on smooth 1-D fields],
@@ -516,8 +517,8 @@ array dimensions are written into the header.
 )
 
 The scoreboard tells a clear story. Lossless methods max out around 4×; error-bounded
-methods reach 25–33× on the same data. The price is that scientists must decide —
-and justify — what "close enough" means for their application.
+methods reach 25–33× on the same data. The price is that scientists must decide,
+and justify, what "close enough" means for their application.
 
 === When Does Each Win?
 
@@ -537,7 +538,7 @@ data:
   codec tuning.
 
 #gopython("NumPy Arrays and struct Module")[
-  In Python, scientific data almost always lives in a *NumPy array* — a
+  In Python, scientific data almost always lives in a *NumPy array*, a
   contiguous block of memory holding values of a single data type. You can
   inspect the raw bytes of a float with the `struct` module:
 
@@ -569,8 +570,8 @@ Before leaving lossless techniques, two more tricks deserve mention because they
 appear frequently in scientific data pipelines.
 
 *Byte-splitting* is a variant of byte-shuffling that takes a step further: it
-groups all the bytes at position 0 together, all at position 1 together, etc. —
-then *separately compresses each group*. The sign-plus-high-exponent group is nearly
+groups all the bytes at position 0 together, all at position 1 together, and so on.
+It then *separately compresses each group*. The sign-plus-high-exponent group is nearly
 constant (compresses to almost nothing); the low-mantissa group is random (barely
 compresses). By splitting them, a smart compressor can allocate more effort to the
 compressible groups and skip the incompressible ones quickly.
@@ -618,7 +619,7 @@ PyTables, NetCDF-4, and SZ3 all offer bit-packing as a transparent filter.
   print("Round-trip OK:", [hex(v) for v in original])
   ```
 
-  Notice that the first four bytes of `shuffled` are all `0x3F` — identical, and
+  Notice that the first four bytes of `shuffled` are all `0x3F`, identical, and
   therefore compressible to nearly one byte. The last four bytes vary significantly.
   This is the byte-shuffle effect.
 ]
@@ -626,15 +627,15 @@ PyTables, NetCDF-4, and SZ3 all offer bit-packing as a transparent filter.
 == The Integration Layer: HDF5, NetCDF, and Zarr
 
 Real scientists do not call `zfp.compress(arr)` in a Python script and then write
-the result to a custom binary file. They write to *HDF5* or *NetCDF-4* — two
+the result to a custom binary file. They write to *HDF5* or *NetCDF-4*, two
 standard scientific data formats used across every domain from climate to particle
-physics to genomics — and they want compression to be *transparent*: the file still
+physics to genomics. They want compression to be *transparent*: the file still
 looks like a normal array; the compression happens silently.
 
 HDF5 achieves this through its *filter pipeline*. When you define a dataset in an
 HDF5 file, you can attach a sequence of filters. Every filter has a registered ID.
 The built-in filters include gzip (ID 1), shuffle (ID 2), and SZIP (ID 4).
-Third-party filters — including zfp (ID 32013) and SZ (ID 32017) — are loaded as
+Third-party filters (including zfp (ID 32013) and SZ (ID 32017)) are loaded as
 dynamic shared libraries at runtime. The user writes:
 
 ```python
@@ -649,7 +650,7 @@ with h5py.File("output.h5", "w") as f:
 ```
 
 And the file stores compressed data that any HDF5-aware program can read, on any
-machine, even without knowing about zfp — because the filter ID is stored in the
+machine, even without knowing about zfp. The filter ID is stored in the
 file header and the HDF5 library loads the plugin automatically.
 
 *NetCDF-4* is built on HDF5 and inherits the same filter pipeline. *Zarr* (widely
@@ -684,7 +685,7 @@ the SZ group stand out:
   grid points) is more accurate than extrapolation (the Lorenzo approach) for smooth
   fields.
 
-- *cuSZp2* (Huang, Di et al., 2024): designed for *extreme throughput* — a
+- *cuSZp2* (Huang, Di et al., 2024): designed for *extreme throughput*. It uses a
   single-pass, single-kernel design that reaches >200 GB/s on high-end GPUs, at
   the cost of some ratio compared to cuSZ-i. Aimed at online compression during
   simulation checkpointing where the bottleneck is compute, not I/O.
@@ -709,7 +710,7 @@ autoencoders similar to the learned image codecs in Chapters 56–58) have shown
 ratios on specific datasets but remain too slow and too data-specific for general
 deployment. A June 2026 preprint (Residual Modeling for High-Fidelity Learned
 Compression of Scientific Data) combines a learned predictor with SZ-style
-residual coding, achieving higher ratios than SZ3 on climate data — but at 10–100×
+residual coding, achieving higher ratios than SZ3 on climate data, at 10–100×
 the compute cost. The gap between research and deployment remains wide.
 
 #misconception[
@@ -738,11 +739,11 @@ the compute cost. The gap between research and deployment remains wide.
       [*Condition*], [*Lossless?*], [*Random access?*], [*Recommended*],
     ),
     [Need exact bit-for-bit fidelity; stream is 1-D],
-    [Yes], [—],
+    [Yes], [N/A],
     [*FPC* (predict+XOR; fastest on 1-D streams)],
 
     [Need exact fidelity; data is 2-D/3-D or multi-type],
-    [Yes], [—],
+    [Yes], [N/A],
     [*Blosc + bitshuffle + LZ4* (multi-threaded; integrates into HDF5/Zarr)],
 
     [Lossy OK; need random seek into compressed array],
@@ -765,7 +766,7 @@ the compute cost. The gap between research and deployment remains wide.
   a unified Python API. You can write a 100 TB climate dataset directly to cloud
   object storage (Amazon S3, Google Cloud Storage) in Zarr format with zfp
   compression, and any researcher in the world can read arbitrary slices without
-  downloading the whole file — the random-access property of fixed-rate zfp makes
+  downloading the whole file. The random-access property of fixed-rate zfp makes
   this practical.
 ]
 
@@ -792,7 +793,7 @@ the compute cost. The gap between research and deployment remains wide.
 ]
 
 #solution("66.1")[
-  (a) Sign bit = 1 (negative). (b) $3.14 approx 1.57 times 2^1$, so the true exponent is 1, stored as $1 + 1023 = 1024 = 10000000000_2$; the exponent field occupies bits 62–52 of the 64-bit word. (c) Byte 0 (sign + top 7 exponent bits) will be identical across all one thousand copies — most compressible. Byte 1 (remaining exponent + top mantissa) will also be highly similar. Byte 7 (lowest mantissa) will vary almost randomly even for very similar values — least compressible, effectively incompressible.
+  (a) Sign bit = 1 (negative). (b) $3.14 approx 1.57 times 2^1$, so the true exponent is 1, stored as $1 + 1023 = 1024 = 10000000000_2$; the exponent field occupies bits 62–52 of the 64-bit word. (c) Byte 0 (sign + top 7 exponent bits) will be identical across all one thousand copies and is therefore the most compressible. Byte 1 (remaining exponent + top mantissa) will also be highly similar. Byte 7 (lowest mantissa) will vary almost randomly even for very similar values, making it effectively incompressible.
 ]
 
 #exercise("66.2", 1)[
@@ -803,7 +804,7 @@ the compute cost. The gap between research and deployment remains wide.
 ]
 
 #solution("66.2")[
-  Relative bound of $10^(-4)$ is far better here. The dynamic range spans a factor of 1000. An absolute bound of $0.01$ Pa is uselessly tight for sea-level values ($100\,000$ Pa) — it demands 7 significant digits — while being potentially too loose for upper-stratosphere values near $100$ Pa if the researcher cares about 0.01% accuracy there. A relative bound of $10^(-4)$ treats each pressure proportionally: $plus.minus 0.01$ Pa accuracy for $100$ Pa values, $plus.minus 10$ Pa accuracy for $100\,000$ Pa values — physically appropriate at every altitude.
+  Relative bound of $10^(-4)$ is far better here. The dynamic range spans a factor of 1000. An absolute bound of $0.01$ Pa is uselessly tight for sea-level values ($100\,000$ Pa), demanding 7 significant digits, while being potentially too loose for upper-stratosphere values near $100$ Pa if the researcher cares about 0.01% accuracy there. A relative bound of $10^(-4)$ treats each pressure proportionally: $plus.minus 0.01$ Pa accuracy for $100$ Pa values, $plus.minus 10$ Pa accuracy for $100\,000$ Pa values, which is physically appropriate at every altitude.
 ]
 
 #exercise("66.3", 2)[
@@ -817,7 +818,7 @@ the compute cost. The gap between research and deployment remains wide.
   - $i=3$: $hat(x)_3 = 2(10.3) - 10.1 = 10.5$. $r_3 = 10.6 - 10.5 = 0.1$. $q_3 = round(0.1/0.05) = 2$.
   - $i=4$: $hat(x)_4 = 2(10.6) - 10.3 = 10.9$. $r_4 = 11.0 - 10.9 = 0.1$. $q_4 = round(0.1/0.05) = 2$.
 
-  All quantized residuals are 2 — a perfectly uniform sequence. The entropy of a perfectly uniform constant is 0 bits/symbol, so entropy coding will compress the residuals to almost nothing. This illustrates why SZ works so well on smoothly varying fields: the Lorenzo predictor extrapolates the trend, and the residuals collapse to a tiny near-constant distribution.
+  All quantized residuals are 2, a perfectly uniform sequence. The entropy of a perfectly uniform constant is 0 bits/symbol, so entropy coding will compress the residuals to almost nothing. This illustrates why SZ works so well on smoothly varying fields: the Lorenzo predictor extrapolates the trend, and the residuals collapse to a tiny near-constant distribution.
 ]
 
 #exercise("66.4", 2)[
@@ -884,34 +885,34 @@ the compute cost. The gap between research and deployment remains wide.
 ]
 
 #solution("66.6")[
-  (a) Lorenzo extrapolation fits a linear trend from the immediately preceding neighbors. For a smooth field that curves gently (like an atmospheric pressure field with large-scale wave patterns), the locally linear approximation introduces a systematic bias — the residual is not zero but a small "curvature" term. Multi-level interpolation fits higher-order curves by combining values at multiple resolutions (coarse + fine), capturing the curvature and leaving a truly small residual. Intuitively: interpolation "sees" more of the field's shape; Lorenzo only sees the local slope.
+  (a) Lorenzo extrapolation fits a linear trend from the immediately preceding neighbors. For a smooth field that curves gently (like an atmospheric pressure field with large-scale wave patterns), the locally linear approximation introduces a systematic bias: the residual is not zero but a small "curvature" term. Multi-level interpolation fits higher-order curves by combining values at multiple resolutions (coarse + fine), capturing the curvature and leaving a truly small residual. Interpolation "sees" more of the field's shape; Lorenzo only sees the local slope.
 
-  (b) Lorenzo excels on very smooth, nearly linear fields where the second derivative is tiny — e.g., a velocity component in laminar flow. In that case, interpolation's additional computation gains nothing, and Lorenzo's simplicity (one addition, one subtraction) is faster. Lorenzo also handles discontinuities (shock waves) about as poorly as interpolation, so neither has an advantage there.
+  (b) Lorenzo excels on very smooth, nearly linear fields where the second derivative is tiny, e.g., a velocity component in laminar flow. In that case, interpolation's additional computation gains nothing, and Lorenzo's simplicity (one addition, one subtraction) is faster. Lorenzo also handles discontinuities (shock waves) about as poorly as interpolation, so neither has an advantage there.
 
-  (c) Hardware requirements: a CUDA-capable NVIDIA GPU must be present at the node where data is written; the GPU compressor library must be installed and linked to the I/O stack (HDF5 VOL connector or MPI-IO). Organizational barriers: (i) Long-term archiving requires decompression decades hence — the library must be maintained or the data becomes inaccessible; GPU-native formats are less stable than CPU-native ones. (ii) Different facilities use different GPU architectures (NVIDIA A100 at some HPC centers, AMD MI300 at others); cross-architecture portability is not guaranteed. (iii) Verifying that 20-year-old data compressed with 2024 software can still be read requires keeping the software — and its GPU dependencies — alive, which conflicts with how archives work (immutable data, evolving software stack).
+  (c) Hardware requirements: a CUDA-capable NVIDIA GPU must be present at the node where data is written; the GPU compressor library must be installed and linked to the I/O stack (HDF5 VOL connector or MPI-IO). Organizational barriers: (i) Long-term archiving requires decompression decades hence. The library must be maintained or the data becomes inaccessible, and GPU-native formats are less stable than CPU-native ones. (ii) Different facilities use different GPU architectures (NVIDIA A100 at some HPC centers, AMD MI300 at others); cross-architecture portability is not guaranteed. (iii) Verifying that 20-year-old data compressed with 2024 software can still be read requires keeping the software and its GPU dependencies alive, which conflicts with how archives work (immutable data, evolving software stack).
 ]
 
 == Further Reading
 
-- #link("https://ieeexplore.ieee.org/document/6876024")[Lindstrom, P. (2014). *Fixed-Rate Compressed Floating-Point Arrays.* IEEE TVCG 20(12).] — the original zfp paper.
-- #link("https://ieeexplore.ieee.org/document/7516069")[Di, S. & Cappello, F. (2016). *Fast Error-Bounded Lossy HPC Data Compression with SZ.* IEEE IPDPS.] — the original SZ paper.
-- #link("https://arxiv.org/pdf/2111.02925")[Zhao, K. et al. (2022). *SZ3: A Modular Framework for Composing Prediction-Based Error-Bounded Lossy Compressors.* arXiv:2111.02925.] — the SZ3 redesign.
-- #link("https://userweb.cs.txstate.edu/~burtscher/papers/tc09.pdf")[Burtscher, M. & Ratanaworabhan, P. (2009). *FPC: A High-Speed Compressor for Double-Precision Floating-Point Data.* IEEE Transactions on Computers 58(1).] — the FPC paper (freely available).
-- #link("https://blosc.org/pages/")[Blosc home page] — documentation, benchmarks, and the C-Blosc2 library.
-- #link("https://dl.acm.org/doi/10.1109/SC41406.2024.00019")[Liu et al. (2024). *cuSZ-i: High-Ratio Scientific Lossy Compression on GPUs with Optimized Multi-Level Interpolation.* SC24.] — the latest GPU SZ result.
-- #link("https://dl.acm.org/doi/10.1109/SC41406.2024.00021")[Huang et al. (2024). *cuSZp2: A GPU Lossy Compressor with Extreme Throughput and Optimized Compression Ratio.* SC24.] — ultra-high-throughput GPU compressor.
-- #link("https://computing.llnl.gov/projects/zfp")[zfp project page at LLNL Computing] — current documentation, modes, language bindings.
-- #link("https://arxiv.org/pdf/2312.10301")[FCBench: Cross-Domain Benchmarking of Lossless Compression for Floating-Point Data (2023)] — a systematic comparison of lossless float-specific methods.
+- #link("https://ieeexplore.ieee.org/document/6876024")[Lindstrom, P. (2014). *Fixed-Rate Compressed Floating-Point Arrays.* IEEE TVCG 20(12).] The original zfp paper.
+- #link("https://ieeexplore.ieee.org/document/7516069")[Di, S. & Cappello, F. (2016). *Fast Error-Bounded Lossy HPC Data Compression with SZ.* IEEE IPDPS.] The original SZ paper.
+- #link("https://arxiv.org/pdf/2111.02925")[Zhao, K. et al. (2022). *SZ3: A Modular Framework for Composing Prediction-Based Error-Bounded Lossy Compressors.* arXiv:2111.02925.] The SZ3 redesign.
+- #link("https://userweb.cs.txstate.edu/~burtscher/papers/tc09.pdf")[Burtscher, M. & Ratanaworabhan, P. (2009). *FPC: A High-Speed Compressor for Double-Precision Floating-Point Data.* IEEE Transactions on Computers 58(1).] The FPC paper (freely available).
+- #link("https://blosc.org/pages/")[Blosc home page]: documentation, benchmarks, and the C-Blosc2 library.
+- #link("https://dl.acm.org/doi/10.1109/SC41406.2024.00019")[Liu et al. (2024). *cuSZ-i: High-Ratio Scientific Lossy Compression on GPUs with Optimized Multi-Level Interpolation.* SC24.] The latest GPU SZ result.
+- #link("https://dl.acm.org/doi/10.1109/SC41406.2024.00021")[Huang et al. (2024). *cuSZp2: A GPU Lossy Compressor with Extreme Throughput and Optimized Compression Ratio.* SC24.] Ultra-high-throughput GPU compressor.
+- #link("https://computing.llnl.gov/projects/zfp")[zfp project page at LLNL Computing]: current documentation, modes, and language bindings.
+- #link("https://arxiv.org/pdf/2312.10301")[FCBench: Cross-Domain Benchmarking of Lossless Compression for Floating-Point Data (2023)]: a systematic comparison of lossless float-specific methods.
 
 #bridge[
   We have now seen how to compress floating-point simulation data by exploiting its
   physics: smoothness allows prediction; error bounds allow quantization; block
-  structure allows transforms. In Chapter 67 we turn to *columnar databases* — a
+  structure allows transforms. In Chapter 67 we turn to *columnar databases*, a
   completely different domain where the physics is the schema. A table column holds
   values of one type that are related by the same logical meaning (all order IDs,
   all timestamps, all prices). That semantic structure enables dictionary encoding,
   run-length encoding, bit-packing, and delta coding to achieve 5–30× compression
-  on analytical databases like Apache Parquet and ClickHouse — with no error bound
-  needed, because the data is exact by definition. The "know your data" principle
+  on analytical databases like Apache Parquet and ClickHouse, with no error bound
+  needed because the data is exact by definition. The "know your data" principle
   continues.
 ]

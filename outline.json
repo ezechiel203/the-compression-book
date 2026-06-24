@@ -1,15 +1,15 @@
 {
  "volumes": [
-  "Volume I — Foundations: The Language of Information",
-  "Volume II — Classical Lossless Compression",
-  "Volume III — Lossy and Perceptual Media Compression",
-  "Volume IV — The Neural and AI Era",
-  "Volume V — Specialized Domains, Systems, and Reflections"
+  "Volume I - Foundations: The Language of Information",
+  "Volume II - Classical Lossless Compression",
+  "Volume III - Lossy and Perceptual Media Compression",
+  "Volume IV - The Neural and AI Era",
+  "Volume V - Specialized Domains, Systems, and Reflections"
  ],
  "chapters": [
   {
    "number": 1,
-   "volume": "Volume I — Foundations: The Language of Information",
+   "volume": "Volume I - Foundations: The Language of Information",
    "title": "What Is Compression?",
    "brief": "The grand tour and the promise. What compression is, the model+coder idea in plain words, why it silently underpins the entire digital world (streaming, the web, phones, genomes, AI). The book's contract with the reader: from zero, assuming only 9th-grade math, with skippable Go-Further boxes. Introduce tinyzip and the running scoreboard.",
    "profiles": [],
@@ -32,7 +32,7 @@
   },
   {
    "number": 2,
-   "volume": "Volume I — Foundations: The Language of Information",
+   "volume": "Volume I - Foundations: The Language of Information",
    "title": "A Guided History of the Field",
    "brief": "A narrative arc from telegraphy to June 2026, naming the milestones and people we will deepen later. Orientation, not detail — a map of the journey so every later chapter has a place to hang.",
    "profiles": [
@@ -55,7 +55,7 @@
   },
   {
    "number": 3,
-   "volume": "Volume I — Foundations: The Language of Information",
+   "volume": "Volume I - Foundations: The Language of Information",
    "title": "Information, Data, and Symbols",
    "brief": "What 'data' really is: signs, symbols, alphabets, messages; analog vs digital; the idea of redundancy and why it is the thing we remove. Sets intuitions before any math.",
    "profiles": [],
@@ -76,7 +76,7 @@
   },
   {
    "number": 4,
-   "volume": "Volume I — Foundations: The Language of Information",
+   "volume": "Volume I - Foundations: The Language of Information",
    "title": "Numbers and Number Systems",
    "brief": "From counting to place value to binary, octal, hexadecimal, and two's complement — taught from scratch with worked conversions. Why computers use base 2.",
    "profiles": [],
@@ -97,7 +97,7 @@
   },
   {
    "number": 5,
-   "volume": "Volume I — Foundations: The Language of Information",
+   "volume": "Volume I - Foundations: The Language of Information",
    "title": "Logic and Boolean Algebra",
    "brief": "Propositions, truth, AND/OR/NOT/XOR, truth tables, De Morgan's laws, logic gates, and how bits implement logic. The reasoning backbone of computer science, built from zero.",
    "profiles": [],
@@ -118,7 +118,7 @@
   },
   {
    "number": 6,
-   "volume": "Volume I — Foundations: The Language of Information",
+   "volume": "Volume I - Foundations: The Language of Information",
    "title": "Sets, Functions, and Relations",
    "brief": "The grammar of mathematics: sets and membership, subsets, unions/intersections, functions and mappings, injections/bijections (needed for codes), relations. Worked, concrete, friendly.",
    "profiles": [],
@@ -139,7 +139,7 @@
   },
   {
    "number": 7,
-   "volume": "Volume I — Foundations: The Language of Information",
+   "volume": "Volume I - Foundations: The Language of Information",
    "title": "Exponents, Logarithms, and Growth",
    "brief": "The single most important tool in the book. Exponents, the three exponent rules, logarithms as inverse exponents, the multiplication-into-addition magic, change of base, and why a bit is a logarithm.",
    "profiles": [],
@@ -162,7 +162,7 @@
   },
   {
    "number": 8,
-   "volume": "Volume I — Foundations: The Language of Information",
+   "volume": "Volume I - Foundations: The Language of Information",
    "title": "Counting and Combinatorics",
    "brief": "Permutations, combinations, the multiplication principle, and the counting/pigeonhole bound — the proof that no compressor shrinks everything. Foundations of why limits exist.",
    "profiles": [],
@@ -183,7 +183,7 @@
   },
   {
    "number": 9,
-   "volume": "Volume I — Foundations: The Language of Information",
+   "volume": "Volume I - Foundations: The Language of Information",
    "title": "Probability From Scratch",
    "brief": "Built from coins and dice: sample spaces, events, probability axioms, conditional probability, independence, and Bayes' rule. Every idea with a numeric example.",
    "profiles": [],
@@ -206,7 +206,7 @@
   },
   {
    "number": 10,
-   "volume": "Volume I — Foundations: The Language of Information",
+   "volume": "Volume I - Foundations: The Language of Information",
    "title": "Random Variables, Expectation, and Variance",
    "brief": "Random variables as numbered outcomes; expectation as a weighted average (the cost of a code!); variance and spread; the geometric and Bernoulli sources we will compress.",
    "profiles": [],
@@ -227,7 +227,7 @@
   },
   {
    "number": 11,
-   "volume": "Volume I — Foundations: The Language of Information",
+   "volume": "Volume I - Foundations: The Language of Information",
    "title": "Sequences, Sums, and a Gentle Calculus",
    "brief": "∑ and ∏ notation demystified; sequences and limits; the bare minimum of derivatives, slopes, optimization and gradients (for later RDO and neural nets) — taught visually and from scratch.",
    "profiles": [],
@@ -248,7 +248,7 @@
   },
   {
    "number": 12,
-   "volume": "Volume I — Foundations: The Language of Information",
+   "volume": "Volume I - Foundations: The Language of Information",
    "title": "Vectors, Matrices, and Linear Transformations",
    "brief": "Vectors as arrows and lists, dot products, matrices as transformations, basis and orthogonality — the machinery behind transforms (DCT/wavelets) and neural networks, built gently.",
    "profiles": [],
@@ -269,7 +269,7 @@
   },
   {
    "number": 13,
-   "volume": "Volume I — Foundations: The Language of Information",
+   "volume": "Volume I - Foundations: The Language of Information",
    "title": "How Computers Represent Things",
    "brief": "Bits, bytes, words; unsigned/signed integers; characters, ASCII and Unicode/UTF-8; floating point; endianness. How real data becomes the bytes we compress.",
    "profiles": [],
@@ -290,7 +290,7 @@
   },
   {
    "number": 14,
-   "volume": "Volume I — Foundations: The Language of Information",
+   "volume": "Volume I - Foundations: The Language of Information",
    "title": "Algorithms, Data Structures, and Complexity",
    "brief": "What an algorithm is; pseudocode; Big-O notation from scratch; arrays, linked lists, stacks, queues, hash tables, trees, heaps, priority queues — the toolbox every codec uses.",
    "profiles": [
@@ -313,8 +313,8 @@
   },
   {
    "number": 15,
-   "volume": "Volume I — Foundations: The Language of Information",
-   "title": "A Python Primer I — Values, Types, and Control Flow",
+   "volume": "Volume I - Foundations: The Language of Information",
+   "title": "A Python Primer I: Values, Types, and Control Flow",
    "brief": "Python 3.14 from zero: the REPL, values and variables, int/float/str/bool, operators, f-strings, if/elif/else, while/for, ranges, and the walrus operator. Every concept in a gopython box with runnable code.",
    "profiles": [],
    "seed": [],
@@ -334,8 +334,8 @@
   },
   {
    "number": 16,
-   "volume": "Volume I — Foundations: The Language of Information",
-   "title": "A Python Primer II — Data Structures, Functions, and Iterators",
+   "volume": "Volume I - Foundations: The Language of Information",
+   "title": "A Python Primer II: Data Structures, Functions, and Iterators",
    "brief": "Lists, tuples, dicts, sets; slicing; comprehensions; functions, arguments, type hints (dict[int,int]); modules; iterators and generators; match statements. Read-Python fluency, Python 3.14.",
    "profiles": [],
    "seed": [],
@@ -355,8 +355,8 @@
   },
   {
    "number": 17,
-   "volume": "Volume I — Foundations: The Language of Information",
-   "title": "A Python Primer III — Bytes, Bits, Files, and Binary I/O",
+   "volume": "Volume I - Foundations: The Language of Information",
+   "title": "A Python Primer III: Bytes, Bits, Files, and Binary I/O",
    "brief": "bytes vs str, bytearray, indexing bytes, bit operations (& | ^ << >>), reading/writing binary files, struct, a from-scratch BitWriter/BitReader. The toolkit tinyzip needs to emit real compressed files.",
    "profiles": [],
    "seed": [],
@@ -376,7 +376,7 @@
   },
   {
    "number": 18,
-   "volume": "Volume I — Foundations: The Language of Information",
+   "volume": "Volume I - Foundations: The Language of Information",
    "title": "Shannon and the Birth of Information Theory",
    "brief": "1948 in depth: self-information/surprisal, entropy H(X), joint and conditional entropy, the chain rule — all from the probability we just built, with intuition (entropy as 'twenty questions').",
    "profiles": [
@@ -402,7 +402,7 @@
   },
   {
    "number": 19,
-   "volume": "Volume I — Foundations: The Language of Information",
+   "volume": "Volume I - Foundations: The Language of Information",
    "title": "The Source Coding Theorem",
    "brief": "Why entropy is the floor: prefix codes, the Kraft–McMillan inequality, typical sets and the AEP, and the noiseless source coding theorem — stated, proved gently, and made intuitive.",
    "profiles": [
@@ -428,7 +428,7 @@
   },
   {
    "number": 20,
-   "volume": "Volume I — Foundations: The Language of Information",
+   "volume": "Volume I - Foundations: The Language of Information",
    "title": "Mutual Information, Channels, and the Noisy-Channel Theorem",
    "brief": "KL divergence, mutual information, channel capacity, the noisy-channel coding theorem, and source–channel separation — the duality of removing vs adding redundancy.",
    "profiles": [],
@@ -451,7 +451,7 @@
   },
   {
    "number": 21,
-   "volume": "Volume I — Foundations: The Language of Information",
+   "volume": "Volume I - Foundations: The Language of Information",
    "title": "Rate–Distortion: The Theory of Lossy Compression",
    "brief": "Shannon's R(D): distortion measures, the rate–distortion function, the Gaussian case, reverse water-filling, Blahut–Arimoto, and a first look at the rate–distortion–perception tradeoff.",
    "profiles": [
@@ -476,7 +476,7 @@
   },
   {
    "number": 22,
-   "volume": "Volume I — Foundations: The Language of Information",
+   "volume": "Volume I - Foundations: The Language of Information",
    "title": "Kolmogorov Complexity and Algorithmic Information",
    "brief": "Solomonoff/Kolmogorov/Chaitin: descriptive complexity, the invariance theorem, incompressibility, uncomputability, algorithmic probability and the universal prior — the ideal compressor we can never build.",
    "profiles": [
@@ -501,7 +501,7 @@
   },
   {
    "number": 23,
-   "volume": "Volume I — Foundations: The Language of Information",
+   "volume": "Volume I - Foundations: The Language of Information",
    "title": "Compression = Prediction = Learning",
    "brief": "The thesis that powers the rest of the book: cross-entropy = expected code length, MDL (Rissanen 1978), universal coding, and why a great predictor is a great compressor. The hinge into the modern era.",
    "profiles": [
@@ -526,7 +526,7 @@
   },
   {
    "number": 24,
-   "volume": "Volume II — Classical Lossless Compression",
+   "volume": "Volume II - Classical Lossless Compression",
    "title": "Entropy Coding I: Shannon–Fano and Huffman",
    "brief": "Optimal symbol codes: Shannon–Fano and its suboptimality; Huffman's 1952 greedy construction; proof of optimality among prefix codes; canonical and length-limited Huffman; adaptive Huffman.",
    "profiles": [
@@ -554,7 +554,7 @@
   },
   {
    "number": 25,
-   "volume": "Volume II — Classical Lossless Compression",
+   "volume": "Volume II - Classical Lossless Compression",
    "title": "Integer and Universal Codes",
    "brief": "Unary, Elias gamma/delta/omega, Golomb–Rice (optimal for geometric sources), Exp-Golomb, Fibonacci coding, byte varints — coding when you know the shape but not exact probabilities.",
    "profiles": [
@@ -579,7 +579,7 @@
   },
   {
    "number": 26,
-   "volume": "Volume II — Classical Lossless Compression",
+   "volume": "Volume II - Classical Lossless Compression",
    "title": "Arithmetic Coding",
    "brief": "Reaching the entropy limit by coding a whole message as one interval: Elias's idea, Pasco/Rissanen, Witten–Neal–Cleary 1987, finite-precision renormalization and carry handling, binary AC, CABAC/MQ. The patent saga.",
    "profiles": [
@@ -606,7 +606,7 @@
   },
   {
    "number": 27,
-   "volume": "Volume II — Classical Lossless Compression",
+   "volume": "Volume II - Classical Lossless Compression",
    "title": "Asymmetric Numeral Systems (ANS)",
    "brief": "Duda's 2009–2013 breakthrough: the numeral-system intuition, uABS, rANS and tANS, the LIFO nature, interleaving/SIMD, normalization — arithmetic-coding ratio at Huffman speed. Adoption and patent fights.",
    "profiles": [
@@ -632,7 +632,7 @@
   },
   {
    "number": 28,
-   "volume": "Volume II — Classical Lossless Compression",
+   "volume": "Volume II - Classical Lossless Compression",
    "title": "Dictionary Coding I: LZ77 and LZ78",
    "brief": "Ziv–Lempel: LZ77 sliding-window matches, LZ78 explicit dictionaries, LZSS, and the universality/asymptotic-optimality results. The idea behind almost every general-purpose codec.",
    "profiles": [
@@ -659,7 +659,7 @@
   },
   {
    "number": 29,
-   "volume": "Volume II — Classical Lossless Compression",
+   "volume": "Volume II - Classical Lossless Compression",
    "title": "Dictionary Coding II: LZW and the Patent Wars",
    "brief": "Welch's 1984 LZW; compress, GIF, TIFF, V.42bis; the Unisys patent (1985) and the GIF licensing firestorm that created PNG; the wider LZ family map.",
    "profiles": [
@@ -684,7 +684,7 @@
   },
   {
    "number": 30,
-   "volume": "Volume II — Classical Lossless Compression",
+   "volume": "Volume II - Classical Lossless Compression",
    "title": "DEFLATE, zlib, gzip, and PNG",
    "brief": "The most-deployed compressor ever: DEFLATE = LZ77 + Huffman, block structure, fixed/dynamic codes, the 32 KB window, hash-chain match finding; zlib/gzip/ZIP/PNG and HTTP ubiquity.",
    "profiles": [
@@ -709,7 +709,7 @@
   },
   {
    "number": 31,
-   "volume": "Volume II — Classical Lossless Compression",
+   "volume": "Volume II - Classical Lossless Compression",
    "title": "LZMA and the High-Ratio Dictionary Coders",
    "brief": "7-Zip's LZMA: large dictionaries, range coding, context-modelled literals, optimal parsing; LZMA2, PPMd, .xz — and the 2024 xz-utils backdoor as a supply-chain cautionary tale.",
    "profiles": [
@@ -734,7 +734,7 @@
   },
   {
    "number": 32,
-   "volume": "Volume II — Classical Lossless Compression",
+   "volume": "Volume II - Classical Lossless Compression",
    "title": "The Modern Frontier: Zstandard, Brotli, LZ4, Snappy",
    "brief": "The speed/ratio Pareto revolution: LZ4 and Snappy (speed), Brotli (2015, static dictionary), Zstandard (2016: levels, trained dictionaries, long-distance matching, ANS) — why zstd won everywhere.",
    "profiles": [
@@ -762,7 +762,7 @@
   },
   {
    "number": 33,
-   "volume": "Volume II — Classical Lossless Compression",
+   "volume": "Volume II - Classical Lossless Compression",
    "title": "Statistical Modeling: PPM and Context Mixing",
    "brief": "Beyond dictionaries: PPM (1984), escape mechanisms, exclusion; the leap to context mixing — logistic mixing of many predictors, SSE/APM, neural mixing.",
    "profiles": [
@@ -788,7 +788,7 @@
   },
   {
    "number": 34,
-   "volume": "Volume II — Classical Lossless Compression",
+   "volume": "Volume II - Classical Lossless Compression",
    "title": "The Ratio Champions: PAQ, ZPAQ, and cmix",
    "brief": "Mahoney's PAQ lineage, the anatomy of a context-mixing compressor, ZPAQ's archival format, cmix's ratio crown and memory cost — and the ratio-vs-speed wall.",
    "profiles": [
@@ -815,7 +815,7 @@
   },
   {
    "number": 35,
-   "volume": "Volume II — Classical Lossless Compression",
+   "volume": "Volume II - Classical Lossless Compression",
    "title": "The Burrows–Wheeler Transform and bzip2",
    "brief": "The 1994 reversible clustering permutation, the inverse, Move-To-Front, RLE, the bzip2 pipeline; suffix arrays and the FM-index, and BWT's second life in genomic alignment.",
    "profiles": [
@@ -842,7 +842,7 @@
   },
   {
    "number": 36,
-   "volume": "Volume II — Classical Lossless Compression",
+   "volume": "Volume II - Classical Lossless Compression",
    "title": "Benchmarks, Corpora, and the Hutter Prize",
    "brief": "How the field measures itself: Calgary/Canterbury/Silesia corpora, the Large Text Compression Benchmark, enwik8/9, Squash/lzbench; the Hutter Prize and 'compression as AI', with the record progression.",
    "profiles": [
@@ -867,7 +867,7 @@
   },
   {
    "number": 37,
-   "volume": "Volume III — Lossy and Perceptual Media Compression",
+   "volume": "Volume III - Lossy and Perceptual Media Compression",
    "title": "Signals, Sampling, and the Frequency Domain",
    "brief": "DSP from scratch: continuous vs discrete signals, the sampling theorem, aliasing, sine waves and frequency, the DFT/FFT and the time–frequency view — the basis of every transform codec.",
    "profiles": [
@@ -893,7 +893,7 @@
   },
   {
    "number": 38,
-   "volume": "Volume III — Lossy and Perceptual Media Compression",
+   "volume": "Volume III - Lossy and Perceptual Media Compression",
    "title": "Transforms for Compression: KLT, DCT, Wavelets, MDCT",
    "brief": "The heart of lossy coding: the KLT as the ideal decorrelator, the DCT (1974) as its practical proxy, wavelets and multiresolution, the MDCT and overlap/perfect reconstruction. Energy compaction, intuitively and mathematically.",
    "profiles": [
@@ -921,7 +921,7 @@
   },
   {
    "number": 39,
-   "volume": "Volume III — Lossy and Perceptual Media Compression",
+   "volume": "Volume III - Lossy and Perceptual Media Compression",
    "title": "Quantization: From Scalar to Vector",
    "brief": "The lossy step: uniform/non-uniform scalar quantization, Lloyd–Max, companding, dithering, dead-zones; vector quantization, the LBG algorithm, structured/trellis VQ — and the VQ→VQ-VAE→product-quantization lineage.",
    "profiles": [
@@ -948,7 +948,7 @@
   },
   {
    "number": 40,
-   "volume": "Volume III — Lossy and Perceptual Media Compression",
+   "volume": "Volume III - Lossy and Perceptual Media Compression",
    "title": "Prediction and Differential Coding",
    "brief": "DPCM, delta and adaptive delta modulation, linear prediction (LPC), the normal equations and Levinson–Durbin, predictors in JPEG-LS — exploiting correlation before coding.",
    "profiles": [
@@ -975,7 +975,7 @@
   },
   {
    "number": 41,
-   "volume": "Volume III — Lossy and Perceptual Media Compression",
+   "volume": "Volume III - Lossy and Perceptual Media Compression",
    "title": "Rate–Distortion Optimization in Practice",
    "brief": "How real encoders spend bits: Lagrangian RDO (J = D + λR), operational R–D curves, bit allocation, rate control (CBR/VBR/CRF), two-pass and perceptual extensions.",
    "profiles": [
@@ -1000,7 +1000,7 @@
   },
   {
    "number": 42,
-   "volume": "Volume III — Lossy and Perceptual Media Compression",
+   "volume": "Volume III - Lossy and Perceptual Media Compression",
    "title": "JPEG: Anatomy of the World's Image Codec",
    "brief": "Full pipeline: YCbCr, chroma subsampling, the 8×8 DCT, quantization tables, zig-zag, run-length + Huffman; why blocking/ringing appear; progressive vs baseline; JPEG-LS lossless. A 1992 standard that won't die.",
    "profiles": [
@@ -1026,7 +1026,7 @@
   },
   {
    "number": 43,
-   "volume": "Volume III — Lossy and Perceptual Media Compression",
+   "volume": "Volume III - Lossy and Perceptual Media Compression",
    "title": "JPEG 2000 and the Wavelet Promise",
    "brief": "Wavelets in practice: EBCOT, code-blocks, bit-plane coding, scalability, the MQ coder; genuinely better than JPEG yet beaten on the web — and why it rules cinema and medicine.",
    "profiles": [
@@ -1052,7 +1052,7 @@
   },
   {
    "number": 44,
-   "volume": "Volume III — Lossy and Perceptual Media Compression",
+   "volume": "Volume III - Lossy and Perceptual Media Compression",
    "title": "Lossless and Simple Image Formats: GIF, PNG, QOI",
    "brief": "GIF (LZW, palettes, animation), PNG (DEFLATE + filters, the patent-driven origin), and the minimalist QOI (2021). Where lossless/palette formats still rule.",
    "profiles": [
@@ -1079,7 +1079,7 @@
   },
   {
    "number": 45,
-   "volume": "Volume III — Lossy and Perceptual Media Compression",
+   "volume": "Volume III - Lossy and Perceptual Media Compression",
    "title": "The Modern Image Wars: WebP, HEIC, AVIF, JPEG XL",
    "brief": "Intra-frame video codecs as still formats: WebP (VP8), HEIC (HEVC), AVIF (AV1); then JPEG XL — modular+VarDCT, lossless JPEG transcoding, ANS, royalty-free, and its Chrome removal then Feb-2026 re-addition.",
    "profiles": [
@@ -1106,7 +1106,7 @@
   },
   {
    "number": 46,
-   "volume": "Volume III — Lossy and Perceptual Media Compression",
+   "volume": "Volume III - Lossy and Perceptual Media Compression",
    "title": "Psychoacoustics: Compressing for the Ear",
    "brief": "The science codecs exploit: the basilar membrane, critical bands, the threshold of hearing, simultaneous and temporal masking, perceptual entropy — deciding which sounds are inaudible.",
    "profiles": [
@@ -1131,7 +1131,7 @@
   },
   {
    "number": 47,
-   "volume": "Volume III — Lossy and Perceptual Media Compression",
+   "volume": "Volume III - Lossy and Perceptual Media Compression",
    "title": "MP3 and the MPEG Audio Lineage",
    "brief": "MPEG-1 Layers I/II/III, the hybrid filterbank (polyphase + MDCT), the psychoacoustic model, the bit reservoir, Huffman tables; Fraunhofer, the patents, and MP3's cultural earthquake.",
    "profiles": [
@@ -1156,7 +1156,7 @@
   },
   {
    "number": 48,
-   "volume": "Volume III — Lossy and Perceptual Media Compression",
+   "volume": "Volume III - Lossy and Perceptual Media Compression",
    "title": "AAC, Vorbis, and Modern General Audio",
    "brief": "AAC's improvements (MDCT-only, TNS, PNS, SBR/HE-AAC, parametric stereo); royalty-free Vorbis; USAC/xHE-AAC; the licensing landscape.",
    "profiles": [
@@ -1182,7 +1182,7 @@
   },
   {
    "number": 49,
-   "volume": "Volume III — Lossy and Perceptual Media Compression",
+   "volume": "Volume III - Lossy and Perceptual Media Compression",
    "title": "Opus: One Codec to Rule Real-Time Audio",
    "brief": "The IETF triumph (2012): SILK+CELT hybrid, sub-26 ms latency, 6–510 kbit/s, the codec behind WebRTC/Zoom/Discord; Opus 1.3–1.5 and its ML features (DRED, neural PLC).",
    "profiles": [
@@ -1209,7 +1209,7 @@
   },
   {
    "number": 50,
-   "volume": "Volume III — Lossy and Perceptual Media Compression",
+   "volume": "Volume III - Lossy and Perceptual Media Compression",
    "title": "Lossless and Speech Coding",
    "brief": "Lossless audio: FLAC (LPC + Rice), ALAC, WavPack, Monkey's Audio, and why lossless reaches only ~50–60%. Speech: LPC-10, CELP, ACELP, the vocoder idea, AMR/EVS.",
    "profiles": [
@@ -1236,7 +1236,7 @@
   },
   {
    "number": 51,
-   "volume": "Volume III — Lossy and Perceptual Media Compression",
+   "volume": "Volume III - Lossy and Perceptual Media Compression",
    "title": "The Hybrid Video Codec: Motion, Prediction, Transform",
    "brief": "Why video is mostly redundancy: temporal prediction and block motion compensation, I/P/B frames, the GOP, intra prediction, the transform+quantize+entropy loop, in-loop filtering, encoder/decoder asymmetry.",
    "profiles": [
@@ -1261,7 +1261,7 @@
   },
   {
    "number": 52,
-   "volume": "Volume III — Lossy and Perceptual Media Compression",
+   "volume": "Volume III - Lossy and Perceptual Media Compression",
    "title": "H.261 to H.264/AVC: The Workhorse Era",
    "brief": "The lineage: H.261, MPEG-1, MPEG-2/H.262 (DVD/broadcast), H.263, MPEG-4 Part 2, then H.264/AVC (2003): variable blocks, multi-reference, quarter-pel, CAVLC/CABAC, profiles. Why AVC still dominates.",
    "profiles": [
@@ -1287,7 +1287,7 @@
   },
   {
    "number": 53,
-   "volume": "Volume III — Lossy and Perceptual Media Compression",
+   "volume": "Volume III - Lossy and Perceptual Media Compression",
    "title": "HEVC and VVC: More Compression, More Patents",
    "brief": "H.265/HEVC (2013): CTUs, quadtrees, ~50% over AVC and its patent quagmire; H.266/VVC (2020): bigger gains, screen content, 360/HDR. The licensing lessons.",
    "profiles": [
@@ -1313,7 +1313,7 @@
   },
   {
    "number": 54,
-   "volume": "Volume III — Lossy and Perceptual Media Compression",
+   "volume": "Volume III - Lossy and Perceptual Media Compression",
    "title": "The Open Codecs: VP8, VP9, AV1, AV2",
    "brief": "On2/Google, the Alliance for Open Media, AV1 (2018) tools (CDEF, restoration, warped motion), encoder complexity and hardware rollout, AV2 (2025–26), and the open-vs-licensed war.",
    "profiles": [
@@ -1340,7 +1340,7 @@
   },
   {
    "number": 55,
-   "volume": "Volume III — Lossy and Perceptual Media Compression",
+   "volume": "Volume III - Lossy and Perceptual Media Compression",
    "title": "The Successor Frontier and Encoding at Scale",
    "brief": "JVET's ECM (>25% over VVC), NN video coding (NNVC), H.267 (~2028); and the practical layer: Netflix per-title/per-shot Dynamic Optimizer, content-adaptive encoding, VMAF-driven RDO.",
    "profiles": [
@@ -1367,7 +1367,7 @@
   },
   {
    "number": 56,
-   "volume": "Volume IV — The Neural and AI Era",
+   "volume": "Volume IV - The Neural and AI Era",
    "title": "A Machine-Learning Primer for Compression",
    "brief": "Just enough deep learning, from scratch: neurons as functions, gradient descent (building on the gentle calculus), autoencoders and the bottleneck, VAEs/GANs/diffusion/autoregressive models — all as ways to learn the source distribution.",
    "profiles": [
@@ -1393,7 +1393,7 @@
   },
   {
    "number": 57,
-   "volume": "Volume IV — The Neural and AI Era",
+   "volume": "Volume IV - The Neural and AI Era",
    "title": "Learned Image Compression: Autoencoders and Hyperpriors",
    "brief": "The Ballé line (2016–18): end-to-end RD-optimized transforms, GDN, quantization-as-noise, the scale/mean hyperprior, autoregressive/context entropy models (Minnen 2018, Cheng 2020) — overtaking JPEG/AVIF.",
    "profiles": [
@@ -1419,7 +1419,7 @@
   },
   {
    "number": 58,
-   "volume": "Volume IV — The Neural and AI Era",
+   "volume": "Volume IV - The Neural and AI Era",
    "title": "Generative and Perceptual Codecs",
    "brief": "Optimizing realism not MSE: the rate–distortion–perception tradeoff, GAN codecs (HiFiC), diffusion decoders (PerCo 2024, ultra-low bitrate), and the 2025–26 one-step/real-time push. The 'hallucinated detail' debate.",
    "profiles": [
@@ -1445,7 +1445,7 @@
   },
   {
    "number": 59,
-   "volume": "Volume IV — The Neural and AI Era",
+   "volume": "Volume IV - The Neural and AI Era",
    "title": "Learned Video and Implicit Neural Representations",
    "brief": "Neural video coding (DVC 2019, the DCVC line, VCT); implicit neural representations (COIN, NeRF-as-compression, video INRs); promise vs decode-complexity/standardization reality.",
    "profiles": [
@@ -1471,7 +1471,7 @@
   },
   {
    "number": 60,
-   "volume": "Volume IV — The Neural and AI Era",
+   "volume": "Volume IV - The Neural and AI Era",
    "title": "Neural Audio Codecs as Tokenizers",
    "brief": "SoundStream (2021), EnCodec (2022), DAC (2023): residual vector quantization, the discrete-token substrate now powering audio LLMs and TTS — codec and tokenizer converge.",
    "profiles": [
@@ -1498,7 +1498,7 @@
   },
   {
    "number": 61,
-   "volume": "Volume IV — The Neural and AI Era",
+   "volume": "Volume IV - The Neural and AI Era",
    "title": "Compression as Intelligence: The Theory",
    "brief": "Why generalization equals compression: MDL revisited, PAC-Bayes, the Hutter thesis, the Solomonoff ideal, the AIXI sketch — and the honest counterarguments.",
    "profiles": [
@@ -1524,7 +1524,7 @@
   },
   {
    "number": 62,
-   "volume": "Volume IV — The Neural and AI Era",
+   "volume": "Volume IV - The Neural and AI Era",
    "title": "Large Language Models as Compressors",
    "brief": "The mechanics: an autoregressive LM gives P(next token); plus arithmetic coding it becomes a SOTA lossless compressor. DeepMind's 'Language Modeling Is Compression' (2023), scaling-as-compression, the tokenizer caveat; Bellard's nncp and ts_zip.",
    "profiles": [
@@ -1550,7 +1550,7 @@
   },
   {
    "number": 63,
-   "volume": "Volume IV — The Neural and AI Era",
+   "volume": "Volume IV - The Neural and AI Era",
    "title": "Model Compression I: Quantization",
    "brief": "Compressing the network: post-training quantization (GPTQ, AWQ), QAT, FP8/INT4, outliers; and the information-theoretic frontier — ternary BitNet b1.58 (log2 3 ≈ 1.58 bits/weight), native low-bit training, BitNet v2.",
    "profiles": [
@@ -1576,7 +1576,7 @@
   },
   {
    "number": 64,
-   "volume": "Volume IV — The Neural and AI Era",
+   "volume": "Volume IV - The Neural and AI Era",
    "title": "Model Compression II: Pruning, Distillation, Low-Rank",
    "brief": "Magnitude/structured/movement pruning, the Lottery Ticket Hypothesis, knowledge distillation, low-rank factorization and LoRA — squeezing a frontier model onto a phone.",
    "profiles": [
@@ -1603,7 +1603,7 @@
   },
   {
    "number": 65,
-   "volume": "Volume IV — The Neural and AI Era",
+   "volume": "Volume IV - The Neural and AI Era",
    "title": "KV-Cache, Context, and Embedding Compression",
    "brief": "Inference-time compression: KV-cache eviction (H2O), DeepSeek MLA, and the 2025–26 vector-quantization frontier (TurboQuant, KVTC); prompt/context compression; product quantization, OPQ, binary/Matryoshka embeddings for retrieval.",
    "profiles": [
@@ -1630,7 +1630,7 @@
   },
   {
    "number": 66,
-   "volume": "Volume V — Specialized Domains, Systems, and Reflections",
+   "volume": "Volume V - Specialized Domains, Systems, and Reflections",
    "title": "Scientific and Floating-Point Compression",
    "brief": "HPC's data deluge: lossless FP (FPC, Blosc, byte-split, bit-packing); error-bounded lossy zfp and SZ with absolute/relative bounds; the lossless-vs-error-bounded distinction.",
    "profiles": [
@@ -1657,7 +1657,7 @@
   },
   {
    "number": 67,
-   "volume": "Volume V — Specialized Domains, Systems, and Reflections",
+   "volume": "Volume V - Specialized Domains, Systems, and Reflections",
    "title": "Columnar and Database Compression",
    "brief": "The analytics toolkit: dictionary encoding, run-length, frame-of-reference and delta-FOR, bit-packing, Roaring bitmaps; how Parquet/ORC layer these under zstd; operate-on-compressed query engines.",
    "profiles": [
@@ -1684,7 +1684,7 @@
   },
   {
    "number": 68,
-   "volume": "Volume V — Specialized Domains, Systems, and Reflections",
+   "volume": "Volume V - Specialized Domains, Systems, and Reflections",
    "title": "Time-Series and IoT Compression",
    "brief": "Streaming numeric data: Facebook Gorilla (XOR'd floats, delta-of-delta timestamps), the basis of Prometheus/InfluxDB; simple-8b and stream VByte for integers; sensor constraints.",
    "profiles": [
@@ -1711,7 +1711,7 @@
   },
   {
    "number": 69,
-   "volume": "Volume V — Specialized Domains, Systems, and Reflections",
+   "volume": "Volume V - Specialized Domains, Systems, and Reflections",
    "title": "Genomic and Biological Sequence Compression",
    "brief": "FASTQ/FASTA/SAM/BAM, reference-based compression and CRAM, quality-score modeling (the dominant cost), the BWT/FM-index alignment connection revisited; a compression-bound science.",
    "profiles": [
@@ -1736,7 +1736,7 @@
   },
   {
    "number": 70,
-   "volume": "Volume V — Specialized Domains, Systems, and Reflections",
+   "volume": "Volume V - Specialized Domains, Systems, and Reflections",
    "title": "DNA Data Storage and Constrained Coding",
    "brief": "Storing bits in molecules: the DNA channel and its constraints (GC balance, homopolymer runs), fountain/LT/Raptor codes, Erlich & Zielinski's DNA Fountain (~215 PB/g), and constrained-coding theory.",
    "profiles": [
@@ -1760,7 +1760,7 @@
   },
   {
    "number": 71,
-   "volume": "Volume V — Specialized Domains, Systems, and Reflections",
+   "volume": "Volume V - Specialized Domains, Systems, and Reflections",
    "title": "Delta, Diff, and Deduplication",
    "brief": "Compression across files and versions: xdelta/bsdiff, VCDIFF, content-defined chunking (Rabin, FastCDC), block/file dedup (Borg, Restic, ZFS), Git packfiles, Docker layers.",
    "profiles": [
@@ -1784,7 +1784,7 @@
   },
   {
    "number": 72,
-   "volume": "Volume V — Specialized Domains, Systems, and Reflections",
+   "volume": "Volume V - Specialized Domains, Systems, and Reflections",
    "title": "The Error-Correction Boundary",
    "brief": "Adding redundancy back: why compress-then-protect (source–channel separation, and where it fails), CRCs, Reed–Solomon, LDPC, polar codes; the meeting points — DNA storage, QR codes, Opus DRED, flash.",
    "profiles": [
@@ -1809,7 +1809,7 @@
   },
   {
    "number": 73,
-   "volume": "Volume V — Specialized Domains, Systems, and Reflections",
+   "volume": "Volume V - Specialized Domains, Systems, and Reflections",
    "title": "Engineering Fast Codecs",
    "brief": "Where bits-per-second are won: SIMD and interleaved rANS, branchless decoding, cache-aware match finders, multithreading/framing; GPU compression (nvCOMP) and hardware offload (Intel IAA/QAT).",
    "profiles": [
@@ -1835,7 +1835,7 @@
   },
   {
    "number": 74,
-   "volume": "Volume V — Specialized Domains, Systems, and Reflections",
+   "volume": "Volume V - Specialized Domains, Systems, and Reflections",
    "title": "Compression in the Stack",
    "brief": "Where compression actually runs: HTTP Content-Encoding (gzip→br→zstd), HPACK/QPACK, filesystem compression (Btrfs/ZFS), databases, RAM compression (zram/zswap), the CDN/streaming edge.",
    "profiles": [
@@ -1858,7 +1858,7 @@
   },
   {
    "number": 75,
-   "volume": "Volume V — Specialized Domains, Systems, and Reflections",
+   "volume": "Volume V - Specialized Domains, Systems, and Reflections",
    "title": "Measuring Compression: Metrics and Benchmarks",
    "brief": "Judging codecs honestly: ratio/bpp/bpc, throughput, R–D curves, BD-rate; quality metrics — PSNR's failures, SSIM/MS-SSIM, VMAF, LPIPS/DISTS — and the listening/viewing-test gold standard; benchmark pitfalls.",
    "profiles": [
@@ -1882,7 +1882,7 @@
   },
   {
    "number": 76,
-   "volume": "Volume V — Specialized Domains, Systems, and Reflections",
+   "volume": "Volume V - Specialized Domains, Systems, and Reflections",
    "title": "A People's History of Compression",
    "brief": "The humans and labs: Shannon, Huffman, Ziv & Lempel, Rissanen, Witten/Neal/Cleary, Burrows & Wheeler, Welch, Katz, Brandenburg, Collet, Duda, Mahoney, Bellard, Ballé, Hutter; Bell, IBM, PARC, Fraunhofer, DEC SRC.",
    "profiles": [],
@@ -1903,7 +1903,7 @@
   },
   {
    "number": 77,
-   "volume": "Volume V — Specialized Domains, Systems, and Reflections",
+   "volume": "Volume V - Specialized Domains, Systems, and Reflections",
    "title": "Patents, Standards, and the Politics of Formats",
    "brief": "How law and committees shaped what we use: the arithmetic-coding and LZW patents, MP3 and HEVC pools, MPEG vs AOMedia, the royalty-free movement, the standards bodies — and how patents handed wins to free tech.",
    "profiles": [],
@@ -1927,7 +1927,7 @@
   },
   {
    "number": 78,
-   "volume": "Volume V — Specialized Domains, Systems, and Reflections",
+   "volume": "Volume V - Specialized Domains, Systems, and Reflections",
    "title": "Dead Ends, Failures, and Cautionary Tales",
    "brief": "What didn't work and why it teaches: fractal compression's overpromise, infinite-compression scams (and the counting bound that kills them), JPEG 2000's stranded superiority, the xz backdoor. Honest engineering epistemics.",
    "profiles": [
@@ -1950,7 +1950,7 @@
   },
   {
    "number": 79,
-   "volume": "Volume V — Specialized Domains, Systems, and Reflections",
+   "volume": "Volume V - Specialized Domains, Systems, and Reflections",
    "title": "The State of the Field, June 2026",
    "brief": "A grounded snapshot: what ships in production (zstd, AV1/HEVC, Opus, AVIF/JPEG XL), what's emerging (learned/generative codecs, LLM compression, BitNet, KV-cache VQ), and an honest hype-vs-deployed ledger.",
    "profiles": [],
@@ -1973,7 +1973,7 @@
   },
   {
    "number": 80,
-   "volume": "Volume V — Specialized Domains, Systems, and Reflections",
+   "volume": "Volume V - Specialized Domains, Systems, and Reflections",
    "title": "Open Problems and Grand Challenges",
    "brief": "The frontier: the real limits of learned compression, decode complexity and energy, standardizing neural codecs, semantic/goal-oriented compression, joint source–channel learning, compressing foundation models, coding-for-machines.",
    "profiles": [],
@@ -1996,7 +1996,7 @@
   },
   {
    "number": 81,
-   "volume": "Volume V — Specialized Domains, Systems, and Reflections",
+   "volume": "Volume V - Specialized Domains, Systems, and Reflections",
    "title": "The Future of Compression",
    "brief": "Where it heads and why it stays invaluable: data growth vs compute stagnation, compression as the substrate of AI, semantic communication, sustainability, in-storage compute — and a reasoned set of predictions tying the whole book together.",
    "profiles": [],

@@ -10,16 +10,16 @@
 Imagine you work at Facebook (now Meta) in 2013. Every server in every data center is
 sending you a reading every sixty seconds: CPU load, memory usage, request latency,
 error rates. You have hundreds of thousands of servers, which means millions of metrics
-per minute, around the clock, forever. Storing them naively — sixteen bytes per data
-point (eight for the timestamp, eight for the floating-point value) — would require
+per minute, around the clock, forever. Storing them naively (sixteen bytes per data
+point: eight for the timestamp, eight for the floating-point value) would require
 petabytes of disk just for the last few hours. But here is the secret: _almost nothing
 ever changes_. CPU load drifts slowly. Memory usage stays flat for hours. Request
 latency bounces inside a narrow band. The data is not random noise; it has a shape, and
-that shape compresses beautifully — if you know the trick.
+that shape compresses beautifully, if you know the trick.
 
 That trick is the topic of this chapter. We will see how Facebook's engineers built
 *Gorilla*, a system that squeezes those sixteen bytes down to about 1.37 bytes on
-average — a better-than-ten-times reduction — using two simple ideas that together
+average (a better-than-ten-times reduction) using two simple ideas that together
 exploit everything that makes time-series data special. Then we will visit the world
 of small integers, where *Simple-8b* and *Stream VByte* achieve similar magic for
 monotone index-like numbers. And we will end in the world of sensors: tiny, battery-
@@ -90,7 +90,7 @@ bit stream, with two interleaved sub-streams: one for timestamps and one for val
   Hadoop's HDFS) to store monitoring metrics. Queries that aggregated over thousands of
   metrics took seconds or tens of seconds. Gorilla replaced most of the hot read path
   with an in-memory store backed by compressed blocks, cutting query time to
-  milliseconds and reducing storage by 10× — allowing 26 hours of data to fit in the
+  milliseconds and reducing storage by 10×. Twenty-six hours of data fit in the
   RAM of two servers per region in 2015, a scale that would be impossible without
   compression.
 ]
@@ -105,8 +105,8 @@ Suppose a metric is scraped every 60 seconds:
     columns: 3,
     stroke: 0.5pt,
     [*Timestamp (s)*], [*Delta (s)*], [*Delta-of-delta (s)*],
-    [`1,700,000,000`], [—], [—],
-    [`1,700,000,060`], [`60`], [—],
+    [`1,700,000,000`], [n/a], [n/a],
+    [`1,700,000,060`], [`60`], [n/a],
     [`1,700,000,120`], [`60`], [`0`],
     [`1,700,000,180`], [`60`], [`0`],
     [`1,700,000,241`], [`61`], [`+1`],
@@ -116,7 +116,7 @@ Suppose a metric is scraped every 60 seconds:
 ]
 
 The raw timestamps are large 32-bit or 64-bit numbers. Their first differences (deltas)
-are almost all 60. The *delta-of-delta* — the difference between consecutive deltas —
+are almost all 60. The *delta-of-delta* (the difference between consecutive deltas)
 is almost always 0, occasionally ±1 or ±2 when a scrape is slightly early or late.
 
 #gomaths("Difference Sequences")[
@@ -127,7 +127,7 @@ is almost always 0, occasionally ±1 or ±2 when a scrape is slightly early or l
   Example: values 10, 13, 16, 19, 22 (arithmetic sequence, step 3).
   Deltas: 3, 3, 3, 3. Delta-of-deltas: 0, 0, 0. Perfectly regular
   data has all-zero second differences. The compressed representation is just: "start
-  at 10, step of 3, then four zeros" — three numbers instead of five.
+  at 10, step of 3, then four zeros": three numbers instead of five.
 ]
 
 Gorilla encodes the delta-of-delta (DoD) using a variable-length code optimized for
@@ -158,21 +158,21 @@ in full.
     import cetz.draw: *
     // Raw timestamps box
     rect((0,5),(8,6), stroke: 0.6pt, fill: rgb("#ddeeff"))
-    content((4,5.5))[Raw timestamps: 64 bits each]
+    content((4,5.5), box(width: 7.6cm, inset: 2pt, align(center, text(size: 8pt)[Raw timestamps: 64 bits each])))
     // Arrow down
     line((4,5),(4,4.2), mark: (end: ">"))
-    content((5.5,4.6))[first delta]
+    content((5.5,4.6), box(width: 2.5cm, inset: 1pt, align(center, text(size: 8pt)[first delta])))
     rect((0,3.3),(8,4.2), stroke: 0.6pt, fill: rgb("#d4edda"))
-    content((4,3.75))[Deltas ≈ 60 s each: 7 bits]
+    content((4,3.75), box(width: 7.6cm, inset: 2pt, align(center, text(size: 8pt)[Deltas ≈ 60 s each: 7 bits])))
     // Arrow down
     line((4,3.3),(4,2.5), mark: (end: ">"))
-    content((5.5,2.9))[second delta]
+    content((5.5,2.9), box(width: 2.5cm, inset: 1pt, align(center, text(size: 8pt)[second delta])))
     rect((0,1.8),(8,2.5), stroke: 0.6pt, fill: rgb("#fff3cd"))
-    content((4,2.15))[Delta-of-deltas: mostly 0 → 1 bit]
+    content((4,2.15), box(width: 7.6cm, inset: 2pt, align(center, text(size: 8pt)[Delta-of-deltas: mostly 0 → 1 bit])))
     // Labels on right
-    content((9.5,5.5), anchor: "west")[64 bits]
-    content((9.5,3.75), anchor: "west")[7 bits]
-    content((9.5,2.15), anchor: "west")[1 bit]
+    content((8.3,5.5), anchor: "west", text(size: 8pt)[64 bits])
+    content((8.3,3.75), anchor: "west", text(size: 8pt)[7 bits])
+    content((8.3,2.15), anchor: "west", text(size: 8pt)[1 bit])
   })
 )
 
@@ -188,8 +188,8 @@ double-precision floating-point numbers (64 bits each).
 
   Two numbers that are _close in value_ tend to share their leading bits: same sign,
   same exponent, and the upper part of the mantissa. Their lower mantissa bits differ.
-  This means the XOR of two close floats has many leading zeros and many trailing zeros
-  — only the differing middle bits are nonzero.
+  This means the XOR of two close floats has many leading zeros and many trailing zeros;
+  only the differing middle bits are nonzero.
 ]
 
 The XOR trick, named for the *exclusive-or* (XOR) bitwise operation: it produces a 1
@@ -198,8 +198,8 @@ are close in value will XOR to a number with many leading zeros and many trailin
 
 #definition("XOR Residual")[
   Given two 64-bit floats $v_(i-1)$ and $v_i$, the *XOR residual* is
-  $r_i = v_i text(" XOR ") v_(i-1)$. Only the _meaningful bits_ — those between the
-  first and last 1 bit of $r_i$ — need to be stored. Gorilla calls those the
+  $r_i = v_i text(" XOR ") v_(i-1)$. Only the _meaningful bits_ (those between the
+  first and last 1 bit of $r_i$) need to be stored. Gorilla calls those the
   *center bits*.
 ]
 
@@ -213,7 +213,7 @@ Gorilla's value encoder works as follows:
    of meaningful bits, and then the meaningful bits themselves.
 
 Case 1 covers a very common situation: the metric simply did not change between
-readings. Case 2 covers slow drift — the value changes a little, but the exponent and
+readings. Case 2 covers slow drift: the value changes a little, but the exponent and
 upper mantissa stay the same, so the XOR has the same leading-zero count as before.
 Case 3 handles larger jumps.
 
@@ -222,13 +222,13 @@ clearly. Suppose a temperature sensor reports values near 72.0 °F.
 
 #align(center)[
   #table(
-    columns: 4,
+    columns: (auto, 1fr, auto, auto),
     stroke: 0.5pt,
     [*Value*], [*Bits (simplified)*], [*XOR with prev*], [*Leading/Trailing zeros*],
-    [`72.0`], [`0100000001010010000...`], [first value], [—],
-    [`72.1`], [`0100000001010010000110...`], [`000...0110...`], [many leading, many trailing],
-    [`72.1`], [`0100000001010010000110...`], [`000...000`], [all zero → case 1],
-    [`71.9`], [`0100000001010001111...`], [`000...010...`], [many leading, many trailing],
+    [`72.0`], [`0100000001010010000...`], [first value], [n/a],
+    [`72.1`], [`010000000101001000011...`], [`000...0110...`], [many leading, many trailing],
+    [`72.1`], [`010000000101001000011...`], [`000...000`], [all zero → case 1],
+    [`71.9`], [`010000000101000111...`], [`000...010...`], [many leading, many trailing],
   )
 ]
 
@@ -238,25 +238,25 @@ doubles agree on the sign, the whole exponent, and the top of the mantissa, so t
 has a long run of zeros at the front (say 16 leading zeros) and a long run of zeros at the
 back (say 30 trailing zeros), leaving only 18 _meaningful_ center bits in the middle. This
 is a new block structure, so Gorilla emits `11`, then a 5-bit leading-zero count (16), then
-a 6-bit meaningful-bit count (18), then the 18 center bits themselves — about 41 bits
+a 6-bit meaningful-bit count (18), then the 18 center bits themselves: about 41 bits
 instead of 64. The third reading repeats `72.1` exactly, so the XOR is all zeros and the
 whole point costs a *single* `0` bit. The fourth reading, `71.9`, drifts by the same tiny
 amount in the opposite direction; its XOR happens to land in the same window of leading and
 trailing zeros as the `72.0`→`72.1` step, so Gorilla emits just `10` followed by the 18
-center bits — about 20 bits, skipping the leading/meaningful counts entirely because they
+center bits - about 20 bits, skipping the leading/meaningful counts entirely because they
 are unchanged. That is the whole trick: the first change pays for the block geometry, and
 every later change of the *same shape* rides along for almost free.
 
 #keyidea[
   *Why the XOR is mostly zeros.* For a slowly-drifting metric, consecutive doubles differ
   only in their _low_ mantissa bits. XOR turns "agree" into 0 and "differ" into 1, so the
-  result is zero everywhere the two numbers match — which is everywhere except a narrow
+  The result is zero everywhere the two numbers match, which is everywhere except a narrow
   band of low-order bits. Gorilla stores only that band. A general-purpose coder like gzip,
   staring at the raw 8-byte doubles, never sees this structure at all.
 ]
 
 In real monitoring data, Gorilla achieves an average of about *1.37 bytes per
-(timestamp, value) pair*, compared to 16 bytes without compression — a compression
+(timestamp, value) pair*, compared to 16 bytes without compression, a compression
 ratio of approximately 11.7×.
 
 #algo(
@@ -273,13 +273,13 @@ ratio of approximately 11.7×.
   Each block stores the first (timestamp, value) pair in full, then encodes all
   subsequent pairs as bit-stream deltas. Blocks are immutable once closed, enabling
   fast scans and replication. Two gorilla blocks are stored in memory as a bump
-  pointer into a byte slice — appending a data point touches at most a few bytes.
+  pointer into a byte slice; appending a data point touches at most a few bytes.
 ]
 
 === Gorilla in Production: Prometheus, InfluxDB, and Friends
 
-The Gorilla compression scheme was so effective that it was immediately adopted — often
-verbatim — by the open-source monitoring ecosystem:
+The Gorilla compression scheme was so effective that it was immediately adopted, often
+verbatim, by the open-source monitoring ecosystem:
 
 - *Prometheus* (open-source, CNCF, 2012/2016): Prometheus's TSDB chunk format uses
   Gorilla-style timestamp and value encoding as its default. Every Kubernetes cluster
@@ -293,7 +293,7 @@ verbatim — by the open-source monitoring ecosystem:
   same chunk format.
 - *VictoriaMetrics* (Valyala, 2018+): Improved on Gorilla by adding integer-valued
   float detection and an outer zstd pass, achieving 0.4 bytes per data point versus
-  Gorilla's ~1.37 — a further 3× improvement for typical Prometheus metrics.
+  Gorilla's ~1.37, a further 3× improvement for typical Prometheus metrics.
 
 #aside[
   Gorilla is not a general data store. It only stores *recent* data (26 hours in
@@ -327,7 +327,7 @@ fits the append-only ingestion model perfectly.
 == Python Implementation: Gorilla-Style Encoding
 
 Let us build a compact Python version of the core Gorilla algorithms. This is
-illustrative code — a real implementation would work at the bit level inside `bytes`
+illustrative code. A real implementation would work at the bit level inside `bytes`
 buffers, but we use a `BitWriter` and `BitReader` from the `tinyzip.bitio` module (built
 in Chapter 17) to keep things readable.
 
@@ -467,7 +467,7 @@ round_trip_demo()
 ][
   It means the current value is _identical_ to the previous value. It is common because
   most monitored metrics (memory usage, disk size, background request rate) change
-  slowly — many consecutive readings are literally the same float value.
+  slowly; many consecutive readings are literally the same float value.
 ]
 
 == Simple-8b: Packing Small Integers into 64-Bit Words
@@ -476,8 +476,8 @@ Gorilla addresses floating-point values and timestamps. A related and extremely 
 problem is compressing large sequences of small non-negative integers: document IDs in
 a search engine's _inverted index_ (a table that, for each word, lists the sorted ID
 numbers of every document containing that word), row identifiers in a columnar database,
-event counts, port numbers, sensor readings quantized to integer levels. These integers are small —
-perhaps in the range 0 to 255 — but stored naively as 32-bit or 64-bit values, which
+event counts, port numbers, sensor readings quantized to integer levels. These integers are small,
+perhaps in the range 0 to 255, but stored naively as 32-bit or 64-bit values, which
 wastes most of the bits.
 
 *Simple-8b* (Anh and Moffat, _Software: Practice and Experience_, 2010) is the
@@ -574,7 +574,7 @@ all ≤ 7 so needing at most 3 bits each).
 - The decoder reads selector 4, knows: 20 integers × 3 bits = 60 bits. Extracts them
   all by looping 20 times with a 3-bit mask.
 
-We compressed 11 × 4 bytes (44 bytes if stored as 32-bit ints) into 8 bytes —
+We compressed 11 × 4 bytes (44 bytes if stored as 32-bit ints) into 8 bytes,
 a 5.5× reduction.
 
 == Stream VByte: SIMD-Friendly Byte-Oriented Integer Compression
@@ -583,7 +583,7 @@ Simple-8b is word-aligned and fast, but it packs bits tightly across byte bounda
 which prevents the simplest SIMD (Single Instruction, Multiple Data) optimizations.
 *Stream VByte* (Daniel Lemire, Nathan Kurz, and Christoph Rupp, _Information Processing
 Letters_, 2018) reorganizes the encoding so that control information and data are
-strictly separated into two contiguous regions — making SIMD processing of the data
+strictly separated into two contiguous regions, which makes SIMD processing of the data
 bytes trivially possible.
 
 #definition("Variable-Byte (VByte) Encoding")[
@@ -615,7 +615,7 @@ by all data bytes. A decoder can:
 - Process 4 integers in roughly the time it takes to load two cache lines.
 
 On a 3.4 GHz Intel Haswell processor, Stream VByte decodes more than *4 billion
-differentially-coded integers per second* from RAM — roughly 4 bytes per nanosecond,
+differentially-coded integers per second* from RAM, roughly 4 bytes per nanosecond,
 which is near the memory bandwidth limit.
 
 #algo(
@@ -636,22 +636,22 @@ which is near the memory bandwidth limit.
     import cetz.draw: *
     // Control region
     rect((0,3),(4,4), stroke: 0.6pt, fill: rgb("#ddeeff"))
-    content((2,3.5))[Control bytes]
-    content((0.5,2.7))[`10|01|00|11`]
-    content((2.5,2.7))[← 4 ints: 3B,2B,1B,4B]
+    content((2,3.5), box(width: 3.6cm, inset: 2pt, align(center, text(size: 8pt)[Control bytes])))
+    content((0.5,2.7), box(width: 1.8cm, inset: 1pt, align(center, text(size: 7pt)[`10|01|00|11`])))
+    content((2.9,2.7), box(width: 2.4cm, inset: 1pt, align(center, text(size: 7pt)[← 4 ints: 3B,2B,1B,4B])))
     // Arrow right
     line((4,3.5),(5,3.5), mark: (end: ">"))
     // Data region
     rect((5,3),(11,4), stroke: 0.6pt, fill: rgb("#d4edda"))
-    content((8,3.5))[Data bytes: BBB BB B BBBB]
+    content((8,3.5), box(width: 5.6cm, inset: 2pt, align(center, text(size: 8pt)[Data bytes: BBB BB B BBBB])))
     // SIMD label
     rect((5,1.5),(11,2.5), stroke: 0.6pt, fill: rgb("#fff3cd"), radius: 3pt)
-    content((8,2))[SIMD shuffle → 4 integers decoded at once]
+    content((8,2), box(width: 5.6cm, inset: 2pt, align(center, text(size: 8pt)[SIMD shuffle → 4 integers decoded at once])))
     // Arrow down from data
     line((8,3),(8,2.5), mark: (end: ">"))
     // Arrow from control to shuffle mask
     line((3,2.7),(3,2),(7,2), stroke: (dash: "dashed"), mark: (end: ">"))
-    content((5,1.2))[shuffle mask lookup (control byte → table)]
+    content((5,1.1), box(width: 5.0cm, inset: 1pt, align(center, text(size: 7pt)[shuffle mask lookup (control byte → table)])))
   })
 )
 
@@ -673,7 +673,7 @@ Both schemes compress small positive integers efficiently. They have different t
 
 #align(center)[
   #table(
-    columns: 3,
+    columns: (auto, 1fr, 1fr),
     stroke: 0.5pt,
     [*Property*], [*Simple-8b*], [*Stream VByte*],
     [Alignment], [Word-aligned (64-bit)], [Byte-aligned],
@@ -709,7 +709,7 @@ RAM. The Internet of Things (IoT) turns the problem upside down. An IoT sensor m
 - Connected to the internet via LoRaWAN (a 250 bps radio link) or a 2G modem
 - Measuring temperature, humidity, pressure, or soil moisture every few minutes
 
-The same need — compress time-series data before sending — applies, but every byte of
+The same need applies: compress time-series data before sending. But every byte of
 RAM used by the compressor and every CPU cycle burned is precious. Let us look at how
 compression works under these extreme constraints.
 
@@ -724,7 +724,7 @@ A typical LoRaWAN packet is limited to 51–242 bytes depending on the spreading
 and regional regulations. A sensor that takes a reading every minute and wants to
 batch one hour of data (60 readings) into a single packet must compress: 60 × 8 bytes
 (float) + 60 × 4 bytes (timestamp) = 720 bytes, which does not fit. After Gorilla-
-style compression, those 60 (timestamp, value) pairs might fit in under 100 bytes —
+style compression, those 60 (timestamp, value) pairs might fit in under 100 bytes,
 well within the payload limit.
 
 #keyidea[
@@ -756,7 +756,7 @@ of lightweight algorithms:
 *3. Lightweight universal codes.*
   When the distribution of delta values is not known in advance (e.g., a vibration
   sensor with highly variable readings), Rice/Golomb codes (Chapter 25) or Elias
-  gamma codes (Chapter 25) work well with almost no memory overhead — just a few
+  gamma codes (Chapter 25) work well with almost no memory overhead, just a few
   registers. The encoder needs to choose or adapt the Rice parameter k, which requires
   only a running estimate of the mean delta.
 
@@ -779,7 +779,7 @@ of lightweight algorithms:
 
 *MQTT* (Message Queuing Telemetry Transport, originally IBM, now an OASIS standard)
 is the dominant protocol for IoT device-to-cloud messaging. It is designed for
-constrained devices and unreliable networks. MQTT messages are binary payloads — the
+constrained devices and unreliable networks. MQTT messages are binary payloads; the
 protocol does not define a data format, so the application layer must define it. A
 common pattern:
 
@@ -878,7 +878,7 @@ The delta-of-delta idea is not unique to Gorilla. It appears throughout compress
 signal processing under different names:
 
 - *Video coding* (Chapter 51): predictive inter-frame coding predicts each pixel
-  from motion-compensated previous frames and codes the residual — exactly "predict
+  from motion-compensated previous frames and codes the residual. That is exactly "predict
   then code the residual," which is what delta-of-delta does for timestamps.
 - *FLAC audio* (Chapter 50): FLAC's predictors compute a linear combination of previous
   samples and code the residual with Rice codes. A first-order predictor gives deltas;
@@ -888,8 +888,8 @@ signal processing under different names:
 - *Financial tick data*: price changes are small relative to the price level; delta-
   encoding plus a small integer codec achieves 4–8× compression over raw doubles.
 
-This pattern — *predict the next value from the past, then encode only the prediction
-error* — is one of the deepest organizing principles in all of compression. We first
+This pattern (*predict the next value from the past, then encode only the prediction
+error*) is one of the deepest organizing principles in all of compression. We first
 encountered it in information-theoretic form in Chapter 23 (compression = prediction =
 learning) and in algorithmic form in Chapter 28 (LZ77 as "copy a match, code only the
 mismatch").
@@ -912,7 +912,7 @@ place:
 
 #align(center)[
   #table(
-    columns: 4,
+    columns: (auto, 1fr, auto, auto),
     stroke: 0.5pt,
     [*Scheme*], [*What is stored*], [*Best for*], [*Deployed in*],
     [Raw], [$t_i$ directly], [Random values], [Legacy formats],
@@ -935,22 +935,22 @@ A complete Gorilla compressed block for a time series looks like this:
     import cetz.draw: *
     // Header
     rect((0,5),(10,6), stroke: 0.6pt, fill: rgb("#ddeeff"))
-    content((5,5.5))[Header: block start time (64 bits) + point count (16 bits)]
+    content((5,5.5), box(width: 9.6cm, inset: 2pt, align(center, text(size: 8pt)[Header: block start time (64 bits) + point count (16 bits)])))
     // Timestamp stream
     rect((0,3.8),(4.8,4.8), stroke: 0.6pt, fill: rgb("#d4edda"))
-    content((2.4,4.3))[Timestamp sub-stream]
-    content((2.4,3.95), size: 0.8em)[DoD variable-length codes]
+    content((2.4,4.3), box(width: 4.4cm, inset: 2pt, align(center, text(size: 8pt)[Timestamp sub-stream])))
+    content((2.4,3.95), box(width: 4.4cm, inset: 2pt, align(center, text(size: 7pt)[DoD variable-length codes])))
     // Value stream
     rect((5.2,3.8),(10,4.8), stroke: 0.6pt, fill: rgb("#fff3cd"))
-    content((7.6,4.3))[Value sub-stream]
-    content((7.6,3.95), size: 0.8em)[XOR block codes]
+    content((7.6,4.3), box(width: 4.4cm, inset: 2pt, align(center, text(size: 8pt)[Value sub-stream])))
+    content((7.6,3.95), box(width: 4.4cm, inset: 2pt, align(center, text(size: 7pt)[XOR block codes])))
     // Arrow from header down
     line((5,5),(5,4.8), mark: (end: ">"))
     // Footer
     rect((0,2.6),(10,3.6), stroke: 0.6pt, fill: rgb("#fce5cd"))
-    content((5,3.1))[Bit-stream padding to byte boundary]
+    content((5,3.1), box(width: 9.6cm, inset: 2pt, align(center, text(size: 8pt)[Bit-stream padding to byte boundary])))
     // Brace
-    content((-0.8,4.3), anchor: "east")[interleaved]
+    content((-0.8,4.3), anchor: "east", text(size: 8pt)[interleaved])
     line((-0.5,3.8),(-0.5,4.8))
     line((-0.5,3.8),(0,3.8))
     line((-0.5,4.8),(0,4.8))
@@ -1004,7 +1004,7 @@ The paper reported the following compression results on Facebook's operational d
   DoDs: 0, 0, -2, 2, 0, 0. Max abs = 2.
   Encoding the DoDs with Gorilla's scheme: five `0` bits (3 middle values), one `10`+7-bit
   code for -2, one `10`+7-bit for +2. Total ≈ 5 + 9 + 9 = 23 bits for 6 DoD values
-  vs. 6 × 32 bits = 192 bits raw (for 32-bit integers) — an 8× reduction.
+  vs. 6 × 32 bits = 192 bits raw (for 32-bit integers): an 8× reduction.
 ]
 
 #exercise("68.2", 1)[
@@ -1046,10 +1046,10 @@ The paper reported the following compression results on Facebook's operational d
 #solution("68.4")[
   Classic VByte interleaves control bits with data bytes: each byte's high bit tells
   you whether to read more bytes. You must process each byte sequentially to find
-  where the next integer starts — no parallelism. Stream VByte separates control bytes
+  where the next integer starts, so no parallelism is possible. Stream VByte separates control bytes
   (2 bits per integer, grouped 4 per byte) from data bytes (contiguous). To decode 4
   integers: read the control byte, use it as an index into a 256-entry lookup table to
-  retrieve a "shuffle mask" — a 16-byte pattern that tells a SIMD instruction (e.g.,
+  retrieve a "shuffle mask" - a 16-byte pattern that tells a SIMD instruction (e.g.,
   x86 `pshufb`) which byte in the 16-byte data register goes to which position in the
   output. The SIMD unit executes this in one clock cycle, extracting all 4 integers
   simultaneously. The hardware feature is the SIMD shuffle/permute instruction
@@ -1102,21 +1102,21 @@ The paper reported the following compression results on Facebook's operational d
 
 == Further Reading
 
-- #link("https://dl.acm.org/doi/10.14778/2824032.2824078")[Pelkonen et al. (2015) — *Gorilla: A Fast, Scalable, In-Memory Time Series Database*. VLDB Endowment 8(12), 1816–1827.] The original paper; precise encoding tables and evaluation on Facebook's operational data.
+- #link("https://dl.acm.org/doi/10.14778/2824032.2824078")[Pelkonen et al. (2015): *Gorilla: A Fast, Scalable, In-Memory Time Series Database*. VLDB Endowment 8(12), 1816–1827.] The original paper; precise encoding tables and evaluation on Facebook's operational data.
 
-- #link("https://arxiv.org/abs/1709.08990")[Lemire, Kurz & Rupp (2018) — *Stream VByte: Faster Byte-Oriented Integer Compression*. Information Processing Letters 130.] Explains the control/data split and SIMD shuffle decoding in detail.
+- #link("https://arxiv.org/abs/1709.08990")[Lemire, Kurz & Rupp (2018): *Stream VByte: Faster Byte-Oriented Integer Compression*. Information Processing Letters 130.] Explains the control/data split and SIMD shuffle decoding in detail.
 
-- #link("https://onlinelibrary.wiley.com/doi/abs/10.1002/spe.948")[Anh & Moffat (2010) — *Index Compression Using 64-Bit Words* (Simple-8b). Software: Practice and Experience 40, 131–147.] Introduces the selector-based 64-bit packing scheme.
+- #link("https://onlinelibrary.wiley.com/doi/abs/10.1002/spe.948")[Anh & Moffat (2010): *Index Compression Using 64-Bit Words* (Simple-8b). Software: Practice and Experience 40, 131–147.] Introduces the selector-based 64-bit packing scheme.
 
-- #link("https://www.vldb.org/pvldb/vol15/p3058-liakos.pdf")[Liakos et al. (2022) — *Chimp: Efficient Lossless Floating Point Compression for Time Series Databases*. VLDB 15(11).] Chimp and Chimp128: improvements on Gorilla's XOR scheme.
+- #link("https://www.vldb.org/pvldb/vol15/p3058-liakos.pdf")[Liakos et al. (2022): *Chimp: Efficient Lossless Floating Point Compression for Time Series Databases*. VLDB 15(11).] Chimp and Chimp128: improvements on Gorilla's XOR scheme.
 
-- #link("https://ir.cwi.nl/pub/33334/33334.pdf")[Afroozeh, Kuffó & Boncz (2024) — *ALP: Adaptive Lossless Floating-Point Compression*. SIGMOD 2024.] The state-of-the-art for float column compression in analytical databases; default in DuckDB.
+- #link("https://ir.cwi.nl/pub/33334/33334.pdf")[Afroozeh, Kuffó & Boncz (2024): *ALP: Adaptive Lossless Floating-Point Compression*. SIGMOD 2024.] The current best approach for float column compression in analytical databases; default in DuckDB.
 
-- #link("https://medium.com/faun/victoriametrics-achieving-better-compression-for-time-series-data-than-gorilla-317bc1f95932")[Valialkin (2020) — *VictoriaMetrics: Achieving Better Compression than Gorilla*.] Practical blog post describing VictoriaMetrics' extensions to Gorilla.
+- #link("https://medium.com/faun/victoriametrics-achieving-better-compression-for-time-series-data-than-gorilla-317bc1f95932")[Valialkin (2020): *VictoriaMetrics: Achieving Better Compression than Gorilla*.] Practical blog post describing VictoriaMetrics' extensions to Gorilla.
 
 - #link("https://www.mdpi.com/1424-8220/24/22/7273")[Evolving Multivariate Time Series Compression for IoT (Sensors, 2024).] A 2024 survey of compression methods specifically designed for IoT multivariate sensor streams.
 
-- #link("https://prometheus.io/docs/prometheus/1.8/storage/")[Prometheus Storage Documentation] — describes how Prometheus implements Gorilla-style chunks in its TSDB.
+- #link("https://prometheus.io/docs/prometheus/1.8/storage/")[Prometheus Storage Documentation]: describes how Prometheus implements Gorilla-style chunks in its TSDB.
 
 #bridge[
   We have now covered four specialized compression domains in Volume V: KV-cache and
@@ -1127,6 +1127,6 @@ The paper reported the following compression results on Facebook's operational d
   compression. Next, in Chapter 69, we cross from the digital to the biological: genomic
   data, where the "alphabet" is just four letters (A, C, G, T) but the files run to
   hundreds of gigabytes, and the best compressors align reads to a reference genome and
-  code only the differences — the same predict-and-code-residual idea, applied to
+  code only the differences: the same predict-and-code-residual idea, applied to
   molecules.
 ]

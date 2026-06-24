@@ -9,11 +9,11 @@
 ][Matt Mahoney, _The PAQ Data Compression Programs_]
 
 Imagine a compression contest where the prize is half a million euros, the entry fee is months of
-your life, and winning means your program takes three days to compress a single gigabyte — yet
+your life, and winning means your program takes three days to compress a single gigabyte, yet
 serious computer scientists enter every year. That is the world of PAQ, ZPAQ, and cmix: the
 ratio champions.
 
-In Chapter 33 we met PPM and context mixing — the two big ideas that push lossless compression
+In Chapter 33 we met PPM and context mixing, the two big ideas that push lossless compression
 beyond what dictionary coders can reach. We learned how to blend dozens of predictions with
 logistic mixing, and how SSE (Secondary Symbol Estimation) refines the result. But that chapter
 stopped short of naming the programs that took those ideas furthest and asked: just how good can
@@ -21,7 +21,7 @@ a compressor get if you throw away every constraint about speed?
 
 This chapter answers that question. We will tour the PAQ family from its 2002 birth through a
 two-decade arms race, understand ZPAQ's elegant solution to the archival problem, meet cmix and
-its LSTM neural mixer, and sit with the philosophical claim that grips the field — that
+its LSTM neural mixer, and sit with the philosophical claim that grips the field: that
 compressing a Wikipedia dump really does mean understanding human knowledge.
 
 #recap[
@@ -29,8 +29,8 @@ compressing a Wikipedia dump really does mean understanding human knowledge.
   proved the deepest insight: perfect prediction equals perfect compression. Chapter 26 gave
   us the arithmetic coder that turns any probability into the matching fraction of a bit.
   Chapter 33 built the predictor: PPM (Prediction by Partial Matching) with escape mechanisms
-  for unseen contexts, and context mixing — running many models in parallel and blending their
-  bit-level probabilities with logistic weights. We also introduced SSE, the calibration layer
+  for unseen contexts, and context mixing (running many models in parallel and blending their
+  bit-level probabilities with logistic weights). We also introduced SSE, the calibration layer
   that corrects the blended probability after the fact. This chapter shows where that machinery
   leads when you let it run unconstrained.
 ]
@@ -48,7 +48,7 @@ compressing a Wikipedia dump really does mean understanding human knowledge.
 == From Theory to Arms Race
 
 Chapter 33 ended with a theorem: if you can predict perfectly, you can compress perfectly. The
-context mixing architecture gives every weapon a predictor could want — many models, each
+context mixing architecture gives every weapon a predictor could want: many models, each
 capturing a different statistical pattern, all blended into one bit-level probability. In
 principle, adding more models and training them longer always helps. In practice, it costs CPU
 time and RAM.
@@ -60,7 +60,7 @@ is the only thing that matters and speed can go whistle.
   Matt Mahoney started the PAQ line in January 2002 while working at Florida Tech (Florida
   Institute of Technology). His original 2000 paper, "Fast Text Compression with Neural
   Networks," showed that a simple feedforward network could beat order-5 PPM on small tests.
-  PAQ1 — released on January 6, 2002 — implemented that idea as a real compressor. By PAQ6
+  PAQ1, released on January 6, 2002, implemented that idea as a real compressor. By PAQ6
   in 2003, dozens of outside contributors were sending patches. The result was one of the few
   open-source compression projects where the paper and the code co-evolved in public, driven by
   a community of enthusiasts on the Encode.su forum, with every decimal point of improvement
@@ -74,8 +74,8 @@ Before going further, let us fix the architecture that all PAQ variants share.
 A PAQ compressor works *bit by bit*, not byte by byte. For each incoming bit of data:
 
 + Several dozen to several hundred *models* each look at the recent data through their own
-  lens — different context lengths, sparse contexts that skip positions, whole-word contexts,
-  record-structure contexts — and each outputs a single number: its estimate of $P("next bit" = 1)$.
+  lens (different context lengths, sparse contexts that skip positions, whole-word contexts,
+  record-structure contexts) and each outputs a single number: its estimate of $P("next bit" = 1)$.
 
 + A *mixer* takes all those probabilities, transforms each one with the logistic function
   $s_i = ln(p_i \/ (1 - p_i))$ (the "log-odds stretch"), forms a weighted sum
@@ -99,13 +99,13 @@ A PAQ compressor works *bit by bit*, not byte by byte. For each incoming bit of 
 
   *A quick refresher.* Model A says $P_1 = 0.8$, so $s_1 = ln(0.8\/0.2) = ln 4 approx 1.386$;
   model B says $P_2 = 0.6$, so $s_2 = ln(0.6\/0.4) = ln 1.5 approx 0.405$. An equal-weight mix is
-  $S = (1.386 + 0.405)\/2 approx 0.896$, giving $P = 1\/(1 + e^(-0.896)) approx 0.71$ — both models
+  $S = (1.386 + 0.405)\/2 approx 0.896$, giving $P = 1\/(1 + e^(-0.896)) approx 0.71$. Both models
   agreed, so the blended prediction is stronger than either alone, but tempered by their
   uncertainty.
 ]
 
 #keyidea[
-  The arithmetic coder does not care *how* you computed the probability — it only cares that
+  The arithmetic coder does not care *how* you computed the probability. It only cares that
   the probability is calibrated (i.e., when you say 80%, the bit really is 1 about 80% of the
   time). Context mixing's job is to produce the most calibrated possible probability by using
   every available clue. The more clues you use, the better the calibration, and the closer to
@@ -120,7 +120,7 @@ PAQ1 (2002) used a small fixed-weight neural network with a handful of order-0 t
 order-4 character models. Weights did not adapt; the mixing was static. The compression was
 already competitive with the best PPM programs of the day, which surprised the field.
 
-PAQ2 (2002) added SSE — Secondary Symbol Estimation. After the mixer produces its probability
+PAQ2 (2002) added SSE (Secondary Symbol Estimation). After the mixer produces its probability
 $P$, a small lookup table indexed by $(P, "recent 2 bits")$ adjusts $P$ to remove systematic
 biases. If the mixer historically said "70%" but the bit turned out to be 1 only 55% of the
 time in that situation, SSE learns to correct 70% down toward 55%. This one addition dropped
@@ -143,8 +143,8 @@ every bit.
 
 #aside[
   A PAQ model's count table is not stored as a raw count. A common trick is to store a *bit
-  history* — a small state machine summary of the last few bits seen in this context — and
-  map that history through a learned table to a probability. This is much more space-efficient
+  history*: a small state machine summary of the last few bits seen in this context, mapped
+  through a learned table to a probability. This is much more space-efficient
   than keeping full integer counts, because most contexts are seen only a handful of times.
   The state machine records "five 1s and two 0s, in this order" compactly, and a table converts
   that state to a probability calibrated over millions of training bits.
@@ -154,7 +154,7 @@ every bit.
 
 PAQ7 (December 2005), released by Mahoney but incorporating ideas from contributors including
 Alexander Rhatushnyak, replaced the old fixed-weight neural mixing with true logistic mixing
-and gradient descent. This was the pivotal upgrade. Previous PAQ versions were already
+and gradient descent. This was the decisive upgrade. Previous PAQ versions were already
 outperforming PPM on most benchmarks, but PAQ7 made the improvement reproducible and
 principled: each weight update is a small gradient step that minimizes the cross-entropy
 between the model's prediction and the actual bit.
@@ -194,8 +194,8 @@ contexts share statistical strength with structurally similar (but textually dif
 contexts.
 
 *Structured binary modeling*: PAQ8 added dedicated models for JPEG, BMP, WAV, EXE, and other
-file formats. A JPEG model, for instance, knows the DCT block structure from Chapter 38 — even
-before we get there in this book — and predicts bits in the AC coefficients using their known
+file formats. A JPEG model, for instance, knows the DCT block structure from Chapter 38 (even
+before we get there in this book) and predicts bits in the AC coefficients using their known
 statistical distribution. Pre-processing the data by sorting it, modeling it as a known format,
 or applying a reversible transform before feeding it to the context mixer can dramatically
 improve compression on mixed-content archives.
@@ -256,11 +256,11 @@ ZPAQ's central innovation is simple to state and profound in its consequences: *
 decompressor's description inside every archive it creates*.
 
 A ZPAQ archive does not just contain compressed data. Each block in the archive begins with a
-header that describes — in a compact bytecode called *ZPAQL* — exactly how to decompress the
+header that describes, in a compact bytecode called *ZPAQL*, exactly how to decompress the
 bytes that follow. A single fixed ZPAQ reader program, written once in 2009 and unchanged since,
 can parse that bytecode and run it. Future improvements to the compression algorithm can be
 embedded in new archives without changing the reader, because the reader does not need to
-understand the algorithm — it just needs to execute the bytecode.
+understand the algorithm. It just needs to execute the bytecode.
 
 #keyidea[
   ZPAQ separates the *format* (stable, defined in 2009) from the *algorithm* (can change
@@ -285,12 +285,12 @@ ZPAQL is a tiny assembly language with:
 On x86 hardware, the ZPAQ reader JIT-compiles the ZPAQL bytecode to native instructions,
 roughly doubling speed. (JIT, "just-in-time" compilation, means translating the bytecode into
 real machine instructions the first time it runs, instead of re-interpreting each instruction
-every time — a one-off cost that pays for itself over billions of bits.) On other hardware, it
+every time, a one-off cost that pays for itself over billions of bits.) On other hardware, it
 interprets. Either way, the output is identical.
 
 To make this concrete: a single component in a ZPAQL model might say "compute my context as a
 hash of the last two bytes, look it up in a $2^22$-entry table, and report the probability stored
-there." Written out, that is a handful of ZPAQL instructions — load the previous byte into
+there." Written out, that is a handful of ZPAQL instructions: load the previous byte into
 register `A`, combine it with the byte before, multiply by a hashing constant, mask down to 22
 bits, and use the result as a table index. The reader never knows or cares that those bytes spell
 "an order-2 context model"; it simply executes the instructions. Because the _description_ of the
@@ -299,11 +299,10 @@ elaborate model written years from now without a single change to the reader's o
 
 #aside[
   The ZPAQL architecture is one of the rare cases where a compression format is
-  *Turing-complete* in its header — meaning its little bytecode language is powerful enough to
+  *Turing-complete* in its header: its little bytecode language is powerful enough to
   express _any_ computation a general computer can perform, given enough memory and time. Any
-  algorithm that can be expressed as a program — including,
-  in principle, a neural network or an LLM — could be described in ZPAQL and stored in a ZPAQ
-  archive. In practice, ZPAQL programs are small (a few kilobytes of bytecode), but the
+  algorithm that can be expressed as a program, including a neural network or an LLM in
+  principle, could be described in ZPAQL and stored in a ZPAQ archive. In practice, ZPAQL programs are small (a few kilobytes of bytecode), but the
   principle is important: the format never becomes obsolete, because the algorithm is not
   hardcoded.
 ]
@@ -342,7 +341,7 @@ for xz. The ratio improvement over xz is typically 5–15%.
 
 If ZPAQ traded a little ratio for archival soundness, cmix went the other direction entirely:
 throw every idea at the wall and accept that the result is spectacularly slow. Byron Knoll
-began work on cmix in December 2013. The name stands for *context mix* — a straightforward
+began work on cmix in December 2013. The name stands for *context mix*, a straightforward
 description of the architecture.
 
 === The cmix Architecture
@@ -351,21 +350,21 @@ cmix is a classical context mixer with one addition that changed everything: *an
 Short-Term Memory) neural network as one of the mixing inputs*.
 
 #gomaths("LSTM (Long Short-Term Memory) networks, briefly")[
-  An LSTM is a type of recurrent neural network — a network with a hidden state that carries
+  An LSTM is a type of recurrent neural network, one with a hidden state that carries
   information from one step to the next. At each step, it receives the current input and its
   own previous hidden state, and outputs both a new hidden state and a prediction.
 
-  Unlike a simple recurrent network, an LSTM has three *gates* — learned switches that control
-  what to remember, what to forget, and what to output. This lets it remember patterns over
+  Unlike a simple recurrent network, an LSTM has three *gates* (learned switches that control
+  what to remember, what to forget, and what to output). This lets it remember patterns over
   long distances (hundreds or thousands of steps back) without the "vanishing gradient" problem
   that makes simple RNNs forget quickly.
 
   *In compression terms*: at each bit position, the LSTM receives recent bits and its own
   history, and outputs $P("next bit" = 1)$. Because it can maintain state over thousands of
-  bits, it captures long-range patterns that fixed-order context models miss — the statistical
+  bits, it captures long-range patterns that fixed-order context models miss: the statistical
   signature of a whole paragraph, a recurring phrase, or even the writing style of an article.
   This comes at enormous cost: updating an LSTM on every bit requires a full forward and
-  backward pass through the network, which is why cmix is several times slower than PAQ8 — and
+  backward pass through the network. That is why cmix is several times slower than PAQ8, and
   PAQ8 was already slow.
 ]
 
@@ -376,14 +375,14 @@ cmix's full model ensemble (version 21, 2023) includes:
 - Whole-word and word-pair contexts.
 - Run-length contexts (what was the last repeated byte?).
 - Indirect context models (ICM): context hashes two levels deep.
-- *LSTM mixer*: a byte-level LSTM network trained online by backpropagation-through-time —
+- *LSTM mixer*: a byte-level LSTM network trained online by backpropagation-through-time,
   the standard way of updating a recurrent network's weights, which works by unrolling the
   network over the last several steps and pushing the error backwards through that unrolled
   chain. This is the component that makes cmix qualitatively different from all earlier context
   mixers.
 
-The LSTM does not replace the context models; it operates alongside them. All models —
-character contexts, sparse models, and the LSTM — feed into a final logistic mixer whose
+The LSTM does not replace the context models; it operates alongside them. All models
+(character contexts, sparse models, and the LSTM) feed into a final logistic mixer whose
 weights are updated after every bit. The LSTM captures patterns too long-range for any
 context model; the context models capture patterns too local for the LSTM's gradients to
 converge on quickly.
@@ -404,8 +403,8 @@ converge on quickly.
 
 === A Minimal Context-Mixing Sketch in Python
 
-The full cmix codebase runs to thousands of lines of C++. But the essential logic — multiple
-models, logistic mixing, weight update — fits in a small Python sketch. The version below is
+The full cmix codebase runs to thousands of lines of C++. But the essential logic (multiple
+models, logistic mixing, weight update) fits in a small Python sketch. The version below is
 deliberately simplified (order-1 and order-0 models only, no SSE, no LSTM) so you can read
 and run it:
 
@@ -458,7 +457,7 @@ class ContextMixer:
             m.update(bit)
 
 def compress_bits(data: bytes) -> tuple[int, int, float]:
-    """Count total bits used by the mixer on `data` (demo — does not emit a bit stream)."""
+    """Count total bits used by the mixer on `data` (demo only; does not emit a bit stream)."""
     models = [OrderNModel(0), OrderNModel(1), OrderNModel(2)]
     mixer  = ContextMixer(models)
     total_bits = 0.0
@@ -479,7 +478,7 @@ if __name__ == "__main__":
     print(f"Savings   : {100*(1 - coded_bits/raw_bits):.1f}%")
 ```
 
-Running this on a repeated English sentence gives roughly 3–4 bits per character — a big
+Running this on a repeated English sentence gives roughly 3–4 bits per character, a big
 improvement over the 8 bits/character of raw storage, achieved with just three tiny adaptive
 models. A real PAQ8 or cmix compressor runs hundreds of such models, plus sparse models, word
 models, and an LSTM, pushing the number below 2 bits per character on natural English.
@@ -499,7 +498,7 @@ models, and an LSTM, pushing the number below 2 bits per character on natural En
 
 How do you compare compressors that trade speed for ratio? You need a fixed test set,
 fixed resource limits, and an objective score. The compression community solved this with
-*corpora* — standard datasets on which every compressor is measured. The Calgary corpus
+*corpora*, standard datasets on which every compressor is measured. The Calgary corpus
 (1987), the Canterbury corpus (1997), and the Silesia corpus (2003) each defined an era.
 Chapter 36 gives the full history; here we focus on the corpus that emerged specifically for
 the ratio-champion class: *enwik9*.
@@ -507,7 +506,7 @@ the ratio-champion class: *enwik9*.
 === Enwik8 and Enwik9
 
 Matt Mahoney created the *Large Text Compression Benchmark* (LTCB) in 2006, based on
-*enwik8* — the first 100 million bytes (100 MB) of an English Wikipedia XML dump. The choice
+*enwik8*, the first 100 million bytes (100 MB) of an English Wikipedia XML dump. The choice
 of Wikipedia was deliberate: to compress it well, your model must learn English grammar,
 factual patterns, markup structure, and inter-article references. It is a proxy for general
 knowledge rather than random bytes.
@@ -523,12 +522,12 @@ from "good" to "the best humanity can do algorithmically, as of 2024, with a sin
 === The Hutter Prize Rules
 
 In August 2006, Marcus Hutter (Researcher at DeepMind, formerly ANU; creator of the AIXI
-theory we first encountered in Chapter 22) announced the Hutter Prize — formally "500,000 €
+theory we first encountered in Chapter 22) announced the Hutter Prize, formally "500,000 €
 for Compressing Human Knowledge."
 
 The rules, carefully designed to prevent cheating:
 
-+ *Data*: enwik9 — the first 1 GB of a specific Wikipedia XML dump, SHA-256 verified.
++ *Data*: enwik9, the first 1 GB of a specific Wikipedia XML dump, SHA-256 verified.
 + *Self-extracting*: the submission must be a single self-extracting executable. The
   decompressor is included in the compressed file itself, so that the total size (compressor +
   compressed data) is what counts.
@@ -538,7 +537,7 @@ The rules, carefully designed to prevent cheating:
 + *Prize*: €500 per 0.1% improvement, or equivalently €5,000 per 1% improvement over the
   standing record. The total prize pool is €500,000.
 
-The resource limits are crucial. They prevent the trivial solution of pre-training a giant
+The resource limits matter. They prevent the trivial solution of pre-training a giant
 language model on enwik9 and embedding it as a lookup table. The compressor must learn
 everything from the data itself, within 50 hours. (An LLM with weights pre-trained on the
 broader internet would fail the "no pre-computed knowledge" implicit in the spirit of the
@@ -548,7 +547,7 @@ the total compressed size counts. This ambiguity became relevant by 2025.)
 #history[
   Marcus Hutter's motivation was not just to find a good compressor. His 2007 paper with Shane
   Legg, "Universal Intelligence: A Definition of Machine Intelligence," defined intelligence as
-  the ability to achieve goals in a wide range of environments — and showed this is mathematically
+  the ability to achieve goals in a wide range of environments, and showed this is mathematically
   equivalent to compression: a more intelligent agent finds shorter programs for more strings.
   The Hutter Prize is therefore a bet: if you can compress a Wikipedia dump better than anyone
   else, you have, in a precise sense, more machine intelligence. The prize is a provocation as
@@ -557,34 +556,43 @@ the total compressed size counts. This ambiguity became relevant by 2025.)
 
 === The Record Progression
 
-#scoreboard(
-  caption: "Hutter Prize enwik9 record progression (selected milestones).",
-  [*Year*], [*Winner*], [*Program*], [*Bytes (enwik9)*], [*bpc*],
-  [2020 baseline], [—], [reference bzip2-class], [116,671,095], [0.933],
-  [2021], [Artemiy Margaritov], [starlit], [~115,100,000], [0.921],
-  [2023 Feb], [Saurabh Kumar], [fast-cmix], [114,156,155], [0.913],
-  [2024 Aug], [Kaido Orav], [fx-cmix], [112,578,322], [0.900],
-  [2024 Sep], [Kaido Orav + Byron Knoll], [*fx2-cmix*], [*110,793,128*], [*0.886*],
-)
+#block(width: 100%, breakable: true, above: 12pt, below: 12pt)[
+  #text(weight: "bold", fill: c-accent2, size: 9.5pt)[
+    SCOREBOARD: Hutter Prize enwik9 record progression (selected milestones).]
+  #v(3pt)
+  #text(size: 8pt)[
+  #table(
+    columns: (auto, 1fr, auto, auto, auto),
+    inset: 6pt,
+    align: (left, left, left, right, right),
+    fill: (_, row) => if row == 0 { c-accent.lighten(85%) } else { none },
+    table.header([*Year*], [*Winner*], [*Program*], [*Bytes (enwik9)*], [*bpc*]),
+    [2020 baseline], [-], [reference bzip2-class], [116,671,095], [0.933],
+    [2021], [Artemiy Margaritov], [starlit], [\~115,100,000], [0.921],
+    [2023 Feb], [Saurabh Kumar], [fast-cmix], [114,156,155], [0.913],
+    [2024 Aug], [Kaido Orav], [fx-cmix], [112,578,322], [0.900],
+    [2024 Sep], [Kaido Orav + Byron Knoll], [*fx2-cmix*], [*110,793,128*], [*0.886*],
+  )]
+]
 
-The September 2024 record — *fx2-cmix* at 110,793,128 bytes, awarded €7,950 to Kaido Orav
-and Byron Knoll — compresses enwik9 from 1,000,000,000 bytes to 110,793,128. That is a ratio
+The September 2024 record, *fx2-cmix* at 110,793,128 bytes, awarded €7,950 to Kaido Orav
+and Byron Knoll, compresses enwik9 from 1,000,000,000 bytes to 110,793,128. That is a ratio
 of 9.02:1 on 1 GB of Wikipedia text, with a self-extracting decompressor included.
 
 The techniques that fx2-cmix added over base cmix included:
 
 - *Article reordering*: Wikipedia articles are reordered so that topically related articles
   are adjacent. Each article is first turned into a list of numbers summarising its vocabulary
-  (an _embedding_), and a technique called t-SNE — a standard way of squashing such
+  (an _embedding_), and a technique called t-SNE (a standard way of squashing such
   high-dimensional summaries down onto a single line while keeping similar items near each
-  other — assigns every article a position. Sorting by that position puts articles about, say,
+  other) assigns every article a position. Sorting by that position puts articles about, say,
   chemistry next to one another, so the context mixer sees similar vocabulary in nearby
   positions. This is essentially the same idea the paq8hp branch discovered, now done
   efficiently enough to fit the time limit.
 
 - *Selective weight updates*: the gradient-descent mixer skips weight updates when the
-  prediction error is below a threshold. This saves CPU time with minimal ratio loss, allowing
-  more complex models to run within the time budget.
+  prediction error is below a threshold. This saves CPU time with minimal ratio loss and lets
+  more complex models run within the time budget.
 
 - *Improved LSTM architecture*: layer normalisation (rescaling the network's internal numbers
   at each layer so training stays numerically stable), the Adam optimiser (which adapts the
@@ -654,7 +662,7 @@ downward.
 
 Using the final probability from SSE, the arithmetic coder (Chapter 26) encodes the bit,
 consuming approximately $-log_2(P_"SSE")$ bits if the bit is 0. Because $P_"SSE"$ is close
-to 1 (the models are confident), this cost is well below 1 bit — perhaps 0.3 bits.
+to 1 (the models are confident), this cost is well below 1 bit, perhaps 0.3 bits.
 
 *Step 5: All models and weights are updated.*
 
@@ -685,7 +693,7 @@ it off. Practitioners choose LSTM depth and width to fit within the prize's 50-h
 === Why Speed Champions Cannot Use These Techniques
 
 LZ4 and Snappy (Chapter 32) aim for gigabytes per second. At that speed, there is time for
-exactly one cheap lookup per byte — perhaps a 4-byte hash into a small history table. There
+exactly one cheap lookup per byte, perhaps a 4-byte hash into a small history table. There
 is no time for logistic mixing, SSE, or an LSTM.
 
 Even gzip's Huffman coding (Chapter 24) and LZ77 match finding (Chapter 28) are already at
@@ -699,39 +707,39 @@ on the Pareto frontier: the extreme of ratio with no constraint on speed.
 
     // Axes
     line((0, 0), (8, 0), mark: (end: ">"))
-    line((0, 0), (0, 6), mark: (end: ">"))
-    content((4, -0.5))[Speed (faster →)]
-    content((-1.8, 3), angle: 90deg)[Ratio (better →)]
+    line((0, 0), (0, 6.2), mark: (end: ">"))
+    content((4, -0.5), text(size: 8pt)[Speed (faster →)])
+    content((-1.4, 3), angle: 90deg, text(size: 8pt)[Ratio (better →)])
 
     // Speed zones (right = fast)
     // Data points: (speed_x, ratio_y, name)
     // LZ4 Snappy: fast, lower ratio
     circle((7.2, 1.5), radius: 0.08, fill: black)
-    content((7.2, 1.9))[LZ4/Snappy]
+    content((6.5, 1.9), text(size: 8pt)[LZ4/Snappy])
 
     // gzip
     circle((5.5, 2.4), radius: 0.08, fill: black)
-    content((5.5, 2.8))[gzip]
+    content((5.5, 2.8), text(size: 8pt)[gzip])
 
     // zstd
     circle((5.0, 3.1), radius: 0.08, fill: black)
-    content((5.0, 3.5))[zstd]
+    content((5.0, 3.5), text(size: 8pt)[zstd])
 
     // xz/LZMA
     circle((3.5, 3.8), radius: 0.08, fill: black)
-    content((3.5, 4.2))[xz/LZMA]
+    content((3.5, 4.2), text(size: 8pt)[xz/LZMA])
 
     // PPMd
     circle((2.5, 4.5), radius: 0.08, fill: black)
-    content((2.5, 4.9))[PPMd]
+    content((2.5, 4.9), text(size: 8pt)[PPMd])
 
     // PAQ8 / ZPAQ
     circle((1.2, 5.2), radius: 0.08, fill: black)
-    content((1.2, 5.6))[PAQ8/ZPAQ]
+    content((1.8, 5.5), text(size: 8pt)[PAQ8/ZPAQ])
 
     // cmix
     circle((0.3, 5.8), radius: 0.08, fill: black)
-    content((0.6, 5.8))[cmix]
+    content((1.0, 5.9), text(size: 8pt)[cmix])
 
     // Pareto frontier curve (dashed)
     bezier(
@@ -748,7 +756,7 @@ on the Pareto frontier: the extreme of ratio with no constraint on speed.
 
 Before a context mixer ever sees a byte, many PAQ-class compressors run preprocessing
 transforms that reorganise the data into a form easier to model. These transforms are always
-reversible — the decompressor inverts them after expanding the data.
+reversible; the decompressor inverts them after expanding the data.
 
 === Text Preprocessing
 
@@ -783,7 +791,7 @@ predictable in its own domain.
 #misconception[
   "PAQ-class programs are cheating because they preprocess data into a special form."][
   Every compressor preprocesses data. gzip's LZ77 finds repeated matches and replaces them
-  with back-references — that is a preprocessing transform. bzip2 applies the
+  with back-references, which is itself a preprocessing transform. bzip2 applies the
   Burrows-Wheeler Transform (Chapter 35) before entropy coding. The difference is only
   degree: PAQ-class preprocessors are more numerous and more specialised. All transforms are
   lossless (the original data is always recoverable). Preprocessing is not special-casing; it
@@ -798,7 +806,7 @@ The Hutter Prize rests on a philosophical claim that is worth examining carefull
 
 In Chapter 23 we proved that the expected code length of a source under a model equals the
 cross-entropy between the model and the true source distribution. The model that assigns the
-highest probability to the actual data is the model closest to the truth — and it produces
+highest probability to the actual data is the model closest to the truth, and it produces
 the shortest compressed file.
 
 To assign high probability to Wikipedia text, a compressor must predict accurately:
@@ -809,7 +817,7 @@ To assign high probability to Wikipedia text, a compressor must predict accurate
 
 These are not pattern-matching exercises; they require something very close to *knowing facts*.
 A compressor that knows facts can assign higher probability to factual sentences and lower
-probability to nonsense — and therefore compresses better.
+probability to nonsense, and therefore compresses better.
 
 This is the argument Hutter and Legg formalised: Solomonoff's universal prior (Chapter 22)
 defines the ideal predictor as the one that compresses every data sequence to its Kolmogorov
@@ -819,7 +827,7 @@ complexity. A better compressor, in this sense, is a more intelligent machine.
   In 2023, DeepMind published "Language Modeling Is Compression" (Delétang et al.), showing
   that large language models (GPT-4-class) paired with arithmetic coding achieve state-of-the-art
   lossless compression on enwik8 and other corpora. A 70-billion-parameter model compresses
-  enwik8 to about 0.9 bits per character — competitive with the Hutter Prize winners, achieved
+  enwik8 to about 0.9 bits per character, competitive with the Hutter Prize winners, achieved
   by models that never saw enwik8 during training. This closed the loop: the Hutter Prize
   competitors build intelligence from scratch on the data; LLMs bring intelligence pre-built
   from the internet. Both approaches converge on the same compression ratios. The Hutter Prize
@@ -836,12 +844,12 @@ tuned for English text.
 True intelligence generalizes across domains. The Hutter Prize measures a proxy: general-
 purpose English-text prediction. It is a better proxy than most, because Wikipedia covers
 enormous breadth. But a programmer who compresses Wikipedia well by specialising in Wikipedia
-is not demonstrating general machine intelligence — they are demonstrating excellent
+is not demonstrating general machine intelligence. They are demonstrating excellent
 domain-specific modeling. The debate between the "compression as AI" camp and the "it's just
 very good statistics" camp remains alive in mid-2026.
 
 #keyidea[
-  The ratio champions — PAQ, ZPAQ, cmix — are not practical tools in the everyday sense.
+  The ratio champions (PAQ, ZPAQ, cmix) are not practical tools in the everyday sense.
   They are *scientific instruments*: measuring how close we can get to the theoretical minimum
   bits-per-character on a fixed well-understood corpus, subject to realistic (if generous)
   time and memory constraints. Every step closer to the limit is a step toward understanding
@@ -850,8 +858,8 @@ very good statistics" camp remains alive in mid-2026.
 
 == Why It All Matters
 
-The PAQ family may seem like an academic curiosity — programs that take days to run,
-useful to nobody in a hurry. But the ideas that emerged from the PAQ community influenced
+The PAQ family may seem like an academic curiosity, programs that take days to run and
+are useful to nobody in a hurry. But the ideas that emerged from the PAQ community influenced
 the whole field:
 
 - *Context mixing* is now used in ZPAQ, and its logistic-mixing principles influenced the
@@ -869,8 +877,8 @@ the whole field:
   The idea of embedding a bytecode description of the decompressor inside the archive has
   influenced thinking about format longevity in digital preservation communities.
 
-And the Hutter Prize's core insight — that compressing Wikipedia is equivalent to modeling
-it, and modeling it is equivalent to understanding it — became the theoretical underpinning
+And the Hutter Prize's core insight, that compressing Wikipedia is equivalent to modeling
+it and that modeling it is equivalent to understanding it, became the theoretical underpinning
 of the "language modeling is compression" result (Delétang et al., 2023) and the ongoing
 research connecting large language models to lossless compression (Chapter 62).
 
@@ -882,7 +890,6 @@ the ratio champions a fair surface to work on.
 
 #scoreboard(
   caption: "Ratio champions on 100 KB Wikipedia XML sample (approximate; ratios vary by content).",
-  [*Program / Setting*], [*Output bytes*], [*Ratio*], [*Notes*],
   [Raw (uncompressed)], [102,400], [1.00:1], [Baseline],
   [gzip -9 (Ch. 30)], [32,100], [3.19:1], [Classic, fast],
   [xz -9 / LZMA (Ch. 31)], [24,800], [4.13:1], [High ratio, minutes],
@@ -896,14 +903,14 @@ the ratio champions a fair surface to work on.
 == Summary
 
 This chapter showed where classical statistical compression goes when speed is removed as a
-constraint. The ratio-champion family — PAQ (2002–present), ZPAQ (2009–2016), and cmix
-(2013–present) — is built on context mixing (Chapter 33's core idea) pushed to its logical
+constraint. The ratio-champion family - PAQ (2002–present), ZPAQ (2009–2016), and cmix
+(2013–present) - is built on context mixing (Chapter 33's core idea) pushed to its logical
 limit: hundreds of models, an LSTM neural predictor, gradient-descent weight updates on every
 bit, SSE calibration, and aggressive preprocessing.
 
 ZPAQ's self-describing archive solved the archival soundness problem that plagued earlier PAQ
 versions. cmix's LSTM mixer captures long-range dependencies that no finite-order context
-model can reach. And the Hutter Prize — 500,000 € for compressing 1 GB of Wikipedia — turned
+model can reach. And the Hutter Prize (500,000 € for compressing 1 GB of Wikipedia) turned
 this engineering into an ongoing scientific benchmark, with the September 2024 record of
 110,793,128 bytes by Orav and Knoll still standing in June 2026.
 
@@ -912,9 +919,9 @@ extraordinary insight: these programs are the sharpest lens the field has for me
 close algorithmic modeling can get to the theoretical limits of prediction.
 
 #takeaways((
-  "PAQ (2002–present) applies context mixing with dozens to hundreds of bit-level models, logistic mixing with gradient-descent weights, and SSE calibration — building ratio supremacy at the cost of extreme slowness.",
+  "PAQ (2002–present) applies context mixing with dozens to hundreds of bit-level models, logistic mixing with gradient-descent weights, and SSE calibration. The result is extreme ratio at the cost of extreme slowness.",
   "ZPAQ (2009) solved the archival problem by storing the decompression algorithm as ZPAQL bytecode inside every archive, so a fixed reader can decompress any ZPAQ file, past or future.",
-  "cmix (2013–present) adds an LSTM neural network to the classical context-mixer ensemble, capturing long-range patterns beyond any finite context order — making it the current ratio champion on most text benchmarks.",
+  "cmix (2013–present) adds an LSTM neural network to the classical context-mixer ensemble, capturing long-range patterns beyond any finite context order. That is what makes it the current ratio champion on most text benchmarks.",
   "The Hutter Prize (2006–present) offers €500,000 for compressing enwik9 (1 GB Wikipedia XML); the September 2024 record by Orav and Knoll using fx2-cmix is 110,793,128 bytes, still the standing champion in June 2026.",
   "The ratio-vs-speed wall is fundamental: every extra model costs microseconds per bit, multiplied by 8 billion bits per gigabyte. PAQ-class tools are scientific instruments, not everyday codecs.",
   "Compressing Wikipedia well requires predicting factual sentences correctly, which is closely related to intelligence. The Hutter Prize, the DeepMind LLM-compression result (2023), and Chapter 62's LLM-as-compressor all rest on the same equation: better predictor = better compressor = more knowledge about the world.",
@@ -952,7 +959,7 @@ close algorithmic modeling can get to the theoretical limits of prediction.
 
 #solution("34.2")[
   Because every ZPAQ archive stores the decompression algorithm as ZPAQL bytecode in its own
-  header. The fixed ZPAQ reader program only needs to know how to interpret ZPAQL — it does
+  header. The fixed ZPAQ reader program only needs to know how to interpret ZPAQL; it does
   not need to know which compression algorithm was used. When a future version of ZPAQ uses
   a new algorithm, it writes the new algorithm in ZPAQL bytecode into the archive's header.
   The 2009 reader, which already knows how to execute ZPAQL, can run that new bytecode and
@@ -970,7 +977,7 @@ close algorithmic modeling can get to the theoretical limits of prediction.
 #solution("34.3")[
   Total size = 110,793,128 + 2,500,000 = 113,293,128 bytes. This is *larger* than 110,793,128
   bytes and therefore does not improve the record. It tells us that making the compressor more
-  complex — for example, by adding a larger LSTM — may improve the ratio on the data payload,
+  complex (for example, by adding a larger LSTM) may improve the ratio on the data payload,
   but the added code size in the self-extracting decompressor may cancel the gain. This is the
   competition's elegance: it rewards algorithms that are simultaneously powerful and compact.
   Winning teams use every trick to keep the decompressor binary small.
@@ -979,7 +986,7 @@ close algorithmic modeling can get to the theoretical limits of prediction.
 #exercise("34.4", 2)[
   The Python sketch in this chapter has a function `compress_bits(data: bytes)` that returns
   the Shannon cost, not an actual bit stream. Explain what would be needed to turn it into a
-  real compressor — one that produces compressed bytes the receiver can decompress. What pieces
+  real compressor, one that produces compressed bytes the receiver can decompress. What pieces
   are missing, and which earlier chapter covers each missing piece?
 ]
 
@@ -987,7 +994,7 @@ close algorithmic modeling can get to the theoretical limits of prediction.
   Three things are missing:
 
   1. *A real arithmetic coder*: the sketch computes the ideal Shannon cost but does not emit
-     actual bits. Chapter 26 covers arithmetic coding — converting a sequence of probability
+     actual bits. Chapter 26 covers arithmetic coding, which converts a sequence of probability
      estimates into a real bit stream (and back).
 
   2. *A bit I/O layer*: the arithmetic coder emits bits, which need to be packed into bytes
@@ -997,7 +1004,7 @@ close algorithmic modeling can get to the theoretical limits of prediction.
   3. *Synchronised models on the decoder side*: the decoder must run exactly the same sequence
      of model updates in exactly the same order, starting from the same initial state, so that
      its probability estimates match the encoder's. This is guaranteed in context mixing because
-     both sides process the same decoded bits in the same order — but the code must be structured
+     both sides process the same decoded bits in the same order, but the code must be structured
      carefully to ensure that no model uses the current bit before it has been decoded.
 ]
 
@@ -1018,7 +1025,7 @@ close algorithmic modeling can get to the theoretical limits of prediction.
   (a) Standard gradient descent pushes all weights toward their optimal values simultaneously.
   If you update only the most-wrong model's weight, you are ignoring information about how
   well all other models performed. In particular, you lose the information that a *correctly*
-  predicting model deserves a higher weight — you only ever penalise. Over many steps, the
+  predicting model deserves a higher weight; you only ever penalise. Over many steps, the
   mixer still converges (the most-wrong model's weight slowly decreases), but convergence is
   slower because you are not simultaneously reinforcing the correct models.
 
@@ -1026,7 +1033,7 @@ close algorithmic modeling can get to the theoretical limits of prediction.
   (the prediction was nearly right), not when the error is large. The motivation: when the
   mixer is already very confident and correct, the weight updates are tiny anyway (gradient
   $approx 0$), and computing them wastes CPU time with negligible benefit. Skipping these
-  micro-updates saves a measurable fraction of compute time, allowing the algorithm to spend
+  micro-updates saves a measurable fraction of compute time and lets the algorithm spend
   its 50-hour budget on more bits and larger models. This is a computational efficiency trick,
   not a change in the learning algorithm.
 ]
@@ -1048,7 +1055,7 @@ close algorithmic modeling can get to the theoretical limits of prediction.
   possible values. That is roughly 18 billion billion distinct contexts.
 
   (b) 10 GB = $10 times 10^9 = 10^10$ bytes of RAM. The table would need $2^64 approx 1.8 times 10^19$
-  bytes — about 1.8 billion times more than available. Hopeless. This is why context models
+  bytes, about 1.8 billion times more than available. Hopeless. This is why context models
   use *hashing*: the context is hashed to one of a manageable number of table positions (say,
   $2^24 approx 16$ million), collisions are accepted and averaged, and the table is stored in
   a practical amount of RAM. Most high-order contexts in a real file appear only once or twice;
@@ -1058,33 +1065,33 @@ close algorithmic modeling can get to the theoretical limits of prediction.
 
 == Further Reading
 
-#link("https://mattmahoney.net/dc/paq.html")[Mahoney, M. _The PAQ Data Compression Programs_ (2002–2016)] — the canonical source for the PAQ family, with full source code, technical notes, and the evolution from PAQ1 through PAQ8 and all branches.
+#link("https://mattmahoney.net/dc/paq.html")[Mahoney, M. _The PAQ Data Compression Programs_ (2002–2016)]. The canonical source for the PAQ family, with full source code, technical notes, and the evolution from PAQ1 through PAQ8 and all branches.
 
-#link("https://mattmahoney.net/dc/zpaq.html")[Mahoney, M. _ZPAQ Archive Format_ (2009–2016)] — the ZPAQ specification, ZPAQL virtual machine description, and source releases through version 7.15.
+#link("https://mattmahoney.net/dc/zpaq.html")[Mahoney, M. _ZPAQ Archive Format_ (2009–2016)]. The ZPAQ specification, ZPAQL virtual machine description, and source releases through version 7.15.
 
-#link("https://mattmahoney.net/dc/zpaq_compression.pdf")[Mahoney, M. "The ZPAQ Compression Algorithm" (December 2015)] — the definitive technical paper describing the ZPAQL architecture, model component types, and performance evaluation.
+#link("https://mattmahoney.net/dc/zpaq_compression.pdf")[Mahoney, M. "The ZPAQ Compression Algorithm" (December 2015)]. The definitive technical paper describing the ZPAQL architecture, model component types, and performance evaluation.
 
-#link("https://www.byronknoll.com/cmix.html")[Knoll, B. _cmix_ (2013–present)] — home page for the cmix compressor, with build instructions, benchmark results, and links to the GitHub repository.
+#link("https://www.byronknoll.com/cmix.html")[Knoll, B. _cmix_ (2013–present)]. Home page for the cmix compressor, with build instructions, benchmark results, and links to the GitHub repository.
 
-#link("https://github.com/kaitz/fx2-cmix")[Orav, K. and Knoll, B. _fx2-cmix_ (2024)] — the Hutter Prize submission source code for the current enwik9 record (110,793,128 bytes).
+#link("https://github.com/kaitz/fx2-cmix")[Orav, K. and Knoll, B. _fx2-cmix_ (2024)]. The Hutter Prize submission source code for the current enwik9 record (110,793,128 bytes).
 
-#link("http://prize.hutter1.net/")[Hutter, M. _Human Knowledge Compression Contest — the Hutter Prize_ (2006–present)] — the official prize site, with current records, rules, and the prize fund status.
+#link("http://prize.hutter1.net/")[Hutter, M. _Human Knowledge Compression Contest: the Hutter Prize_ (2006–present)]. The official prize site, with current records, rules, and the prize fund status.
 
-#link("http://www.mattmahoney.net/dc/text.html")[Mahoney, M. _Large Text Compression Benchmark_ (2006–present)] — the leaderboard for enwik8 and enwik9, the definitive scoreboard for ratio-champion compressors.
+#link("http://www.mattmahoney.net/dc/text.html")[Mahoney, M. _Large Text Compression Benchmark_ (2006–present)]. The leaderboard for enwik8 and enwik9, the definitive scoreboard for ratio-champion compressors.
 
-#link("https://arxiv.org/abs/2309.10668")[Delétang, G. et al. "Language Modeling Is Compression." DeepMind, 2023] — shows that large language models paired with arithmetic coding achieve state-of-the-art lossless compression; the theoretical bridge between the Hutter Prize community and the LLM world.
+#link("https://arxiv.org/abs/2309.10668")[Delétang, G. et al. "Language Modeling Is Compression." DeepMind, 2023]. Shows that large language models paired with arithmetic coding achieve state-of-the-art lossless compression; the theoretical bridge between the Hutter Prize community and the LLM world.
 
-#link("https://en.wikipedia.org/wiki/Context_mixing")[Wikipedia: "Context mixing"] — a compact overview of the logistic mixing architecture used in PAQ and its descendants.
+#link("https://en.wikipedia.org/wiki/Context_mixing")[Wikipedia: "Context mixing"]. A compact overview of the logistic mixing architecture used in PAQ and its descendants.
 
-#link("https://encode.su")[Encode.su compression forum] — the community where PAQ, cmix, and most modern ratio-champion algorithms were developed and debated; an extraordinary primary source for the history of the field.
+#link("https://encode.su")[Encode.su compression forum]. The community where PAQ, cmix, and most modern ratio-champion algorithms were developed and debated; an extraordinary primary source for the history of the field.
 
 #bridge[
   We have now climbed from Shannon's entropy floor all the way to the ratio champions that
-  approach it asymptotically — at the cost of compute measured in days. But there is one more
+  approach it asymptotically, at the cost of compute measured in days. But there is one more
   reversible transform in the lossless toolkit that belongs in a different class: not a model
   and a coder, but a structural rearrangement of the data itself that makes any coder work
-  dramatically better. Chapter 35 introduces the Burrows–Wheeler Transform — the 1994
+  dramatically better. Chapter 35 introduces the Burrows–Wheeler Transform, a 1994
   discovery that permutes a block of text into something far more compressible, powers bzip2,
   and found a second life in the FM-index that makes genome alignment possible. It is the last
-  major classical technique, and it completes Volume II's picture of the lossless landscape.
+  major classical technique, and it rounds out Volume II's survey of lossless compression.
 ]

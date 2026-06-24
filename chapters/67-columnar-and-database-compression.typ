@@ -9,7 +9,7 @@
 ][_Peter Boncz, co-designer of MonetDB_]
 
 Here is a puzzle that tripped up the early designers of analytical databases.
-Suppose you have a table with one billion rows — a year of sales transactions —
+Suppose you have a table with one billion rows (a year of sales transactions)
 and a manager asks: _"What is the total revenue by product category this
 quarter?"_ The query touches exactly two columns out of thirty: `category` and
 `revenue`. In a traditional row-by-row database, you would read all thirty
@@ -24,18 +24,18 @@ because a column holds values _of a single type_, and those values are often
 similar to their neighbors, the column compresses spectacularly well. Not just
 2× or 3×, but 5×, 10×, sometimes 30× for the right kind of data.
 
-This chapter is about how they did it — the small, clever tricks that stack
+This chapter is about how they did it: the small, clever tricks that stack
 together into enormous savings, and why those tricks also make queries run
 faster, not slower.
 
 #recap[
   In *Chapter 24* we built canonical Huffman coding, and in *Chapters 26–27*
-  arithmetic coding and rANS — all entropy coders that assign variable-length
-  codes to individual symbols. In *Chapter 28* we explored LZ77's sliding-window
+  arithmetic coding and rANS (all entropy coders that assign variable-length
+  codes to individual symbols). In *Chapter 28* we explored LZ77's sliding-window
   back-references, and in *Chapter 30* DEFLATE stacked the two ideas. In
   *Chapter 35* BWT+MTF+RLE attacked runs of repeated bytes. All of those
   techniques treat their input as an opaque byte stream and know nothing about
-  its meaning. This chapter is different: we are going to *exploit the schema* —
+  its meaning. This chapter is different: we are going to *exploit the schema* -
   the fact that a column of product categories, or a column of timestamps, or
   a column of integer IDs has a very specific structure that lets us shrink it
   far beyond what any generic compressor can do.
@@ -71,18 +71,18 @@ Imagine a table with four columns: `city`, `product`, `price`, and `date`.
 Stored row-by-row (_row store_), you see: `Berlin`, `Widget`, `9.99`,
 `2024-01-03`, `Paris`, `Gadget`, `4.50`, `2024-01-03`, … A generic compressor
 like zstd will find some redundancy, but the city and product strings are
-interspersed with numbers and dates — the repetitions are far apart.
+interspersed with numbers and dates, so the repetitions are far apart.
 
 Stored column-by-column (_column store_), the `city` column reads:
 `Berlin`, `Paris`, `Berlin`, `Berlin`, `Paris`. Five short strings from
-a two-word vocabulary — trivially compressible. The `price` column reads:
-`9.99`, `4.50`, `9.99`, `4.50`, `9.99` — two values alternating. The `date`
-column reads four consecutive dates — perfect for delta encoding.
+a two-word vocabulary, trivially compressible. The `price` column reads:
+`9.99`, `4.50`, `9.99`, `4.50`, `9.99`: two values alternating. The `date`
+column reads four consecutive dates, perfect for delta encoding.
 
 #keyidea[
   Columnar layout groups *like values with like values*. Because a column has
   a single data type and typically a limited set of distinct values, it
-  compresses far better than an interleaved row stream — and the compression
+  compresses far better than an interleaved row stream, and the compression
   also makes queries faster because less data moves from disk to CPU.
 ]
 
@@ -90,7 +90,7 @@ The landmark paper that proved this in a production system was by Daniel Abadi
 and colleagues at MIT in 2006: "Integrating Compression and Execution in
 Column-Oriented Database Systems," published at ACM SIGMOD. Their key
 observation was that query operators could often work *directly* on the
-compressed representation — more on that at the end of this chapter.
+compressed representation. More on that at the end of this chapter.
 
 == The Encoding Toolkit: Six Lightweight Tricks
 
@@ -118,7 +118,7 @@ The ID column is `[0, 1, 0, 0, 1]`. Each ID fits in 1 bit (since
 $2^1 = 2 >= d$). So five cities that might take $5 times 6$ bytes = 30 bytes
 of UTF-8 become 5 bits of IDs plus a tiny dictionary.
 
-*When it wins:* low cardinality columns — country codes, product categories,
+*When it wins:* low cardinality columns - country codes, product categories,
 status flags, any enum-like column. The compression ratio is roughly:
 
 $
@@ -164,17 +164,17 @@ half of the total compression on typical business analytics tables.
 
 #aside[
   Dictionary encoding also speeds up *joins* and *group-by* operations: instead
-  of comparing strings character-by-character, the engine compares integer IDs —
-  a single CPU instruction that can beat a 20-character string comparison by an
-  order of magnitude. Compression and speed here reinforce each other.
+  of comparing strings character-by-character, the engine compares integer IDs.
+  A single CPU instruction can beat a 20-character string comparison by an
+  order of magnitude. Compression and speed reinforce each other here.
 ]
 
 === Trick 2: Bit-Packing
 
-Once you have a column of small integers — whether from dictionary encoding
-or from IDs stored directly — many of the integer bits are wasted. If your
+Once you have a column of small integers (whether from dictionary encoding
+or from IDs stored directly) many of the integer bits are wasted. If your
 IDs run from 0 to 999, you need only $ceil(log_2 1000) = 10$ bits each.
-But a standard 32-bit integer column wastes 22 bits per value — a 3.2× waste.
+A standard 32-bit integer column wastes 22 bits per value, a 3.2× waste.
 
 #definition("Bit-packing")[
   Store each integer using exactly $w$ bits (the *bit width*), where
@@ -237,7 +237,7 @@ pairs byte-by-byte, we emit them as typed records.
 Example: the `city` column of a *sorted* table might read
 `Berlin, Berlin, Berlin, …, Paris, Paris, Paris` (if the table was sorted
 on city). RLE would produce just two pairs: `(Berlin, 3 million)` and
-`(Paris, 2 million)`. Five million rows become two records — a 2.5-million-fold
+`(Paris, 2 million)`. Five million rows become two records, a 2.5-million-fold
 compression.
 
 #pitfall[
@@ -255,11 +255,11 @@ integer columns efficiently with a single pass.
 
 === Trick 4: Frame of Reference (FOR) and Delta Encoding
 
-Many integer columns are not from dictionaries — they are raw numbers like
+Many integer columns are not from dictionaries; they are raw numbers like
 timestamps, prices in cents, or row-IDs. These values may span a large
 absolute range (say, Unix timestamps from 1,700,000,000 to 1,701,000,000) but
 have a *small range within any block* (within one month, timestamps differ
-by at most 2,592,000 — about 21 bits, not the 32 bits the full range would need).
+by at most 2,592,000, about 21 bits, not the 32 bits the full range would need).
 
 #definition("Frame of Reference (FOR)")[
   Divide the column into blocks of $B$ values. Within each block, record the
@@ -283,7 +283,7 @@ frame, subtract the *previous value*:
 $"Delta"_i = v_i - v_(i-1), quad "with" v_0 = 0$
 
 For monotonically increasing columns (IDs, ordered timestamps) the deltas are
-small positive numbers — often a few bits each. A column of 64-bit primary
+small positive numbers, often a few bits each. A column of 64-bit primary
 keys that increment by one takes only 1 bit per delta after the first value.
 
 *FOR versus Delta.* A 2024 paper by Spindler, Fent, Riedl, and Neumann
@@ -310,11 +310,11 @@ data.
 Column stores use *bitmap indexes* to speed up queries. A bitmap index for a
 column value $v$ is a bit-array with one bit per row: bit $i$ is 1 if row $i$
 has value $v$, else 0. To find all rows where `city = "Berlin" AND price < 5`,
-the engine ANDs the Berlin bitmap with the "price < 5" bitmap — one CPU
+the engine ANDs the Berlin bitmap with the "price < 5" bitmap: one CPU
 instruction per 64 rows on a 64-bit machine.
 
 The problem: a table with 1 billion rows has 1-billion-bit (125 MB) bitmaps.
-For rare values the bitmap is 99.9% zeros — enormous waste. For common values
+For rare values the bitmap is 99.9% zeros, enormous waste. For common values
 it is nearly all ones. The ideal representation shifts between sparse and dense
 as needed.
 
@@ -330,17 +330,17 @@ picks the best internal container for each region of the integer domain.
   are the *entry* within the chunk). Each non-empty chunk is stored in one of
   three container types, chosen automatically:
 
-  1. *Array container* — a sorted array of the 16-bit offsets of the set
+  1. *Array container:* a sorted array of the 16-bit offsets of the set
      elements. Used when the chunk has fewer than 4,096 elements (density
      below $4096 / 65536 = 6.25%$).
-  2. *Bitset container* — a flat bit array of 65,536 bits (8,192 bytes).
+  2. *Bitset container:* a flat bit array of 65,536 bits (8,192 bytes).
      Used when the chunk has 4,096 or more elements (density 6.25% or higher).
-  3. *Run container* — a list of (start, length) pairs for consecutive runs of
+  3. *Run container:* a list of (start, length) pairs for consecutive runs of
      1-bits. Added in the 2016 follow-up paper (Lemire, Ssi-Yan-Kai, Kaser).
      Used when runs compress better than both array and bitset.
 
   The boundary 4,096 is chosen so that an array of 4,096 16-bit values
-  (8,192 bytes) costs exactly the same as a full bitset container — above that
+  (8,192 bytes) costs exactly the same as a full bitset container. Above that
   count, the bitset wins on space.
 ]
 
@@ -354,32 +354,32 @@ picks the best internal container for each region of the integer domain.
     import cetz.draw: *
     // Draw the main 32-bit space bar
     rect((0, 2.8), (12, 3.4), stroke: 1pt, fill: rgb("#e8f0fe"))
-    content((6, 3.1), text(size: 9pt)[32-bit integer space (0 … 4,294,967,295)])
+    content((6, 3.1), box(width: 11.6cm, inset: 2pt, align(center, text(size: 9pt)[32-bit integer space (0 … 4,294,967,295)])))
 
     // Three chunks
     // Sparse chunk (array container)
     rect((0.2, 0), (3.6, 2.4), stroke: 1pt, fill: rgb("#fef9e7"), radius: 3pt)
-    content((1.9, 2.15), text(size: 8pt, weight: "bold")[Chunk key = 0x0017])
-    content((1.9, 1.8), text(size: 8pt)[Sparse: 12 elements])
-    content((1.9, 1.45), text(size: 7.5pt, fill: rgb("#1f5066"))[Array container])
-    content((1.9, 1.1), text(size: 7pt)[\[0x0003, 0x00A1, 0x02FF, …\]])
-    content((1.9, 0.75), text(size: 7pt)[24 bytes])
+    content((1.9, 2.15), box(width: 3.0cm, inset: 2pt, align(center, text(size: 8pt, weight: "bold")[Chunk key = 0x0017])))
+    content((1.9, 1.8), box(width: 3.0cm, inset: 2pt, align(center, text(size: 8pt)[Sparse: 12 elements])))
+    content((1.9, 1.45), box(width: 3.0cm, inset: 2pt, align(center, text(size: 7.5pt, fill: rgb("#1f5066"))[Array container])))
+    content((1.9, 1.1), box(width: 3.0cm, inset: 2pt, align(center, text(size: 7pt)[0x0003, 0x00A1, 0x02FF…])))
+    content((1.9, 0.75), box(width: 3.0cm, inset: 2pt, align(center, text(size: 7pt)[24 bytes])))
 
     // Dense chunk (bitset container)
     rect((4.2, 0), (7.8, 2.4), stroke: 1pt, fill: rgb("#eafaf1"), radius: 3pt)
-    content((6.0, 2.15), text(size: 8pt, weight: "bold")[Chunk key = 0x003B])
-    content((6.0, 1.8), text(size: 8pt)[Dense: 40,000 elements])
-    content((6.0, 1.45), text(size: 7.5pt, fill: rgb("#1f5066"))[Bitset container])
-    content((6.0, 1.1), text(size: 7pt)[65,536-bit flat array])
-    content((6.0, 0.75), text(size: 7pt)[8,192 bytes])
+    content((6.0, 2.15), box(width: 3.2cm, inset: 2pt, align(center, text(size: 8pt, weight: "bold")[Chunk key = 0x003B])))
+    content((6.0, 1.8), box(width: 3.2cm, inset: 2pt, align(center, text(size: 8pt)[Dense: 40,000 elements])))
+    content((6.0, 1.45), box(width: 3.2cm, inset: 2pt, align(center, text(size: 7.5pt, fill: rgb("#1f5066"))[Bitset container])))
+    content((6.0, 1.1), box(width: 3.2cm, inset: 2pt, align(center, text(size: 7pt)[65,536-bit flat array])))
+    content((6.0, 0.75), box(width: 3.2cm, inset: 2pt, align(center, text(size: 7pt)[8,192 bytes])))
 
     // Run chunk (run container)
     rect((8.4, 0), (11.8, 2.4), stroke: 1pt, fill: rgb("#fce4ec"), radius: 3pt)
-    content((10.1, 2.15), text(size: 8pt, weight: "bold")[Chunk key = 0x00F0])
-    content((10.1, 1.8), text(size: 8pt)[Runs: 3 long runs])
-    content((10.1, 1.45), text(size: 7.5pt, fill: rgb("#1f5066"))[Run container])
-    content((10.1, 1.1), text(size: 7pt)[(start, len) pairs])
-    content((10.1, 0.75), text(size: 7pt)[12 bytes])
+    content((10.1, 2.15), box(width: 3.0cm, inset: 2pt, align(center, text(size: 8pt, weight: "bold")[Chunk key = 0x00F0])))
+    content((10.1, 1.8), box(width: 3.0cm, inset: 2pt, align(center, text(size: 8pt)[Runs: 3 long runs])))
+    content((10.1, 1.45), box(width: 3.0cm, inset: 2pt, align(center, text(size: 7.5pt, fill: rgb("#1f5066"))[Run container])))
+    content((10.1, 1.1), box(width: 3.0cm, inset: 2pt, align(center, text(size: 7pt)[(start, len) pairs])))
+    content((10.1, 0.75), box(width: 3.0cm, inset: 2pt, align(center, text(size: 7pt)[12 bytes])))
 
     // Connector lines from big bar to chunks
     line((1.9, 2.8), (1.9, 2.4), stroke: 0.7pt + gray)
@@ -390,10 +390,10 @@ picks the best internal container for each region of the integer domain.
 
 *Why it matters.* Roaring bitmaps are now embedded in Apache Lucene (full-text
 search), Apache Spark, Apache Pinot, ClickHouse, DuckDB, and dozens of other
-systems. Operations on Roaring bitmaps — AND (intersection), OR (union),
-NOT (complement), XOR — operate directly on the containers without
-decompression, and SIMD implementations (using AVX2 and AVX-512 on x86, NEON
-on ARM) can process hundreds of millions of integers per second.
+systems. Operations on Roaring bitmaps (AND, OR, NOT, XOR) work
+directly on the containers without decompression, and SIMD implementations
+(using AVX2 and AVX-512 on x86, NEON on ARM) can process hundreds of millions
+of integers per second.
 
 A 2023 benchmark by the Roaring team showed that Roaring is up to 900× faster
 than traditional EWAH-compressed bitmaps for sparse intersections, and
@@ -405,7 +405,7 @@ access and intersections are slow.)
 
 #checkpoint[
   If a Roaring bitmap chunk has exactly 4,096 elements, which container type
-  does it use — array or bitset?
+  does it use - array or bitset?
 ][
   Either is equally expensive at that threshold: 4,096 × 2 bytes = 8,192 bytes
   for an array, and the bitset is always 8,192 bytes. In practice Roaring
@@ -416,15 +416,15 @@ access and intersections are slow.)
 === Trick 6: Cascading with a Heavy-Weight Codec
 
 After applying dictionary encoding, bit-packing, and FOR/delta, the data is
-already much smaller. But there is still statistical redundancy that
-lightweight tricks leave behind. The final layer is a *byte-stream compressor*
-— zstd, Snappy, LZ4, or gzip — applied to the already-encoded byte stream.
+already much smaller. There is still statistical redundancy that
+lightweight tricks leave behind, so the final layer is a *byte-stream compressor*
+(zstd, Snappy, LZ4, or gzip) applied to the already-encoded byte stream.
 
 This cascading works because:
 1. Bit-packed integers from the same dictionary cluster near each other
-   in value — they have low entropy (the few-bits-per-symbol floor we defined
+   in value. They have low entropy (the few-bits-per-symbol floor we defined
    in *Chapter 18*), exactly the redundancy an entropy coder mops up.
-2. Delta-encoded timestamps are mostly small numbers — an LZ77-based coder
+2. Delta-encoded timestamps are mostly small numbers, so an LZ77-based coder
    finds repeated byte patterns easily.
 3. The lightweight encodings remove structure that would confuse a byte-stream
    coder; the byte-stream coder then removes the remaining redundancy.
@@ -448,11 +448,11 @@ columns.
 == Algorithm Profiles
 
 #mathrecall[
-  The profiles below report cost in *Big-O notation* — $O(N)$, $O(log d)$, and
-  so on — the order-of-growth shorthand we built from scratch in *Chapter 14*.
+  The profiles below report cost in *Big-O notation* ($O(N)$, $O(log d)$, and
+  so on) - the order-of-growth shorthand we built from scratch in *Chapter 14*.
   Read $O(N)$ as "work grows in proportion to the number of values $N$", $O(1)$
   as "constant, independent of size", and $O(log d)$ as "grows like the
-  logarithm of $d$" — far slower than $N$.
+  logarithm of $d$," far slower than $N$.
 ]
 
 #algo(
@@ -463,12 +463,12 @@ columns.
   complexity: "O(N) encoding time; O(1) dictionary lookup; O(d) dictionary space where d = distinct values.",
   strengths: "Huge wins on low-cardinality string columns (country, category, status). Enables ID-based joins and group-by without string comparison. Preserves exact values (lossless). Simple to implement.",
   weaknesses: "Degrades to plain encoding when cardinality is high (many distinct values). Dictionary overhead becomes significant for short columns. Must rebuild on updates.",
-  superseded: "Not superseded — foundational. BtrBlocks (2023) automates selection among dictionary and other schemes.",
+  superseded: "Not superseded - foundational. BtrBlocks (2023) automates selection among dictionary and other schemes.",
 )[
   The simplest and most impactful single trick in analytical databases. When
   a column has $d$ distinct values, each value becomes an ID in
   $0, dots, d - 1$, stored with $ceil(log_2 d)$ bits using bit-packing.
-  The key insight is that *cardinality* — not column size — determines
+  The key insight is that *cardinality* - not column size - determines
   compressibility. A 100 GB column of 10 countries compresses into roughly
   $N times ceil(log_2 10) / 8$ bytes of IDs plus a tiny dictionary.
 ]
@@ -481,7 +481,7 @@ columns.
   complexity: "O(N / 64) for bitwise operations (SIMD); O(d) space where d = cardinality; O(log d) for membership test in array containers.",
   strengths: "Outperforms EWAH, WAH, Concise by up to 900× in intersection speed. Space-efficient across all density regimes. No decompression needed for logical operations. Widely supported (C, Java, Python, Go, Rust).",
   weaknesses: "32-bit native (64-bit extension is two separate 32-bit bitmaps). Overhead per chunk header for very sparse data may exceed a plain sorted array. Not optimal for streaming updates (bulk re-runs recommended).",
-  superseded: "Not superseded — the de facto standard. Roaring64 (2021) extends to 64-bit sets.",
+  superseded: "Not superseded - the de facto standard. Roaring64 (2021) extends to 64-bit sets.",
 )[
   Roaring solves the long-standing bitmap compression dilemma: classic bitmaps
   waste space for sparse data; compressed formats (EWAH, WAH) are slow for
@@ -498,7 +498,7 @@ columns.
   complexity: "Encoding O(N); decoding O(N); seeking O(log N) via row group and column chunk metadata. Typical I/O: 4–16× less than row-store formats.",
   strengths: "De facto standard for data lakes (S3, HDFS, GCS). Predicate push-down (column statistics skip whole row groups). Language-neutral (Python pyarrow, Java, Rust parquet-rs). Nested record support via Dremel algorithm. Apache Iceberg and Delta Lake use it as the underlying format.",
   weaknesses: "Row-group boundary effects (statistics only skip whole groups). Write overhead from schema negotiation. Dictionary overflow falls back to plain encoding silently. Column ordering matters for compression ratio.",
-  superseded: "Not superseded — actively used. Apache Arrow IPC (columnar in-memory) and Lance (ML-oriented, random-access) target different niches.",
+  superseded: "Not superseded - actively used. Apache Arrow IPC (columnar in-memory) and Lance (ML-oriented, random-access) target different niches.",
 )[
   Parquet became the lingua franca of the data lake after Databricks, Amazon
   Athena, Google BigQuery, Snowflake, and Spark all adopted it. A Parquet file
@@ -513,19 +513,19 @@ columns.
 
 Let us trace what happens to our `city` column when Parquet writes it.
 
-*Step 1 — Schema typing.* Parquet knows this is a `BYTE_ARRAY` (variable-length string) column annotated `UTF8`. This tells the encoder to try dictionary encoding first.
+*Step 1: Schema typing.* Parquet knows this is a `BYTE_ARRAY` (variable-length string) column annotated `UTF8`. This tells the encoder to try dictionary encoding first.
 
-*Step 2 — Dictionary page.* The encoder scans the first page of values and builds a dictionary. For `city` with values "Berlin" and "Paris", it writes a *dictionary page*: a sorted array of the two strings, taking perhaps 11 bytes. The dictionary is shared across all subsequent *data pages* in this column chunk.
+*Step 2: Dictionary page.* The encoder scans the first page of values and builds a dictionary. For `city` with values "Berlin" and "Paris", it writes a *dictionary page*: a sorted array of the two strings, taking perhaps 11 bytes. The dictionary is shared across all subsequent *data pages* in this column chunk.
 
-*Step 3 — RLE/bit-packed data page.* The encoder writes the IDs as an
+*Step 3: RLE/bit-packed data page.* The encoder writes the IDs as an
 RLE/bit-packed hybrid stream. For our five values `[0, 1, 0, 0, 1]` with
 bit-width 1:
 - Header: bit-width = 1.
 - Values are packed: 0, 1, 0, 0, 1 → bits `01001` → 1 byte.
 
-*Step 4 — Snappy or zstd compression.* The encoded page (already tiny) is optionally passed through a byte-stream codec. For the dictionary page, Snappy or zstd shrinks the already-small strings further.
+*Step 4: Snappy or zstd compression.* The encoded page (already tiny) is optionally passed through a byte-stream codec. For the dictionary page, Snappy or zstd shrinks the already-small strings further.
 
-*Step 5 — Row group statistics.* The column chunk footer records `min = "Berlin"`, `max = "Paris"`, null count = 0. A query `WHERE city = "Tokyo"` can skip this entire row group without reading a single data page.
+*Step 5: Row group statistics.* The column chunk footer records `min = "Berlin"`, `max = "Paris"`, null count = 0. A query `WHERE city = "Tokyo"` can skip this entire row group without reading a single data page.
 
 The full file footer (written last, read first) stores byte offsets of every column chunk in every row group. A query engine reads the footer, skips irrelevant row groups, and reads only the needed column chunks.
 
@@ -542,8 +542,8 @@ The full file footer (written last, read first) stores byte offsets of every col
 == Apache ORC: The Other Pillar
 
 *Apache ORC* (Optimized Row Columnar) was created at Hortonworks in 2013
-as an alternative to the then-slower early Parquet. It uses similar ideas —
-columnar layout, lightweight encodings, pluggable compression — but with
+as an alternative to the then-slower early Parquet. It uses similar ideas
+(columnar layout, lightweight encodings, pluggable compression) but with
 some differences:
 
 - *Integer encoding:* ORC uses a sophisticated multi-mode integer encoding
@@ -554,8 +554,8 @@ some differences:
 - *Bloom filters:* ORC has built-in Bloom filter support per column, enabling
   fast membership tests ("is this value in this stripe?") without reading all data.
 - *ACID transactions:* ORC supports transactional writes (insert, update, delete)
-  via delta files — a feature Parquet gained later only via surrounding table
-  formats like Apache Iceberg.
+  via delta files. Parquet gained comparable capability later, but only through
+  surrounding table formats like Apache Iceberg.
 
 The *stripe* in ORC plays the same role as Parquet's *row group*: a
 self-contained horizontal slice of the table with its own column statistics.
@@ -567,7 +567,7 @@ edge on integer-heavy tables, while Parquet's wider ecosystem support made it
 more prevalent in practice.
 
 #misconception[
-  "ORC and Parquet are interchangeable — just pick one."
+  "ORC and Parquet are interchangeable - just pick one."
 ][
   They are similar but not identical. ORC's integer encoding (patched base,
   delta, RLE, direct) is richer than Parquet's RLE/bit-packed hybrid and can
@@ -587,10 +587,10 @@ compression from all the generic compression we have studied before.
 *The key observation* (Abadi et al., SIGMOD 2006): if a column is
 dictionary-encoded, then a query `WHERE city = 'Berlin'` can be answered
 by first looking up 'Berlin' in the dictionary (getting ID 0), then scanning
-the ID column looking for 0s. The engine never decodes the string values
-— it operates directly on the integer IDs. For a sorted, run-length-encoded
+the ID column looking for 0s. The engine never decodes the string values;
+it operates directly on the integer IDs. For a sorted, run-length-encoded
 column this becomes: find the run(s) where the value is 0, note their start
-and end positions — zero decompression needed.
+and end positions. Zero decompression needed.
 
 More generally:
 
@@ -611,14 +611,14 @@ rows down to 50 results, you might decode those 50 strings and nothing else.
 A June 2026 arXiv paper on GPU acceleration of SQL analytics on compressed data
 (GPU Acceleration of SQL Analytics on Compressed Data, arXiv:2506.10092)
 showed that executing queries directly on bit-packed and dictionary-encoded
-Parquet data on GPUs — without decompressing to GPU memory first — achieves
+Parquet data on GPUs (without decompressing to GPU memory first) achieves
 speedups of 10–50× over CPU-only engines for typical production analytics
 workloads, because the compression reduces memory bandwidth pressure more than
 the decompression overhead costs.
 
 #keyidea[
   In database compression, compression and query execution are not separate
-  stages — they are *interleaved*. Operating on compressed data means the
+  stages: they are *interleaved*. Operating on compressed data means the
   decompressor is the query operator itself. This is the opposite of the
   generic compression model (compress → store → decompress → use), and it is
   why columnar databases can be simultaneously smaller *and* faster than their
@@ -634,9 +634,9 @@ Leis; ACM SIGMOD 2023) automates this decision.
 
 BtrBlocks divides each column into blocks of 65,536 values and runs a
 *sample-based scheme selection* on a 1% random sample (~655 values) of each
-block. It evaluates a set of candidate schemes — for doubles: frequency
+block. It evaluates a set of candidate schemes (for doubles: frequency
 encoding (dictionary), pseudo-decimal decomposition, FOR, XOR (Gorilla-style),
-and cascaded combinations — and picks the one that compresses the sample
+and cascaded combinations) and picks the one that compresses the sample
 best, then applies it to the full block.
 
 The result: BtrBlocks achieves compression ratios and decompression speeds
@@ -663,8 +663,8 @@ analytics benchmarks, while requiring no schema-specific configuration.
 
 No project step is assigned to Chapter 67 in tinyzip (Chapter 67 has no
 TINYZIP step). But the ideas are worth making concrete. Here is a minimal
-implementation of the four-technique pipeline — dictionary encoding,
-bit-packing, FOR, and delta — in pure Python 3.14, processing a real-ish
+implementation of the four-technique pipeline (dictionary encoding,
+bit-packing, FOR, and delta) in pure Python 3.14, processing a real-ish
 column of data.
 
 #gopython("Python dataclasses and type aliases")[
@@ -687,9 +687,9 @@ column of data.
 #pyrecall[
   Some code below uses `struct.pack`, the binary-serialization helper we met in
   *Chapter 17*. A format string spells out the layout: `>` means big-endian
-  byte order, and the letters are fixed-width integer types — `B` = 1-byte
+  byte order, and the letters are fixed-width integer types (`B` = 1-byte
   (8-bit) unsigned, `I` = 4-byte (32-bit) unsigned, `Q` = 8-byte (64-bit)
-  unsigned. So `struct.pack(">QB", m, w)` writes `m` as eight bytes followed by
+  unsigned). So `struct.pack(">QB", m, w)` writes `m` as eight bytes followed by
   `w` as one byte, and `f">{n}I"` packs `n` consecutive 32-bit integers.
 ]
 
@@ -697,19 +697,19 @@ column of data.
   The line `{idx: val for val, idx in seen.items()}` is a *dict comprehension*
   (from *Chapter 16*): it builds a new dictionary in one expression. `seen.items()`
   yields each `(key, value)` pair of the dictionary `seen`, the `for val, idx`
-  part unpacks each pair into two names at once, and `idx: val` flips them — so
+  part unpacks each pair into two names at once, and `idx: val` flips them, so
   a string-to-ID map becomes the ID-to-string map we want.
 ]
 
 ```python
-# columnar_demo.py  — illustrative, not a tinyzip step
+# columnar_demo.py  -- illustrative, not a tinyzip step
 import math
 from dataclasses import dataclass
 
-# ── Dictionary encoding ────────────────────────────────────────────────────────
+# -- Dictionary encoding -------------------------------------------------------
 
 def dict_encode(col: list[str]) -> tuple[dict[int, str], list[int]]:
-    """Replace strings with integer IDs.  Returns (id→string, id_column)."""
+    """Replace strings with integer IDs.  Returns (id->string, id_column)."""
     seen: dict[str, int] = {}
     ids: list[int] = []
     for v in col:
@@ -722,7 +722,7 @@ def dict_encode(col: list[str]) -> tuple[dict[int, str], list[int]]:
 def dict_decode(dictionary: dict[int, str], ids: list[int]) -> list[str]:
     return [dictionary[i] for i in ids]
 
-# ── Bit-packing ────────────────────────────────────────────────────────────────
+# -- Bit-packing ---------------------------------------------------------------
 
 def bitpack(values: list[int], width: int) -> bytes:
     """Pack non-negative integers into a tight bit stream."""
@@ -756,7 +756,7 @@ def bitunpack(data: bytes, width: int, count: int) -> list[int]:
             out.append((buf >> nbuf) & mask)
     return out
 
-# ── Frame of Reference ─────────────────────────────────────────────────────────
+# -- Frame of Reference --------------------------------------------------------
 
 @dataclass
 class FORBlock:
@@ -775,7 +775,7 @@ def for_decode(block: FORBlock, count: int) -> list[int]:
     offsets = bitunpack(block.packed, block.bit_width, count)
     return [o + block.minimum for o in offsets]
 
-# ── Delta encoding ─────────────────────────────────────────────────────────────
+# -- Delta encoding ------------------------------------------------------------
 
 def delta_encode(values: list[int]) -> list[int]:
     """Return the list of successive differences (first value unchanged)."""
@@ -794,7 +794,7 @@ def delta_decode(deltas: list[int]) -> list[int]:
         out.append(acc)
     return out
 
-# ── Demo ───────────────────────────────────────────────────────────────────────
+# -- Demo ----------------------------------------------------------------------
 
 if __name__ == "__main__":
     # Simulate one day of hourly timestamps (Unix seconds)
@@ -837,7 +837,7 @@ Running this on 24 hourly timestamps produces roughly:
 - Raw: 192 bytes (24 × 8-byte int64)
 - Delta + FOR: the 24 deltas are all 3,600 except the first
   (1,700,100,000). FOR sets minimum = 3,600, width ≈ 1 bit for all
-  but the first. Total ≈ 12 bytes — a *16× compression* on this perfectly
+  but the first. Total ≈ 12 bytes, a *16× compression* on this perfectly
   regular column.
 
 #checkpoint[
@@ -845,7 +845,7 @@ Running this on 24 hourly timestamps produces roughly:
   tricks from this chapter gives the best compression, and why?
 ][
   Run-length encoding wins outright: the entire column is a single run of
-  length 1,000 with value 42, stored as one (42, 1000) pair — about 5 bytes.
+  length 1,000 with value 42, stored as one (42, 1000) pair, about 5 bytes.
   FOR would set minimum = 42, all offsets = 0, width = 1 bit → 125 bytes of
   packed zeros. Dictionary encoding: 1 distinct value, bit-width 0 (or 1) →
   similar to RLE. But RLE as a single pair is literally the most compact.
@@ -861,15 +861,15 @@ showed 10–50× speedups on compressed columnar data over CPU baselines.
 *Nested data support.* The growing dominance of JSON-like analytics (event
 streams from web applications, IoT events, ML feature stores) pushed Parquet 2.x
 and the competing *Lance* format to improve nested-column compression. Lance
-(2023, LanceDB) targets ML workloads and adds random-access to individual rows
-— something Parquet's sequential page design does not support efficiently.
+(2023, LanceDB) targets ML workloads and adds random-access to individual rows,
+something Parquet's sequential page design does not support efficiently.
 
 *Apache Iceberg and the table format layer.* Iceberg (2018–), Delta Lake (2019–),
 and Apache Hudi (2016–) are *table formats* that sit above Parquet, adding
 ACID transactions, time-travel queries, schema evolution, and partition pruning.
 They do not change how individual Parquet pages are compressed, but they add
-metadata that allows *partition pruning* — skipping entire Parquet files
-without reading their footers.
+metadata that allows *partition pruning* (skipping entire Parquet files
+without reading their footers).
 
 *Compressed vector stores.* The rise of embedding-heavy AI applications (RAG
 pipelines, semantic search) has driven development of vector-oriented column
@@ -888,20 +888,20 @@ limits.
 == Common Pitfalls and Misconceptions
 
 #misconception[
-  "Zstd already compresses everything well — why bother with lightweight encodings?"
+  "Zstd already compresses everything well - why bother with lightweight encodings?"
 ][
   Lightweight encodings (dictionary, bit-pack, FOR) are *orders of magnitude*
   faster to decode than zstd, especially critical for query engines that
   decompress billions of integers per second. More importantly, as we saw,
-  they enable *operating on compressed data* — a trick zstd's byte-stream model
+  they enable *operating on compressed data*, a trick zstd's byte-stream model
   cannot support. The two layers are complementary: lightweight for speed and
   operability, zstd for final byte-count reduction.
 ]
 
 #misconception[
-  "Column stores are only useful for read-heavy analytics — they're terrible for inserts."
+  "Column stores are only useful for read-heavy analytics - they're terrible for inserts."
 ][
-  Mostly true but nuanced. Modern systems (Delta Lake, Iceberg) buffer inserts
+  Mostly true but incomplete. Modern systems (Delta Lake, Iceberg) buffer inserts
   in a row-store layer or a small "delta" log and compact them into columnar
   format in the background. For pure OLAP (analytics) workloads the insert
   penalty is irrelevant; for hybrid OLTP/OLAP workloads the pattern of writing
@@ -921,11 +921,11 @@ limits.
   "Columnar storage groups like values together, enabling dramatically better compression than row-oriented layouts.",
   "Dictionary encoding (replace repeated strings with integer IDs) is the single most impactful trick, especially for low-cardinality string columns.",
   "Bit-packing stores integer IDs and small numbers using only the bits they actually need, removing bit-level waste.",
-  "Run-length encoding collapses runs of equal values to (value, count) pairs — most effective on sorted columns.",
+  "Run-length encoding collapses runs of equal values to (value, count) pairs - most effective on sorted columns.",
   "Frame-of-reference (FOR) subtracts a per-block minimum before bit-packing; delta encoding subtracts the previous value. Both shrink the bit-width needed for numeric and timestamp columns.",
   "Roaring bitmaps provide compressed bitmap indexes that auto-select between array, bitset, and run-length containers per 65,536-element chunk, enabling fast set operations without decompression.",
   "Apache Parquet layers dictionary + RLE/bit-packed + optional zstd/Snappy; Apache ORC layers multi-mode integer encoding + Bloom filters + Snappy/zstd.",
-  "Late materialization means query engines operate directly on compressed representations — decompressing only the values that reach the final output.",
+  "Late materialization means query engines operate directly on compressed representations, decompressing only the values that reach the final output.",
   "BtrBlocks (SIGMOD 2023) automates per-block scheme selection with 1% sampling, eliminating manual tuning.",
   "The frontier (2024–2026): GPU-accelerated compressed-data queries, hardware decompressors (Intel IAA), and ML-feature-oriented formats like Lance.",
 ))
@@ -963,10 +963,10 @@ limits.
 ]
 
 #solution("67.2")[
-  RLE pairs: (1000, 3), (2500, 2), (7800, 4) — three pairs. Each pair is
+  RLE pairs: (1000, 3), (2500, 2), (7800, 4) - three pairs. Each pair is
   2 + 2 = 4 bytes → 12 bytes total. Raw: 9 × 2 = 18 bytes. RLE saves 33%.
   (On a million-row table with the same three values, RLE stays at 12 bytes
-  while raw grows to 2,000,000 bytes — a 166,667× saving.)
+  while raw grows to 2,000,000 bytes, a 166,667× saving.)
 ]
 
 #exercise("67.3", 2)[
@@ -1056,8 +1056,8 @@ limits.
 
 #exercise("67.6", 3)[
   Design a simple automated scheme selector in Python 3.14. Given a list of
-  integers, it should try three schemes — plain storage (4 bytes per int),
-  FOR + bit-packing, and RLE (for sorted data only) — compute the encoded
+  integers, it should try three schemes - plain storage (4 bytes per int),
+  FOR + bit-packing, and RLE (for sorted data only) - compute the encoded
   size of each, and return the scheme name and encoded bytes for the winner.
   Test on three columns: (a) `[0]*1000`, (b) a list of 1,000 random integers
   in range 0–65535, and (c) timestamps `[1_700_000_000 + i*60 for i in range(1000)]`.
@@ -1114,40 +1114,40 @@ limits.
       scheme, enc = best_scheme(col)
       raw = len(col) * 4
       print(f"{name:12s}: best={scheme:5s}, {raw} -> {len(enc)} bytes ({raw/len(enc):.1f}x)")
-  # Expected: all_zeros → RLE wins (2 pairs = 8 bytes vs 4000)
-  #           random    → FOR wins or plain (random integers hard to compress)
-  #           timestamps → FOR wins (offsets 0..59940 need 16 bits; 2000 bytes vs 4000)
+  # Expected: all_zeros -> RLE wins (2 pairs = 8 bytes vs 4000)
+  #           random    -> FOR wins or plain (random integers hard to compress)
+  #           timestamps -> FOR wins (offsets 0..59940 need 16 bits; 2000 bytes vs 4000)
   ```
 ]
 
 == Further Reading
 
-- #link("https://dl.acm.org/doi/10.1145/1142473.1142548")[Daniel Abadi et al., "Integrating Compression and Execution in Column-Oriented Database Systems," ACM SIGMOD 2006] — the foundational paper showing that column-store operators can work directly on compressed data.
+- #link("https://dl.acm.org/doi/10.1145/1142473.1142548")[Daniel Abadi et al., "Integrating Compression and Execution in Column-Oriented Database Systems," ACM SIGMOD 2006] - the foundational paper showing that column-store operators can work directly on compressed data.
 
-- #link("https://arxiv.org/abs/1402.6407")[Chambi, Lemire, Kaser, Godin, "Better bitmap performance with Roaring bitmaps," arXiv:1402.6407 / Software: Practice and Experience, 2016] — the original Roaring bitmap paper with the array/bitset container model.
+- #link("https://arxiv.org/abs/1402.6407")[Chambi, Lemire, Kaser, Godin, "Better bitmap performance with Roaring bitmaps," arXiv:1402.6407 / Software: Practice and Experience, 2016] - the original Roaring bitmap paper with the array/bitset container model.
 
-- #link("https://arxiv.org/pdf/1603.06549")[Lemire, Ssi-Yan-Kai, Kaser, "Consistently faster and smaller compressed bitmaps with Roaring," 2016] — adds the run-length container, completing the three-container Roaring design.
+- #link("https://arxiv.org/pdf/1603.06549")[Lemire, Ssi-Yan-Kai, Kaser, "Consistently faster and smaller compressed bitmaps with Roaring," 2016] - adds the run-length container, completing the three-container Roaring design.
 
-- #link("https://dl.acm.org/doi/10.1145/3589263")[Kuschewski, Sauerwein, Alhomssi, Leis, "BtrBlocks: Efficient Columnar Compression for Data Lakes," ACM SIGMOD 2023] — automated per-block scheme selection with cascading; open source at github.com/maxi-k/btrblocks.
+- #link("https://dl.acm.org/doi/10.1145/3589263")[Kuschewski, Sauerwein, Alhomssi, Leis, "BtrBlocks: Efficient Columnar Compression for Data Lakes," ACM SIGMOD 2023] - automated per-block scheme selection with cascading; open source at github.com/maxi-k/btrblocks.
 
-- #link("https://arxiv.org/pdf/2304.05028")[Zeng et al., "An Empirical Evaluation of Columnar Storage Formats," arXiv:2304.05028, 2023] — head-to-head comparison of Parquet, ORC, and Arrow on real workloads.
+- #link("https://arxiv.org/pdf/2304.05028")[Zeng et al., "An Empirical Evaluation of Columnar Storage Formats," arXiv:2304.05028, 2023] - head-to-head comparison of Parquet, ORC, and Arrow on real workloads.
 
-- #link("https://vldb.org/workshops/2024/proceedings/ADMS/ADMS24_02.pdf")[Spindler, Fent, Riedl, Neumann, "Can Delta Compete with Frame-of-Reference for Lightweight Integer Compression?", VLDB Workshops 2024] — rigorous experimental comparison of FOR and delta for integer columns.
+- #link("https://vldb.org/workshops/2024/proceedings/ADMS/ADMS24_02.pdf")[Spindler, Fent, Riedl, Neumann, "Can Delta Compete with Frame-of-Reference for Lightweight Integer Compression?", VLDB Workshops 2024] - rigorous experimental comparison of FOR and delta for integer columns.
 
-- #link("https://arxiv.org/html/2506.10092v1")[arXiv:2506.10092, "GPU Acceleration of SQL Analytics on Compressed Data," June 2026] — state-of-the-art in executing compressed Parquet queries directly on GPUs.
+- #link("https://arxiv.org/html/2506.10092v1")[arXiv:2506.10092, "GPU Acceleration of SQL Analytics on Compressed Data," June 2026] - state-of-the-art in executing compressed Parquet queries directly on GPUs.
 
-- #link("https://parquet.apache.org/docs/")[Apache Parquet format specification] — the official spec for all encoding types and the file footer layout.
+- #link("https://parquet.apache.org/docs/")[Apache Parquet format specification] - the official spec for all encoding types and the file footer layout.
 
 #bridge[
   We have now mastered the toolkit that makes analytics databases fast and
   small: dictionary encoding, bit-packing, RLE, FOR, delta, Roaring bitmaps,
   and late materialization. All of these exploit *structure in a typed schema*.
 
-  In *Chapter 68 — Time-Series and IoT Compression* we take these ideas in a
+  In *Chapter 68 - Time-Series and IoT Compression* we take these ideas in a
   different direction: what happens when your data is a *continuous stream of
   floating-point measurements* from sensors or monitoring systems, arriving
   faster than you can write to disk? Facebook's Gorilla paper (VLDB 2015)
-  tackled this with XOR-based float compression and delta-of-delta timestamps —
+  tackled this with XOR-based float compression and delta-of-delta timestamps,
   two tricks specifically designed for the statistical properties of monitoring
   metrics, not general analytics tables. That is where we go next.
 ]

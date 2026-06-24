@@ -5,15 +5,15 @@
 
 #epigraph[
   The best compression ratio you can get without changing the model is to use
-  the best possible entropy coder — and then extend the dictionary.
+  the best possible entropy coder, and then extend the dictionary.
 ][Igor Pavlov, author of 7-Zip and LZMA]
 
-Picture a kernel developer who needs to ship a Linux tarball to thousands of servers around the world. That `.tar.gz` file might clock in at 140 MB. Swap out gzip for `xz --best` and the same tarball shrinks to 98 MB — a 30 percent saving with no loss of data. On the other hand, the compression step now takes eight minutes rather than thirty seconds, and needs a gigabyte of RAM instead of four megabytes. Is that deal worth taking?
+Picture a kernel developer who needs to ship a Linux tarball to thousands of servers around the world. That `.tar.gz` file might clock in at 140 MB. Swap out gzip for `xz --best` and the same tarball shrinks to 98 MB, a 30 percent saving with no loss of data. On the other hand, the compression step now takes eight minutes rather than thirty seconds, and needs a gigabyte of RAM instead of four megabytes. Is that deal worth taking?
 
-Welcome to the world of *high-ratio dictionary coders* — compressors engineered to push the compression frontier as far as physics allows, at the deliberate cost of speed and memory. In Chapter 30 we dissected DEFLATE: LZ77 plus Huffman, a 32 KB window, a speedy hash chain, greedy parsing. DEFLATE optimises for *time*. The algorithms in this chapter optimise for *size*. They trade every second and every byte of RAM they can extract from the machine in pursuit of a smaller output. Understanding why they work — and why the world's most notorious supply-chain attack in 2024 targeted one of them — requires diving deeper into dictionary search strategies, into range coding, and into context-modelled probability.
+Welcome to the world of *high-ratio dictionary coders*: compressors engineered to push the compression frontier as far as physics allows, at the deliberate cost of speed and memory. In Chapter 30 we dissected DEFLATE: LZ77 plus Huffman, a 32 KB window, a speedy hash chain, greedy parsing. DEFLATE optimises for *time*. The algorithms in this chapter optimise for *size*. They trade every second and every byte of RAM they can extract from the machine in pursuit of a smaller output. Understanding why they work (and why the world's most notorious supply-chain attack in 2024 targeted one of them) requires going deeper into dictionary search strategies, range coding, and context-modelled probability.
 
 #recap[
-  In *Chapter 28* we built the LZ77 sliding window compressor: a match finder scans back through a window of recently seen bytes to find the longest string of upcoming bytes that already appeared, and emits a back-reference (distance, length) plus a literal when no match exists. In *Chapter 30* we assembled DEFLATE, which sits LZ77 output through two layers of Huffman coding. The Huffman step in DEFLATE is fast but leaves bits on the table, because Huffman codes must have integer bit-lengths. In *Chapters 26–27* we built the arithmetic coder and rANS, both capable of encoding a symbol in a fractional number of bits — they approach the true information-theoretic cost set by Shannon's entropy limit. This chapter asks: what happens if you combine the *largest possible* LZ77 dictionary with the *most precise* entropy coder, and then also model which symbols are *likely* at each position?
+  In *Chapter 28* we built the LZ77 sliding window compressor: a match finder scans back through a window of recently seen bytes to find the longest string of upcoming bytes that already appeared, and emits a back-reference (distance, length) plus a literal when no match exists. In *Chapter 30* we assembled DEFLATE, which sits LZ77 output through two layers of Huffman coding. The Huffman step in DEFLATE is fast but leaves bits on the table, because Huffman codes must have integer bit-lengths. In *Chapters 26–27* we built the arithmetic coder and rANS, both capable of encoding a symbol in a fractional number of bits, approaching the true information-theoretic cost set by Shannon's entropy limit. This chapter asks: what happens if you combine the *largest possible* LZ77 dictionary with the *most precise* entropy coder, and then also model which symbols are *likely* at each position?
 ]
 
 #objectives((
@@ -30,9 +30,9 @@ Welcome to the world of *high-ratio dictionary coders* — compressors engineere
 
 DEFLATE is beautiful in its simplicity, but it carries three structural limits that cap its compression ratio.
 
-*The 32 KB window.* LZ77's match finder can only look back 32,768 bytes. If the same string appeared 50 KB ago, DEFLATE cannot reference it — it must emit fresh literals. For source code, English text, or any file with long-range repetition, those missed matches cost dearly.
+*The 32 KB window.* LZ77's match finder can only look back 32,768 bytes. If the same string appeared 50 KB ago, DEFLATE cannot reference it. It must emit fresh literals. For source code, English text, or any file with long-range repetition, those missed matches cost dearly.
 
-*Huffman integer codes.* Huffman assigns each symbol a whole-number-of-bits code. If a literal `'e'` has probability 0.13, its true information content is $-log_2(0.13) approx 2.94$ bits. Huffman might assign it a 3-bit code — wasteful by 2 percent — or a 2-bit code — which would cause other symbols to be overly long. The rounding never goes away. Across millions of symbols, those fractional losses compound.
+*Huffman integer codes.* Huffman assigns each symbol a whole-number-of-bits code. If a literal `'e'` has probability 0.13, its true information content is $-log_2(0.13) approx 2.94$ bits. Huffman might assign it a 3-bit code (wasteful by 2 percent) or a 2-bit code (which forces other symbols to carry overly long codes). The rounding never goes away. Across millions of symbols, those fractional losses compound.
 
 *Greedy parsing.* DEFLATE's LZ77 engine picks the *longest possible match* at every position. That sounds optimal, but it is not. Suppose taking a match of length 6 now forces you to next emit four expensive literals, whereas a match of length 5 now lets you immediately take another match of length 7. The *total* cost of the second plan is lower, yet the greedy parser never considers it.
 
@@ -44,7 +44,7 @@ High-ratio codecs attack all three limits simultaneously.
 
 == Range Coding: Arithmetic Precision Without the Arithmetic Slowness
 
-In Chapter 26 we built a complete arithmetic coder. Recall the idea: you maintain a numeric interval $["low", "high")$ that starts at $[0, 1)$. For each symbol you narrow the interval in proportion to the symbol's probability, then output just enough bits to identify which narrow interval you chose. The result encodes each symbol in exactly $-log_2 p$ bits, making it information-theoretically perfect.
+In Chapter 26 we built a complete arithmetic coder. Recall the idea: you maintain a numeric interval $["low", "high")$ that starts at $[0, 1)$. For each symbol you narrow the interval in proportion to the symbol's probability, then output just enough bits to identify which narrow interval you chose. The result encodes each symbol in exactly $-log_2 p$ bits, which is information-theoretically perfect.
 
 The problem with that arithmetic coder is that it works with real numbers (or very-large-integer fractions), which are expensive to compute. *Range coding*, independently discovered by Jorma Rissanen and G. G. Langdon in 1979 and made practical by Martin (1979) and Schindler (1998), is an equivalent idea that cleverly keeps all arithmetic in machine-word-sized integers.
 
@@ -67,14 +67,14 @@ The problem with that arithmetic coder is that it works with real numbers (or ve
 
 The key property that makes range coding attractive for LZMA specifically is that the probability model and the coder are *decoupled*. The range coder does not need to know the alphabet size in advance; you can call it once per *bit*, with a probability that the bit is 0. If you have a sophisticated model that says "this bit is 0 with probability 97%", the range coder encodes it for $-log_2(0.97) approx 0.044$ bits. If you have a dumb model that says 50/50, it costs 1 bit. The model does all the work; the coder just faithfully translates probability into bits. LZMA uses exactly this split: hundreds of small bit-level probability contexts, each updated adaptively, all fed into a single range coder.
 
-#misconception[A range coder is slower than Huffman.][In most implementations, a range coder is competitive with Huffman decoding speed and significantly *faster than arithmetic coding* implemented with big-integer fractions. Because range coding works with 32-bit integer arithmetic and, in the binary (one-bit-at-a-time) form LZMA uses, needs no division during decode — the decoder only has to *split* the current range at the boundary the probability dictates and ask "did the coded value land in the low part or the high part?", which is one multiply, one comparison, and one subtraction — it compiles to a tight inner loop. The speed gap between Huffman and range coding on modern CPUs is typically under 20 percent in favour of Huffman. That small gap is why DEFLATE uses Huffman for speed and LZMA uses range coding for ratio.]
+#misconception[A range coder is slower than Huffman.][In most implementations, a range coder is competitive with Huffman decoding speed and significantly *faster than arithmetic coding* implemented with big-integer fractions. Because range coding works with 32-bit integer arithmetic and, in the binary (one-bit-at-a-time) form LZMA uses, needs no division during decode. The decoder only has to *split* the current range at the boundary the probability dictates and ask "did the coded value land in the low part or the high part?" That is one multiply, one comparison, and one subtraction. It compiles to a tight inner loop. The speed gap between Huffman and range coding on modern CPUs is typically under 20 percent in favour of Huffman. That small gap is why DEFLATE uses Huffman for speed and LZMA uses range coding for ratio.]
 
 == Markov Chains and Context-Modelled Probability
 
 The range coder is just the messenger. The real magic in LZMA is *what probability it is given* for each bit. LZMA builds a probability model using a concept called a *Markov chain*, named after Russian mathematician Andrey Andreyevich Markov (1856–1922), who first studied sequences of probabilistically dependent events in 1906.
 
 #gomaths("Markov chains")[
-  Imagine a frog sitting on one of several lily pads. At each time step it jumps to another lily pad — but the probability of where it jumps depends *only on the pad it is currently on*, not on how it got there. This "memory of only the last step" is the Markov property.
+  Imagine a frog sitting on one of several lily pads. At each time step it jumps to another lily pad, and the probability of where it lands depends *only on the pad it is currently on*, not on how it got there. This "memory of only the last step" is the Markov property.
 
   Formally: a Markov chain is a sequence of random variables $X_1, X_2, X_3, dots$ where the probability of moving to state $s$ at time $t+1$ depends only on $X_t$:
   $ P(X_(t+1) = s | X_t, X_(t-1), dots, X_1) = P(X_(t+1) = s | X_t) $
@@ -94,12 +94,12 @@ LZMA's name is literally an acronym: *Lempel–Ziv–Markov chain Algorithm*. Th
 - The top bits of the *previous* byte written (the high 3–4 bits form a "literal context" that says "we are in the middle of a run of uppercase letters" vs "we just saw a zero byte").
 - The *position* modulo some power of two (for files with periodic structure like bitmap rows).
 
-Each combination of those state variables has its *own* probability table — a tiny array of 11-bit counters, one per bit of each decision. The result is hundreds of independent probability estimates, each adapted to the local statistics the coder has observed in that context. When the range coder is given a well-tuned probability instead of 50/50, every bit becomes cheaper.
+Each combination of those state variables has its *own* probability table: a tiny array of 11-bit counters, one per bit of each decision. The result is hundreds of independent probability estimates, each adapted to the local statistics the coder has observed in that context. When the range coder is given a well-tuned probability instead of 50/50, every bit becomes cheaper.
 
 #aside[
   The 11-bit probability representation is deliberate: LZMA updates each counter with a fast formula:
   $p' = p + (2^11 - p) >> 5$ if the bit was 1, and $p' = p - (p >> 5)$ if the bit was 0.
-  This is a multiplicative update — the probability decays toward 0 or 1 exponentially — and it involves only shifts and additions, no multiplication or division. The entire inner loop of LZMA decoding fits in a handful of CPU instructions.
+  This is a multiplicative update: the probability decays toward 0 or 1 exponentially, using only shifts and additions, with no multiplication or division. The entire inner loop of LZMA decoding fits in a handful of CPU instructions.
 ]
 
 == Inside the LZMA Algorithm
@@ -110,9 +110,9 @@ Let us trace how LZMA compresses a stream of bytes, step by step.
 
 At each position in the input, LZMA must choose one of several *packet types*:
 
-1. *Literal* — output the next raw byte (encoded as 8 bits through the context model).
-2. *Match* — encode a back-reference (distance, length) to a previous occurrence.
-3. *Rep* — reuse one of the four *most-recently-used distances* (the "rep" cache), optionally with a new length.
+1. *Literal*: output the next raw byte (encoded as 8 bits through the context model).
+2. *Match*: encode a back-reference (distance, length) to a previous occurrence.
+3. *Rep*: reuse one of the four *most-recently-used distances* (the "rep" cache), optionally with a new length.
 
 The distinction between "Match" and "Rep" is clever. After a long match, you often immediately want another match at the *same* distance (think of structured binary formats, or English where "the" often follows itself). LZMA maintains a buffer of the last four distances used. Referencing one of them costs only 1–3 bits, versus encoding a full distance (up to $2^30$ positions for a 1 GB dictionary, which needs ~30 bits). This "rep buffer" is a key reason LZMA beats DEFLATE on binary data.
 
@@ -147,7 +147,7 @@ At the heart of LZMA is a 12-state Markov chain over *packet type*. The states e
   content((2.4, 4.8), text(size: 7.5pt, fill: rgb("#0b6e4f"))[literal])
 
   rect((0.5, 2.8), (2.5, 3.5), fill: rgb("#0b6e4f").lighten(85%), stroke: rgb("#0b6e4f"))
-  content((1.5, 3.15), text(size: 8pt)[*Lit* (8 bits,\ context model)])
+  content((1.5, 3.15), box(width: 1.6cm, inset: 2pt, align(center, text(size: 8pt)[*Lit* (8 bits, ctx model)])))
 
   // Branch: Match/Rep
   line((4.5, 5.5), (7.5, 3.5))
@@ -161,13 +161,13 @@ At the heart of LZMA is a 12-state Markov chain over *packet type*. The states e
   line((7.5, 3.5), (5.5, 1.8))
   content((5.9, 2.8), text(size: 7.5pt, fill: rgb("#783f04"))[yes])
   rect((4.3, 1.2), (6.7, 1.8), fill: rgb("#783f04").lighten(88%), stroke: rgb("#783f04"))
-  content((5.5, 1.5), text(size: 8pt)[*Rep* (cached dist)])
+  content((5.5, 1.5), box(width: 2.0cm, inset: 2pt, align(center, text(size: 8pt)[*Rep* (cached dist)])))
 
   // Match branch
   line((7.5, 3.5), (9.5, 1.8))
   content((9.0, 2.8), text(size: 7.5pt, fill: rgb("#0b5394"))[no])
   rect((8.3, 1.2), (10.7, 1.8), fill: rgb("#0b5394").lighten(88%), stroke: rgb("#0b5394"))
-  content((9.5, 1.5), text(size: 8pt)[*Match* (dist+len)])
+  content((9.5, 1.5), box(width: 2.0cm, inset: 2pt, align(center, text(size: 8pt)[*Match* (dist+len)])))
 }))
 
 #checkpoint[
@@ -177,17 +177,17 @@ At the heart of LZMA is a 12-state Markov chain over *packet type*. The states e
 
 === Optimal Parsing
 
-Greedy parsing — always choosing the longest match — is what DEFLATE does. It is fast but suboptimal. Consider this scenario: at position $i$, the greedy parser finds a match of length 8. But the byte at position $i+7$ starts another match of length 15. If the greedy parser had taken a match of length 7 instead (slightly shorter), it could then encode the length-15 match, for a combined gain of $7 + 15 = 22$ units at cost $2$ tokens — versus the greedy choice of $8$ at cost $1$ token followed by a fresh search.
+Greedy parsing (always choosing the longest match) is what DEFLATE does. It is fast but suboptimal. Consider this scenario: at position $i$, the greedy parser finds a match of length 8. But the byte at position $i+7$ starts another match of length 15. If the greedy parser had taken a match of length 7 instead (slightly shorter), it could then encode the length-15 match, for a combined gain of $7 + 15 = 22$ units at cost $2$ tokens, versus the greedy choice of $8$ at cost $1$ token followed by a fresh search.
 
-#mathrecall[We met optimal (price-based) parsing in *Chapter 28*: model the input as a graph where each position is a node, each candidate literal or match is an edge whose weight is its bit cost, and the best parse is the cheapest path from start to end — solved by *dynamic programming*, the technique of building the answer for a long string out of already-computed answers for its prefixes. LZMA pushes that same idea to its practical limit.]
+#mathrecall[We met optimal (price-based) parsing in *Chapter 28*: model the input as a graph where each position is a node, each candidate literal or match is an edge whose weight is its bit cost, and the best parse is the cheapest path from start to end. That path is found by *dynamic programming*: building the answer for a long string out of already-computed answers for its prefixes. LZMA pushes that same idea to its practical limit.]
 
 LZMA's encoder (at its highest compression levels) uses *optimal parsing* via dynamic programming. The idea:
 
 1. For every position in a buffer (say, the next 128 bytes), find all possible matches and their costs in bits.
 2. Build a shortest-path graph where edges are "take match of length $k$ from position $i$" and weights are the estimated bit cost.
-3. Sweep forward through the buffer once, at each position recording the cheapest known total cost to reach it (the dynamic-programming pass), then read the winning path back off. Because every edge points strictly forward, no fancy graph search is needed — a single left-to-right pass suffices.
+3. Sweep forward through the buffer once, at each position recording the cheapest known total cost to reach it (the dynamic-programming pass), then read the winning path back off. Because every edge points strictly forward, no fancy graph search is needed. A single left-to-right pass suffices.
 
-The result is a parse that might look strange — short matches followed by short matches — but when you count the bits, it is genuinely smaller.
+The result is a parse that might look strange (short matches followed by short matches) but when you count the bits, it is genuinely smaller.
 
 #aside[
   Optimal parsing interacts with the *probability model* in a subtle way: the cost of encoding a literal depends on the current Markov state, which depends on what was output before. True optimality would require re-running the probability model for each candidate parse, which is prohibitively expensive. LZMA's practical approximation re-estimates costs using the current model state without full re-simulation. This is "near-optimal" rather than truly optimal, but in practice the gain over greedy is significant: compression levels 7–9 in 7-Zip owe much of their advantage over level 5 to deeper parsing.]
@@ -215,19 +215,19 @@ LZMA1 has a significant practical problem: it is inherently *serial*. Both the e
 
 The chunked structure has another benefit: each chunk can independently be a *literal chunk* (uncompressed data, for content that resists compression) or an *LZMA chunk*. LZMA2 gracefully handles incompressible segments without overhead, unlike LZMA1 which might expand them.
 
-LZMA2 also fixes a minor spec issue: it stores the dictionary size in the compressed header in a more standard way, making it easier to allocate exactly the right amount of memory for decompression.
+LZMA2 also fixes a minor spec issue: it stores the dictionary size in the compressed header in a more standard way, so the decompressor can allocate exactly the right amount of memory without guessing.
 
 == The .xz Container Format
 
-Raw LZMA2 is just a byte stream — no filename, no size, no checksum. The *.xz* file format (maintained by Lasse Collin and Jia Tan, with the specification published at tukaani.org) wraps LZMA2 in a container that provides:
+Raw LZMA2 is just a byte stream, with no filename, no size, and no checksum. The *.xz* file format (maintained by Lasse Collin and Jia Tan, with the specification published at tukaani.org) wraps LZMA2 in a container that provides:
 
-- A *magic number* (`FD 37 7A 58 5A 00` — which is `ý7zXZ\0` in ASCII) for identification.
+- A *magic number* (`FD 37 7A 58 5A 00`, which is `ý7zXZ\0` in ASCII) for identification.
 - A *stream header* with flags and a CRC-32 of the header.
 - One or more *blocks*, each independently LZMA2-compressed, with their own header and optional check (CRC-32, CRC-64, or SHA-256).
-- An *index* that lists the (compressed size, uncompressed size) of every block — enabling random access within the file.
+- An *index* that lists the (compressed size, uncompressed size) of every block, enabling random access within the file.
 - A *stream footer* that locates the index and verifies the stream.
 
-The block index is what enables `xz --list` to report the uncompressed size without decompressing, and what would allow (with the right tools) decompressing only part of a large `.xz` file. Most users never notice this structure — they just type `tar xf archive.tar.xz` — but it is there.
+The block index is what enables `xz --list` to report the uncompressed size without decompressing, and what would allow (with the right tools) decompressing only part of a large `.xz` file. Most users never notice this structure. They just type `tar xf archive.tar.xz` and it works.
 
 #fig([The .xz container layout. The stream is one or more Blocks, followed by an Index that stores each block's compressed and uncompressed size, allowing random access without full decompression.], cetz.canvas({
   import cetz.draw: *
@@ -235,34 +235,34 @@ The block index is what enables `xz --list` to report the uncompressed size with
 
   // Header box
   rect((0, 3.2), (2.2, 4.0), fill: rgb("#e8f4fd"), stroke: rgb("#0b5394"))
-  content((1.1, 3.6), text(size: 7.5pt)[*Stream Header*\ magic + flags + CRC32])
+  content((1.1, 3.6), box(width: 1.8cm, inset: 2pt, align(center, text(size: 7pt)[*Stream Header*\ magic+flags+CRC])))
 
   // Block 1
   rect((2.4, 3.2), (5.0, 4.0), fill: rgb("#e8fde8"), stroke: rgb("#0b6e4f"))
-  content((3.7, 3.6), text(size: 7.5pt)[*Block 1*\ LZMA2 compressed])
+  content((3.7, 3.6), box(width: 2.2cm, inset: 2pt, align(center, text(size: 7.5pt)[*Block 1*\ LZMA2 compressed])))
 
   // Block 2
   rect((5.2, 3.2), (7.8, 4.0), fill: rgb("#e8fde8"), stroke: rgb("#0b6e4f"))
-  content((6.5, 3.6), text(size: 7.5pt)[*Block 2*\ LZMA2 compressed])
+  content((6.5, 3.6), box(width: 2.2cm, inset: 2pt, align(center, text(size: 7.5pt)[*Block 2*\ LZMA2 compressed])))
 
   // Index
   rect((8.0, 3.2), (10.2, 4.0), fill: rgb("#fdf8e8"), stroke: rgb("#783f04"))
-  content((9.1, 3.6), text(size: 7.5pt)[*Index*\ sizes of all\ blocks])
+  content((9.1, 3.6), box(width: 1.8cm, inset: 2pt, align(center, text(size: 7.5pt)[*Index*\ sizes of all\ blocks])))
 
   // Footer
   rect((10.4, 3.2), (12.0, 4.0), fill: rgb("#fde8e8"), stroke: rgb("#9a2617"))
-  content((11.2, 3.6), text(size: 7.5pt)[*Stream\ Footer*\ + CRC])
+  content((11.2, 3.6), box(width: 1.2cm, inset: 2pt, align(center, text(size: 7pt)[*Footer*\ +CRC])))
 
   // Arrow showing random access
   line((9.1, 3.2), (3.7, 3.2), mark: (end: ">"), stroke: (paint: rgb("#783f04"), dash: "dashed"))
-  content((6.5, 2.8), text(size: 7pt, fill: rgb("#783f04"))[random access: jump directly to any block])
+  content((6.5, 2.8), box(width: 5.5cm, align(center, text(size: 7pt, fill: rgb("#783f04"))[random access: jump to any block])))
 }))
 
 The practical upshot: `.xz` has replaced `.bz2` as the default archive format for Linux kernel releases, major distribution packages, and many open-source tarballs. As of 2026, a `tar.xz` archive is the standard interchange format when you want DEFLATE-class portability with LZMA-class ratio.
 
 == The xz-utils Backdoor: A Supply-Chain Catastrophe in Slow Motion
 
-In late March 2024, a Microsoft security engineer named *Andres Freund* was troubleshooting slow SSH logins on a Debian testing machine. He noticed that the `sshd` process was consuming unexpectedly high CPU time. After methodical debugging — a process that took weeks — he discovered that the `xz-utils` library (version 5.6.0 and 5.6.1), which provides liblzma, had been *deliberately backdoored*. The malicious code, disguised as test data files in the repository, injected itself into OpenSSH's authentication path during linking, replacing the RSA key decryption function with an attacker-controlled version that would allow anyone with a specific private key to authenticate as any user — a remote code execution vulnerability with a CVSS score of 10.0 (the maximum possible).
+In late March 2024, a Microsoft security engineer named *Andres Freund* was troubleshooting slow SSH logins on a Debian testing machine. He noticed that the `sshd` process was consuming unexpectedly high CPU time. After methodical debugging that took weeks, he discovered that the `xz-utils` library (version 5.6.0 and 5.6.1), which provides liblzma, had been *deliberately backdoored*. The malicious code, disguised as test data files in the repository, injected itself into OpenSSH's authentication path during linking. It replaced the RSA key decryption function with an attacker-controlled version that would allow anyone with a specific private key to authenticate as any user, a remote code execution vulnerability with a CVSS score of 10.0 (the maximum possible).
 
 What made this attack extraordinary was not the technical implementation but the *patience and social engineering* behind it.
 
@@ -271,27 +271,27 @@ What made this attack extraordinary was not the technical implementation but the
 
   - *2021, October:* A GitHub account named "Jia Tan" (`JiaT75`) appears and begins contributing small, plausible patches to various open-source projects. The account's activity suggests a professional developer.
 
-  - *2022:* Jia Tan starts contributing to `xz-utils`, whose sole maintainer, *Lasse Collin*, was known to be overworked and struggling with the project's maintenance load. Other accounts (likely sock puppets — fake accounts run by the same actor) begin publicly pressuring Collin to add a co-maintainer and process patches faster.
+  - *2022:* Jia Tan starts contributing to `xz-utils`, whose sole maintainer, *Lasse Collin*, was known to be overworked and struggling with the project's maintenance load. Other accounts (likely sock puppets, fake accounts run by the same actor) begin publicly pressuring Collin to add a co-maintainer and process patches faster.
 
   - *2023:* After over a year of legitimate contributions, Collin gives Jia Tan commit access to the repository. Jia Tan becomes increasingly the *de facto* primary maintainer, reviewing code, cutting releases, and managing the mailing list.
 
   - *June 2023:* Jia Tan adds `IFUNC` resolver hooks to the codebase, ostensibly for performance. This is the first piece of the actual attack infrastructure, but is written to look benign.
 
-  - *February 2024:* Jia Tan releases versions 5.6.0 (February 24) and 5.6.1 (March 9) containing the backdoor. The malicious payload is not in the C source — it is hidden in binary *test data files* (`tests/files/bad-3-corrupt_lzma2.xz` and `tests/files/good-large_compressed.lzma`) that are committed to the git repository but whose content is obfuscated. The build system scripts unpack and link this payload during the `./configure` step.
+  - *February 2024:* Jia Tan releases versions 5.6.0 (February 24) and 5.6.1 (March 9) containing the backdoor. The malicious payload is not in the C source. It is hidden in binary *test data files* (`tests/files/bad-3-corrupt_lzma2.xz` and `tests/files/good-large_compressed.lzma`) that are committed to the git repository but whose content is obfuscated. The build system scripts unpack and link this payload during the `./configure` step.
 
-  - *March 29, 2024:* Andres Freund publishes his findings to the `oss-security` mailing list. The severity is immediately understood. Linux distributions scramble to roll back to version 5.4.6. The affected versions (5.6.0 and 5.6.1) had only made it into Debian unstable and some rolling-release distributions, not to stable releases — the attack was caught just in time.
+  - *March 29, 2024:* Andres Freund publishes his findings to the `oss-security` mailing list. The severity is immediately understood. Linux distributions scramble to roll back to version 5.4.6. The affected versions (5.6.0 and 5.6.1) had only made it into Debian unstable and some rolling-release distributions, not to stable releases. The attack was caught just in time.
 
   - *May 29, 2024:* Lasse Collin, after regaining full control of the repository, releases 5.6.2 as a clean version with the malicious code removed. The "Jia Tan" identity was never definitively traced to a specific person or nation-state, though many security researchers speculate about state-actor involvement based on the operation's sophistication and patience.
 ]
 
 #keyidea[
-  The xz-utils attack was not a bug in the LZMA algorithm. LZMA itself is unchanged and secure. The attack targeted the *human layer* of open-source maintenance: an overworked volunteer, social pressure, and a years-long persona-building effort. The exploit lived in the *build system*, not the compression code. The compression community's lesson: even the most mathematically rigorous code can be undermined by attacks on the supply chain — the humans who review and merge patches.
+  The xz-utils attack was not a bug in the LZMA algorithm. LZMA itself is unchanged and secure. The attack targeted the *human layer* of open-source maintenance: an overworked volunteer, social pressure, and a years-long persona-building effort. The exploit lived in the *build system*, not the compression code. The lesson: even the most mathematically rigorous code can be compromised by attacks on the people who review and merge patches.
 ]
 
 The attack revealed a structural vulnerability in open-source infrastructure: critical libraries depended on by millions of systems can be maintained by a single volunteer with no institutional support. In its aftermath, the Open Source Security Foundation (OpenSSF) and major Linux distributions began more actively reviewing maintainer transitions and providing resources for volunteer maintainers of high-impact projects.
 
-#gopython("The subprocess module — running system tools from Python")[
-  Python's `subprocess` module lets you call external programs — like `xz` — and capture their output. Here is a minimal example that compresses and then decompresses a byte string using the system `xz` command:
+#gopython("The subprocess module: running system tools from Python")[
+  Python's `subprocess` module lets you call external programs (like `xz`) and capture their output. Here is a minimal example that compresses and then decompresses a byte string using the system `xz` command:
 
   ```python
   import subprocess
@@ -345,7 +345,7 @@ print("Round-trip verified.")
 
 The `preset` parameter corresponds to the compression level: 0 is fastest (minimal memory), 9 is slowest (maximum ratio). Adding `| lzma.PRESET_EXTREME` (equivalent to `xz -e`) enables optimal parsing for a few more percent of gain at double the time. The `format` parameter chooses between `FORMAT_XZ` (the `.xz` container), `FORMAT_ALONE` (the legacy `.lzma` format), and `FORMAT_RAW` (bare LZMA2 with no container).
 
-#gopython("Class instances and state — the LZMACompressor object")[
+#gopython("Class instances and state: the LZMACompressor object")[
   For streaming compression (when you do not have all the data at once), use `lzma.LZMACompressor`:
 
   ```python
@@ -368,14 +368,14 @@ The `preset` parameter corresponds to the compression level: 0 is fastest (minim
   print(f"Recovered: {len(recovered):,} bytes")
   ```
 
-  An `LZMACompressor` is a *class instance* — an object that holds the internal compressor state between calls to `.compress()`. Each call returns some output bytes (possibly empty if LZMA is still buffering), and `.flush()` drains the internal buffer and closes the stream. This pattern — create an object, feed it data in pieces, call flush at the end — is common for codecs in Python and mirrors how real streaming systems work.
+  An `LZMACompressor` is a *class instance*, an object that holds the internal compressor state between calls to `.compress()`. Each call returns some output bytes (possibly empty if LZMA is still buffering), and `.flush()` drains the internal buffer and closes the stream. This pattern (create an object, feed it data in pieces, call flush at the end) is common for codecs in Python and mirrors how real streaming systems work.
 ]
 
-The `lzma` module is also how Python's `tarfile` module handles `.tar.xz` files — it transparently wraps this streaming interface.
+The `lzma` module is also how Python's `tarfile` module handles `.tar.xz` files: it transparently wraps this streaming interface.
 
 == PPMd: When Context Depth Beats Dictionary Depth
 
-LZMA is not the only algorithm that occupies the high-ratio end of the spectrum. *PPMd* — Prediction by Partial Matching, variant "d" (and its successors variants H, I, J) — takes a completely different architectural approach to the same goal, and in many benchmarks it matches or exceeds LZMA on natural-language text.
+LZMA is not the only algorithm that occupies the high-ratio end of the spectrum. *PPMd* (Prediction by Partial Matching, variant "d", and its successor variants H, I, J) takes a completely different architectural approach to the same goal, and in many benchmarks it matches or exceeds LZMA on natural-language text.
 
 Where LZMA is fundamentally an LZ77 engine with a good entropy coder bolted on, PPMd is a *pure statistical model*: it has no dictionary in the LZ sense at all. Instead, it looks at the last $N$ bytes of *already-decoded* output (the "context") and predicts the probability distribution of the *next byte* from a table built from previous occurrences of that exact context. It then arithmetic-codes that byte using the predicted probability.
 
@@ -397,7 +397,7 @@ The concept goes back to *John Cleary and Ian Witten* at the University of Cante
   1. Look up context $C$ in the trie. If $b$ has been seen after $C$ before, encode it using those frequencies.
   2. If $b$ has *not* been seen after $C$ (an "escape"), send an *escape symbol* and try the shorter context $C'$ (one byte shorter).
   3. Repeat with shorter and shorter contexts until $b$ is found, or you reach the order-0 context (byte frequencies only) or even an escape to literal mode.
-  This hierarchical fallback is called the "escape mechanism" and is what makes PPM self-adapting — it degrades gracefully on novel contexts.
+  This hierarchical fallback is called the "escape mechanism" and is what makes PPM self-adapting: it degrades gracefully on novel contexts.
 ]
 
 === PPMd vs LZMA: When to Pick Which
@@ -408,7 +408,7 @@ The performance of PPMd versus LZMA varies sharply with data type:
 - *Binary executables, compressed data:* LZMA typically wins by 5–15 percent. Its large dictionary catches long repeated byte sequences; PPMd struggles with apparent randomness at high contexts.
 - *Mixed data, archives:* Close contest; LZMA's rep-buffer advantage on binary often wins overall.
 
-This is why 7-Zip and similar archivers offer *both* as method options — and why no single algorithm has displaced both for all uses.
+This is why 7-Zip and similar archivers offer *both* as method options. No single algorithm has displaced both for all uses.
 
 #scoreboard(
   caption: "Cumulative compression of our running 100 KB English text sample (the same file carried since Chapter 30)",
@@ -433,21 +433,21 @@ Let us walk through a tiny, hand-traceable example of how LZMA handles the strin
 
 *Position 1: `B` (byte 66).* No match possible (only one byte in dictionary). Emit *Literal*. State updates; the literal context now tracks that we last emitted 'A'. Probability for 'B' given context 'A' is still ~50/50. Cost: ~8 bits.
 
-*Position 2: `A` (byte 65).* The encoder looks for matches. It finds the byte `A` at distance 2, length 1 — but LZMA only uses matches of length ≥ 2 (shorter matches are never profitable). Still no usable match. Emit *Literal* `A`. Cost: ~8 bits.
+*Position 2: `A` (byte 65).* The encoder looks for matches. It finds the byte `A` at distance 2, length 1, but LZMA only uses matches of length >= 2 (shorter matches are never profitable). Still no usable match. Emit *Literal* `A`. Cost: ~8 bits.
 
 *Position 3: `B` (byte 66).* Now the encoder looks at what follows position 3: `ABAB`. It scans the dictionary and finds that starting 2 bytes back (`ABAB...`) the string `AB` matches. Match of distance=2, length=2. Comparing costs:
 - Literal 'B': ~8 bits, plus next literal 'A': ~8 bits = 16 bits for 2 bytes.
 - Match (dist=2, len=2): distance slot costs ~6 bits, length flag costs ~2 bits = ~8 bits for 2 bytes.
 The match wins. The encoder emits *Match(dist=2, len=2)*. The rep buffer now holds [2, 0, 0, 0] (distance 2 is the most recent).
 
-*Position 5: `A` (byte 65).* The encoder finds another match starting here: `AB` at distance 2 again. Better: it can use a *Rep0* (the most recently used distance is still 2). Rep0 matches cost only 1 bit for the "is it rep0?" decision, plus the length. Rep0 of length 2 costs roughly 3 bits total. Two bytes for 3 bits — far better than 16 bits for two literals.
+*Position 5: `A` (byte 65).* The encoder finds another match starting here: `AB` at distance 2 again. Better: it can use a *Rep0* (the most recently used distance is still 2). Rep0 matches cost only 1 bit for the "is it rep0?" decision, plus the length. Rep0 of length 2 costs roughly 3 bits total. Two bytes for 3 bits: far better than 16 bits for two literals.
 
-*Position 7: `B` (byte 66).* Another Rep0 of length 1 — but LZMA only uses matches of length ≥ 2. Emit *Literal* `B`. However, the probability model for 'B' after state "just emitted a rep" and context from previous decoded byte has now updated. After seeing B appear reliably after A in this context, the probability is no longer 50/50; it is shifting toward 0.8 or more. The cost drops below 2 bits.
+*Position 7: `B` (byte 66).* Another Rep0 of length 1, but LZMA only uses matches of length >= 2. Emit *Literal* `B`. However, the probability model for 'B' after state "just emitted a rep" and context from previous decoded byte has now updated. After seeing B appear reliably after A in this context, the probability is no longer 50/50; it is shifting toward 0.8 or more. The cost drops below 2 bits.
 
 Total approximate: 3 literals at 8 bits + 1 match at 8 bits + 1 rep at 3 bits + 1 literal at ~2 bits = 45 bits ≈ 6 bytes for 8 bytes input. Ratio of ~1.33×. On tiny inputs the model has no time to warm up; real compression gains appear over kilobytes.
 
 #pitfall[
-  LZMA's probability model starts "cold" — all probabilities are 0.5, meaning the first kilobyte or so achieves worse compression than even a simple Huffman coder. This is why LZMA is a *large-file* algorithm. For small payloads (under ~10 KB), the model overhead exceeds the gains, and DEFLATE or even Huffman may produce smaller output. Never use `xz` for tiny files without measuring.
+  LZMA's probability model starts "cold": all probabilities are 0.5, meaning the first kilobyte or so achieves worse compression than even a simple Huffman coder. This is why LZMA is a *large-file* algorithm. For small payloads (under ~10 KB), the model overhead exceeds the gains, and DEFLATE or even Huffman may produce smaller output. Never use `xz` for tiny files without measuring.
 ]
 
 == The Landscape of High-Ratio Lossless Compression
@@ -461,8 +461,8 @@ To put LZMA and PPMd in context, here is a snapshot of where major lossless algo
   // Axes
   line((0.5, 0.3), (0.5, 5.5), mark: (end: ">"))
   line((0.5, 0.3), (10.5, 0.3), mark: (end: ">"))
-  content((0.0, 5.5), text(size: 7pt)[Ratio])
-  content((10.8, 0.1), text(size: 7pt)[Decomp. MB/s])
+  content((0.0, 5.5), box(width: 1.2cm, align(center, text(size: 7pt)[Ratio])))
+  content((10.5, 0.1), box(width: 2.0cm, align(left, text(size: 7pt)[Decomp. MB/s])))
 
   // X-axis ticks
   for (x, label) in ((1.5, "10"), (3.0, "50"), (5.0, "200"), (7.0, "500"), (9.5, "3000")) {
@@ -492,7 +492,7 @@ To put LZMA and PPMd in context, here is a snapshot of where major lossless algo
   pt(9.5, 1.6, "Snappy", rgb("#9a2617"))
 }))
 
-The diagram makes the trade-off visceral: LZ4 and Snappy sit at the far right — a few percent compression but multi-gigabyte decode speeds. LZMA-9 and PPMd sit at the far left: deep compression, but decompression is still dozens of MB/s (fast enough for sequential reading) while encoding can take minutes per gigabyte. Zstandard occupies the middle ground with its tunable dial.
+The diagram makes the trade-off clear: LZ4 and Snappy sit at the far right, offering a few percent compression at multi-gigabyte decode speeds. LZMA-9 and PPMd sit at the far left, delivering deep compression; decompression still runs at dozens of MB/s (fast enough for sequential reading) while encoding can take minutes per gigabyte. Zstandard occupies the middle ground with its tunable dial.
 
 == The lzma Standard Library Module in Depth
 
@@ -501,9 +501,9 @@ Python's `lzma` module exposes several constants and knobs worth knowing:
 ```python
 import lzma
 
-# lzma.FORMAT_XZ   — .xz container (stream header + block + index + footer)
-# lzma.FORMAT_ALONE  — legacy .lzma format (just LZMA1, no container)
-# lzma.FORMAT_RAW    — no container at all; you supply filters explicitly
+# lzma.FORMAT_XZ   - .xz container (stream header + block + index + footer)
+# lzma.FORMAT_ALONE  - legacy .lzma format (just LZMA1, no container)
+# lzma.FORMAT_RAW    - no container at all; you supply filters explicitly
 
 # Filters: each is a dict with 'id' and parameters
 filters = [
@@ -528,7 +528,7 @@ print(f"Default preset 6 : {len(compressed_default):,} bytes")
 print(f"Tuned (64 MB dict): {len(compressed_tuned):,} bytes")
 ```
 
-The most impactful parameter is `dict_size`. A 64 MB dictionary can reference repeats up to 64 MB in the past; a 4 MB dictionary (LZMA default for level 6) can only look back 4 MB. For Linux kernel tarballs — where many identical function names and headers appear megabytes apart — a large dictionary is worth its memory cost.
+The most impactful parameter is `dict_size`. A 64 MB dictionary can reference repeats up to 64 MB in the past; a 4 MB dictionary (LZMA default for level 6) can only look back 4 MB. For Linux kernel tarballs, where many identical function names and headers appear megabytes apart, a large dictionary is worth its memory cost.
 
 The `lc` (literal context bits) and `lp` (literal position bits) parameters control how finely the literal probability tables are split. More bits = more tables = more context-sensitivity but also more cold-start cost and memory. The default `lc=3` means the literal context selector uses the top 3 bits of the previous byte (8 tables). Setting `lc=4` doubles the tables; useful for high-entropy binary data with structured bytes.
 
@@ -538,20 +538,20 @@ This chapter covered the pinnacle of classical lossless compression. The key mov
 
 1. *Replace the 32 KB window with a window measured in megabytes or gigabytes*, so long-range repetition can be found.
 2. *Replace Huffman coding with range coding*, eliminating the integer-bit-length constraint and enabling sub-bit symbol costs.
-3. *Model every decision with a context-specific probability* — which packet type, which literal bit, which length value — using a fast adaptive Markov-chain estimator that updates in a few instructions.
+3. *Model every decision with a context-specific probability* (which packet type, which literal bit, which length value) using a fast adaptive Markov-chain estimator that updates in a few instructions.
 4. *Replace greedy parsing with optimal or near-optimal parsing*, trading encoder time for smaller output.
 5. *Wrap the result in a proper container* (`.xz`) that provides integrity checks, random access, and multi-threaded chunking (LZMA2).
 
-For the reader who has worked through Chapters 26–30, each of these steps should feel like a natural extrapolation: "what if we applied our arithmetic coder *here*, and our adaptive model *there*, and searched *longer*?" LZMA is the answer that results when you follow those instincts as far as they go within the classical framework. The next chapter will explore what happens at the *speed* end of the spectrum — where Zstandard, Brotli, LZ4, and Snappy live.
+For the reader who has worked through Chapters 26–30, each of these steps should feel like a natural extrapolation: "what if we applied our arithmetic coder *here*, and our adaptive model *there*, and searched *longer*?" LZMA is the answer that results when you follow those instincts as far as they go within the classical framework. The next chapter explores what happens at the *speed* end of the spectrum, where Zstandard, Brotli, LZ4, and Snappy live.
 
 #takeaways((
-  "DEFLATE's three limits — 32 KB window, integer Huffman codes, greedy parsing — set a ceiling that LZMA is designed to break through.",
+  "DEFLATE's three limits (32 KB window, integer Huffman codes, greedy parsing) set a ceiling that LZMA is designed to break through.",
   "A range coder is an integer-arithmetic arithmetic coder: it encodes one bit at a time using adaptive probability counters, costing fractional bits and eliminating Huffman's rounding loss.",
   "LZMA maintains hundreds of context-specific probability tables organised as a Markov chain over encoder state, literal context bits, and position bits.",
-  "Optimal parsing uses dynamic programming over a window to find the sequence of matches and literals with minimum total bit cost — greedy always-longest-match is not always cheapest.",
+  "Optimal parsing uses dynamic programming over a window to find the sequence of matches and literals with minimum total bit cost. Greedy always-longest-match is not always cheapest.",
   "LZMA2 adds chunked parallelism to LZMA1's serial model; .xz wraps it in a container with integrity checks and a block index for random access.",
   "The 2024 xz-utils backdoor (CVE-2024-3094) was a multi-year supply-chain attack via social engineering; it affected liblzma but not the LZMA algorithm itself.",
-  "PPMd is a pure statistical model — no LZ dictionary — that beats LZMA on natural-language text by using deep byte-level context; both live at the high-ratio end of the spectrum.",
+  "PPMd is a pure statistical model with no LZ dictionary. It beats LZMA on natural-language text by using deep byte-level context; both live at the high-ratio end of the spectrum.",
   "Python's built-in `lzma` module provides one-shot and streaming access to the full LZMA/LZMA2 feature set, including tunable dictionary size, context bits, and match finders.",
 ))
 
@@ -578,13 +578,13 @@ For the reader who has worked through Chapters 26–30, each of these steps shou
   (b) If the next match is at distance 32 (the second entry), what happens to the rep buffer after encoding it?
 ]
 #solution("31.2")[
-  (a) Referencing rep0 (the first entry, distance 8) costs 1 bit for the "is it rep0?" flag plus the length encoding. Encoding a fresh match at distance 8 would require encoding the full distance (the slot for distance 8 is slot 6, costing 6 bits for the slot plus 0 extra bits = ~6 bits) plus length. So the rep0 reference costs ~1–3 bits total vs ~8+ bits for a fresh match — a significant saving.
+  (a) Referencing rep0 (the first entry, distance 8) costs 1 bit for the "is it rep0?" flag plus the length encoding. Encoding a fresh match at distance 8 would require encoding the full distance (the slot for distance 8 is slot 6, costing 6 bits for the slot plus 0 extra bits = ~6 bits) plus length. So the rep0 reference costs ~1–3 bits total vs ~8+ bits for a fresh match, a significant saving.
 
   (b) Referencing rep1 (distance 32) promotes it to the front: the new rep buffer becomes [32, 8, 512, 4096]. The previously used distance moves to position 1, and the old rep0 moves to position 1 being pushed down. The four most recently used distances are always kept in order of recency.
 ]
 
 #exercise("31.3", 2)[
-  The LZMA literal probability model uses `lc` "literal context bits" — the top `lc` bits of the previously decoded byte — to select which probability table to use for the next literal.
+  The LZMA literal probability model uses `lc` "literal context bits" (the top `lc` bits of the previously decoded byte) to select which probability table to use for the next literal.
 
   (a) If `lc=3`, how many distinct literal probability tables are there?
 
@@ -608,7 +608,7 @@ For the reader who has worked through Chapters 26–30, each of these steps shou
 #solution("31.4")[
   *Greedy suboptimality example.* At position $i$, greedy finds a match of length 8, costing 12 bits. Then the next token must be a literal costing 8 bits. Total: 20 bits for 9 bytes.
 
-  An optimal parser instead takes a match of length 5 at position $i$ (cost 8 bits), then a match of length 12 starting at $i+5$ (cost 11 bits). Total: 19 bits for 17 bytes — 1 bit cheaper overall, and it encoded more data. Greedy missed this because it committed to length 8 without looking ahead.
+  An optimal parser instead takes a match of length 5 at position $i$ (cost 8 bits), then a match of length 12 starting at $i+5$ (cost 11 bits). Total: 19 bits for 17 bytes, 1 bit cheaper overall, and it encoded more data. Greedy missed this because it committed to length 8 without looking ahead.
 
   *Why greedy is optimal with fixed costs.* If every match token (regardless of length, distance, or type) costs exactly the same number of bits, then the problem reduces to: "minimise the number of tokens." Greedy always picks the longest match, which maximises bytes per token, which minimises token count, which minimises total bits. Variable bit-lengths break this argument because a longer match might cost more bits-per-byte than a shorter one followed by another efficient match.
 ]
@@ -625,11 +625,11 @@ For the reader who has worked through Chapters 26–30, each of these steps shou
      - Regular automated fuzzing of the library's API.
 ]
 #solution("31.5")[
-  (a) C source code can be read and analysed by automated tools (compilers, static analysers, syntax highlighters). Reviewers can read it. Binary files are opaque blobs — a reviewer cannot read a `.xz` test file and notice that it contains shellcode. Automated tools typically skip binary test data as "not interesting". The attacker exploited the common assumption that test fixtures are inert data.
+  (a) C source code can be read and analysed by automated tools (compilers, static analysers, syntax highlighters). Reviewers can read it. Binary files are opaque blobs. A reviewer cannot read a `.xz` test file and notice that it contains shellcode. Automated tools typically skip binary test data as "not interesting". The attacker exploited the common assumption that test fixtures are inert data.
 
   (b) Countermeasure evaluation:
   - *Automated binary diff review*: Would have flagged changes to the test binary files and prompted a human to investigate what the new content was. Likely would have detected this, if the tooling extracted and inspected the payload.
-  - *Two-maintainer approval*: Would have helped if the second maintainer were genuinely independent and suspicious. However, the attacker spent two years building trust — a second maintainer who also trusted Jia Tan would not help. Partial mitigation.
+  - *Two-maintainer approval*: Would have helped if the second maintainer were genuinely independent and suspicious. However, the attacker spent two years building trust, and a second maintainer who also trusted Jia Tan would not have helped. Partial mitigation.
   - *Reproducible builds*: Would not have prevented the backdoor (the attack targeted the build process, and a reproducible build of the backdoored source would reproduce the backdoor). However, reproducible builds *would* detect any post-release binary tampering. Not directly applicable here.
   - *API fuzzing*: Would not have detected this attack. Fuzzing finds crashes and memory errors; this backdoor introduced a subtle authentication bypass only triggered with a specific private key. The library's published API appeared to function correctly during fuzzing.
 ]
@@ -684,20 +684,20 @@ For the reader who has worked through Chapters 26–30, each of these steps shou
 
 == Further Reading
 
-- #link("https://en.wikipedia.org/wiki/LZMA")[LZMA — Wikipedia]: a clear overview of the algorithm, its parameters, and its history, with links to the SDK documentation.
+- #link("https://en.wikipedia.org/wiki/LZMA")[LZMA on Wikipedia]: a clear overview of the algorithm, its parameters, and its history, with links to the SDK documentation.
 
 - #link("https://xz.tukaani.org/format/")[The .xz File Format specification] (tukaani.org): the authoritative technical specification for the `.xz` container, maintained by Lasse Collin.
 
-- #link("https://nigeltao.github.io/blog/2024/xz-lzma-part-5-xz.html")[XZ/LZMA Worked Example — Nigel Tao (2024)]: a detailed five-part blog series that hand-traces the bytes of a real `.xz` file, explaining every field. Outstanding for deep understanding.
+- #link("https://nigeltao.github.io/blog/2024/xz-lzma-part-5-xz.html")[XZ/LZMA Worked Example by Nigel Tao (2024)]: a detailed five-part blog series that hand-traces the bytes of a real `.xz` file, explaining every field. Outstanding for deep understanding.
 
-- #link("https://www.openwall.com/lists/oss-security/2024/03/29/4")[Andres Freund's original xz-utils disclosure] (oss-security, March 29 2024): the post that broke the story — read it to understand how meticulous security work catches sophisticated attacks.
+- #link("https://www.openwall.com/lists/oss-security/2024/03/29/4")[Andres Freund's original xz-utils disclosure] (oss-security, March 29 2024): the post that broke the story. Read it to see how meticulous security work catches sophisticated attacks.
 
-- #link("https://en.wikipedia.org/wiki/XZ_Utils_backdoor")[XZ Utils backdoor — Wikipedia]: a comprehensive timeline of the attack, its technical details, and its aftermath.
+- #link("https://en.wikipedia.org/wiki/XZ_Utils_backdoor")[XZ Utils backdoor on Wikipedia]: a comprehensive timeline of the attack, its technical details, and its aftermath.
 
 - #link("https://ieeexplore.ieee.org/document/999958")[Dmitry Shkarin, "PPM: One Step to Practicality" (DCC 2002)]: the paper introducing PPMII and PPMd; the foundation of the best statistical compression in 7-Zip and WinRAR.
 
 - #link("https://docs.python.org/3/library/lzma.html")[Python `lzma` module documentation]: reference for every function, constant, and parameter, including the filter specification for fine-grained LZMA2 tuning.
 
 #bridge[
-  We have now climbed to the compression summit of classical lossless coding: LZMA at 3–4× on mixed data, PPMd rivalling it on text. But climbing higher takes enormous time and memory — and for many real-world applications (databases, caches, network streams, large-scale ML training), time is the binding constraint, not ratio. *Chapter 32: The Modern Frontier — Zstandard, Brotli, LZ4, Snappy* maps the other end of the speed–ratio spectrum: how Yann Collet, starting with LZ4 in 2011 and culminating in Zstandard in 2016, built codecs that compress at gigabytes per second while still achieving useful ratios — and why, by 2026, zstd has become the new default for almost everything that is not a distribution tarball.
+  We have now climbed to the compression summit of classical lossless coding: LZMA at 3–4× on mixed data, PPMd rivalling it on text. Climbing higher costs enormous time and memory. For many real-world applications (databases, caches, network streams, large-scale ML training), time is the binding constraint, not ratio. *Chapter 32: The Modern Frontier - Zstandard, Brotli, LZ4, Snappy* maps the other end of the speed-ratio spectrum: how Yann Collet, starting with LZ4 in 2011 and culminating in Zstandard in 2016, built codecs that compress at gigabytes per second while still achieving useful ratios, and why, by 2026, zstd has become the new default for almost everything that is not a distribution tarball.
 ]

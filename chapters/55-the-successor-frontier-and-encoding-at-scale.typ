@@ -7,14 +7,14 @@
   The best encoder is the one that never ships bytes it doesn't have to.
 ][Anonymous streaming engineer, circa 2019]
 
-Picture this. A streaming service compresses the same thirty-second action scene one hundred different ways — varying the resolution, the bitrate, the encoding preset, the quantizer — just to find the single configuration that gives the best visual quality per byte for *that exact scene*. No template. No rule of thumb. Just exhaustive search, guided by a machine that has learned to see the way humans do.
+Picture this. A streaming service compresses the same thirty-second action scene one hundred different ways (varying the resolution, the bitrate, the encoding preset, the quantizer) just to find the single configuration that gives the best visual quality per byte for *that exact scene*. No template. No rule of thumb. Just exhaustive search, guided by a machine that has learned to see the way humans do.
 
-That image — a machine spending enormous compute to save every viewer a few precious kilobytes — captures where professional video encoding sits in 2026. The codec standards are getting better, the perceptual quality metrics are getting smarter, and the distance between "the codec exists" and "the codec is being used efficiently at scale" keeps widening. This chapter lives at that frontier.
+That image, of a machine spending enormous compute to save every viewer a few precious kilobytes, captures where professional video encoding sits in 2026. The codec standards are getting better, the perceptual quality metrics are getting smarter, and the distance between "the codec exists" and "the codec is being used efficiently at scale" keeps widening. This chapter lives at that frontier.
 
-We will cover three interlocking stories. First, the Enhanced Compression Model (ECM) — JVET's research platform that already beats VVC by more than 25% and is carving the path toward H.267. Second, the parallel Neural Network Video Coding (NNVC) track, which asks whether learned neural networks can replace the hand-crafted tools in ECM entirely. Third, the practical engineering layer that makes all of this matter in the real world: Netflix's per-title and per-shot encoding pipeline, the VMAF quality metric that drives it, content-adaptive rate-distortion optimization, and the bitrate ladder — the set of encode variants that a streaming service maintains so every device and network speed gets the right version.
+We will cover three interlocking stories. First, the Enhanced Compression Model (ECM): JVET's research platform that already beats VVC by more than 25% and is carving the path toward H.267. Second, the parallel Neural Network Video Coding (NNVC) track, which asks whether learned neural networks can replace the hand-crafted tools in ECM entirely. Third, the practical engineering layer that makes all of this matter in the real world: Netflix's per-title and per-shot encoding pipeline, the VMAF quality metric that drives it, content-adaptive rate-distortion optimization, and the bitrate ladder, the set of encode variants that a streaming service maintains so every device and network speed gets the right version.
 
 #recap[
-  Chapter 38 introduced the Discrete Cosine Transform (DCT) and showed how transform coding concentrates image energy into a handful of coefficients. Chapter 51 built the full hybrid codec loop: motion-compensated prediction, transform coding of the residual, quantization, and entropy coding bound together by Lagrangian rate-distortion optimization (RDO) where the encoder minimises $J = D + lambda dot R$. Chapter 52 traced the lineage from H.261 through H.264/AVC. Chapter 53 explained how HEVC's Coding Tree Units (CTUs) and VVC's multi-type tree (MTT) each bought another round of ~50% bitrate savings while making the standard's patent landscape progressively more tangled. Chapter 54 showed how that licensing chaos motivated the royalty-free AV1 (2018) and AV2 (2025–26) standards from the Alliance for Open Media. This chapter picks up where VVC and AV2 leave off — looking at what comes next, and at how sophisticated production pipelines squeeze every last bit of efficiency out of *existing* codecs right now.
+  Chapter 38 introduced the Discrete Cosine Transform (DCT) and showed how transform coding concentrates image energy into a handful of coefficients. Chapter 51 built the full hybrid codec loop: motion-compensated prediction, transform coding of the residual, quantization, and entropy coding bound together by Lagrangian rate-distortion optimization (RDO) where the encoder minimises $J = D + lambda dot R$. Chapter 52 traced the lineage from H.261 through H.264/AVC. Chapter 53 explained how HEVC's Coding Tree Units (CTUs) and VVC's multi-type tree (MTT) each bought another round of ~50% bitrate savings while making the standard's patent landscape progressively more tangled. Chapter 54 showed how that licensing chaos motivated the royalty-free AV1 (2018) and AV2 (2025–26) standards from the Alliance for Open Media. This chapter picks up where VVC and AV2 leave off, looking at what comes next, and at how sophisticated production pipelines squeeze every last bit of efficiency out of *existing* codecs right now.
 ]
 
 #objectives((
@@ -30,25 +30,25 @@ We will cover three interlocking stories. First, the Enhanced Compression Model 
 
 == Beyond VVC: The Enhanced Compression Model
 
-When the Joint Video Experts Team (JVET) finished VVC in July 2020, the engineers did not go home. The same group — the collaborative body of ITU-T VCEG and ISO/IEC MPEG that also produced HEVC and VVC — immediately started the next phase. Their tool was a software platform called the *Enhanced Compression Model*, universally abbreviated ECM.
+When the Joint Video Experts Team (JVET) finished VVC in July 2020, the engineers did not go home. The same group (the collaborative body of ITU-T VCEG and ISO/IEC MPEG that also produced HEVC and VVC) immediately started the next phase. Their tool was a software platform called the *Enhanced Compression Model*, universally abbreviated ECM.
 
 Think of ECM the way you might think of a prototype racing car that is built in a laboratory. It is not road-legal. It would be chaotic to drive on public roads. But every innovative part fitted to it is being evaluated: how much does it save? How much complexity does it add? Which combinations work together? If the part passes those tests, it has a chance of making it into the eventual production standard, which is expected to carry the designation *H.267*.
 
 #definition("Enhanced Compression Model (ECM)")[
-  ECM is JVET's open-source research codec — a modified and heavily extended version of the VVC reference software (VTM) — maintained at #link("https://jvet.hhi.fraunhofer.de")[jvet.hhi.fraunhofer.de]. It is not a standard; it is the laboratory where the tools for the *next* standard are developed and measured. Each versioned ECM release (ECM-1.0, ECM-2.0, … ECM-15.0 as of late 2024) represents the cumulative best-known combination of beyond-VVC tools at that moment.
+  ECM is JVET's open-source research codec, a modified and heavily extended version of the VVC reference software (VTM), maintained at #link("https://jvet.hhi.fraunhofer.de")[jvet.hhi.fraunhofer.de]. It is not a standard; it is the laboratory where the tools for the *next* standard are developed and measured. Each versioned ECM release (ECM-1.0, ECM-2.0, … ECM-15.0 as of late 2024) represents the cumulative best-known combination of beyond-VVC tools at that moment.
 ]
 
 === How Much Better Is ECM?
 
-By late 2024, ECM version 15 was achieving approximately *26.6% bitrate savings* over VVC (measured in the random-access configuration on standard JVET test sequences, using the Björntegaard Delta Rate metric — the standard way to compare codec efficiency). For screen-content sequences — slides, text, computer-generated graphics — the savings reached up to 40%, because screen content has very different statistical properties (sharp edges, flat colour regions) that ECM's new tools handle especially well.
+By late 2024, ECM version 15 was achieving approximately *26.6% bitrate savings* over VVC (measured in the random-access configuration on standard JVET test sequences, using the Björntegaard Delta Rate metric, the standard way to compare codec efficiency). For screen-content sequences (slides, text, computer-generated graphics) the savings reached up to 40%, because screen content has very different statistical properties (sharp edges, flat colour regions) that ECM's new tools handle especially well.
 
 #gomaths("Björntegaard Delta Rate (BD-Rate)")[
-  Two codecs do not encode at exactly the same bitrate, so you cannot compare them with a single number. The standard technique is to plot *Rate-PSNR* (or Rate-VMAF) curves for each codec — encoding the same video at several different quality settings and measuring the resulting bitrate and quality at each point. The *Björntegaard Delta Rate (BD-Rate)* is the average percentage difference in bitrate between the two curves at the same quality level, integrated across the quality range. A BD-Rate of −26.6% means "to achieve the same quality, the new codec needs 26.6% fewer bits." A negative number is always better.
+  Two codecs do not encode at exactly the same bitrate, so you cannot compare them with a single number. The standard technique is to plot *Rate-PSNR* (or Rate-VMAF) curves for each codec by encoding the same video at several different quality settings and measuring the resulting bitrate and quality at each point. The *Björntegaard Delta Rate (BD-Rate)* is the average percentage difference in bitrate between the two curves at the same quality level, integrated across the quality range. A BD-Rate of −26.6% means "to achieve the same quality, the new codec needs 26.6% fewer bits." A negative number is always better.
 
   The metric was introduced by Gisle Bjøntegaard in a 2001 VCEG contribution. His name is typically anglicised to "Björntegaard" in the literature.
 ]
 
-That 26.6% is a large number. To put it in perspective: H.264 to HEVC was roughly 50% savings; HEVC to VVC was roughly 50% again. ECM to H.267 will not be another 50% — that would require physics-defying gains — but a consistent 25–40% across content types would still represent a substantial step forward, roughly comparable to the gains HEVC delivered over H.264.
+That 26.6% is a large number. To put it in perspective: H.264 to HEVC was roughly 50% savings; HEVC to VVC was roughly 50% again. ECM to H.267 will not be another 50% (that would require physics-defying gains), but a consistent 25–40% across content types would still represent a substantial step forward, roughly comparable to the gains HEVC delivered over H.264.
 
 === What Tools Give ECM Its Edge?
 
@@ -58,23 +58,23 @@ ECM is not magic. It earns every percentage point through a collection of carefu
 
 In VVC, the encoder signals which intra-prediction mode (out of 67 angular directions plus DC and Planar) was chosen for each block. That signalling costs bits. TIMD asks: can we *derive* the prediction direction from the already-decoded pixels surrounding the block, without sending it at all?
 
-The answer is yes, much of the time. TIMD works by building a small template — a strip of already-decoded pixels just above and to the left of the current block. It then tests each candidate intra mode by using that mode to predict the template pixels, and measures how well the prediction matches using the Sum of Absolute Transformed Differences (SATD) — the prediction error is run through a small Hadamard transform (a frequency-like transform built only from additions and subtractions of $+1$ and $-1$) and the absolute values are summed, which estimates coding cost better than summing raw pixel errors. The mode that best predicts the template is chosen. No bits are spent signalling it; the decoder can reproduce the exact same decision because it has the same decoded neighbours.
+The answer is yes, much of the time. TIMD works by building a small template: a strip of already-decoded pixels just above and to the left of the current block. It then tests each candidate intra mode by using that mode to predict the template pixels, and measures how well the prediction matches using the Sum of Absolute Transformed Differences (SATD). The prediction error is run through a small Hadamard transform (a frequency-like transform built only from additions and subtractions of $+1$ and $-1$) and the absolute values are summed, which estimates coding cost better than summing raw pixel errors. The mode that best predicts the template is chosen. No bits are spent signalling it; the decoder can reproduce the exact same decision because it has the same decoded neighbours.
 
-When TIMD derives the correct mode, the bits saved on mode signalling are pure gain. When it guesses wrong, the residual is larger, which costs more bits — so the encoder's RDO loop decides per-block whether to use TIMD or fall back to explicit signalling.
+When TIMD derives the correct mode, the bits saved on mode signalling are pure gain. When it guesses wrong, the residual is larger, which costs more bits, so the encoder's RDO loop decides per-block whether to use TIMD or fall back to explicit signalling.
 
 ==== Decoder-Side Intra Mode Derivation (DIMD)
 
-DIMD is a companion tool that operates at the decoder rather than the encoder. It analyses the gradient direction of reconstructed neighbour pixels using Sobel filters — the same kind of edge-detection filters used in image processing — builds a histogram of gradient directions, and derives a blended prediction that combines the dominant gradient direction with the Planar mode.
+DIMD is a companion tool that operates at the decoder rather than the encoder. It analyses the gradient direction of reconstructed neighbour pixels using Sobel filters (the same kind of edge-detection filters used in image processing), builds a histogram of gradient directions, and derives a blended prediction that combines the dominant gradient direction with the Planar mode.
 
 The result is a smoother, more accurate intra predictor that requires no additional signalling from the encoder. Since both encoder and decoder compute the same gradient analysis on the same reconstructed pixels, they always agree. DIMD and TIMD can be combined, each adding independent savings.
 
 ==== Geometric Partition Mode (GPM) Extended
 
-VVC introduced a Geometric Partition Mode that divides an inter-coded block into two wedge-shaped regions, each with its own motion vector. This is better than rectangular sub-partitions for objects with diagonal edges. ECM's *Spatial Geometric Partition Mode (SGPM)* extends this idea to intra prediction, allowing intra blocks to be divided into two geometric regions that can each use a different prediction mode. This is particularly effective for blocks that straddle a strong edge.
+VVC introduced a Geometric Partition Mode that divides an inter-coded block into two wedge-shaped regions, each with its own motion vector. This is better than rectangular sub-partitions for objects with diagonal edges. ECM's *Spatial Geometric Partition Mode (SGPM)* extends this idea to intra prediction: an intra block can be divided into two geometric regions, each with its own prediction mode. The gain is largest for blocks that straddle a strong edge.
 
 ==== Adaptive Colour Transform (ACT) and Cross-Component Prediction (CCCP)
 
-Colour images have three components — usually luma (Y) and two chroma channels (Cb, Cr) in video. These components are not independent: where the luma has a strong edge, the chroma channels almost always have an edge at the same place. VVC already exploited some cross-component correlation; ECM adds more sophisticated *Cross-Component Coding* (CCC) tools, including a Cross-Component Prediction (CCCP) mode where the chroma residual is predicted as a linear function of the luma residual. If the chroma residual is mostly the luma residual scaled by some constant $alpha$, then sending just $alpha$ (a few bits) plus the tiny deviation is far cheaper than sending the full chroma residual.
+Colour images have three components: luma (Y) and two chroma channels (Cb, Cr) in video. These components are not independent: where the luma has a strong edge, the chroma channels almost always have an edge at the same place. VVC already exploited some cross-component correlation; ECM adds more sophisticated *Cross-Component Coding* (CCC) tools, including a Cross-Component Prediction (CCCP) mode where the chroma residual is predicted as a linear function of the luma residual. If the chroma residual is mostly the luma residual scaled by some constant $alpha$, then sending just $alpha$ (a few bits) plus the tiny deviation is far cheaper than sending the full chroma residual.
 
 ==== Spatial-Temporal Motion Vector Prediction (STMVP) and Affine Motion
 
@@ -82,10 +82,10 @@ Motion in real video is rarely a simple translational shift of a rectangular blo
 
 ==== Improved In-Loop Filters
 
-VVC already had three in-loop filters: the Deblocking Filter (to smooth quantisation artefacts at block boundaries), the Sample Adaptive Offset (SAO, to reduce ringing), and the Adaptive Loop Filter (ALF, a Wiener filter trained per frame — a Wiener filter is simply the linear filter whose weights are chosen to minimise the mean squared error between the filtered output and the clean target). ECM adds a *Cross-Component Adaptive Loop Filter (CC-ALF)* that uses luma samples to help filter chroma, and experiments with *CNN-based in-loop filters* — small convolutional neural networks that replace some of the handcrafted filter stages. These neural in-loop filters blur the line between ECM's classical track and the NNVC neural track discussed below.
+VVC already had three in-loop filters: the Deblocking Filter (to smooth quantisation artefacts at block boundaries), the Sample Adaptive Offset (SAO, to reduce ringing), and the Adaptive Loop Filter (ALF, a Wiener filter trained per frame; a Wiener filter is simply the linear filter whose weights are chosen to minimise the mean squared error between the filtered output and the clean target). ECM adds a *Cross-Component Adaptive Loop Filter (CC-ALF)* that uses luma samples to help filter chroma, and experiments with *CNN-based in-loop filters*: small convolutional neural networks that replace some of the handcrafted filter stages. These neural in-loop filters blur the line between ECM's classical track and the NNVC neural track discussed below.
 
 #keyidea[
-  ECM's core philosophy is the same as every codec before it: find the residual correlation that the previous standard left uncaptured, and add a tool to exploit it. The tools get more elaborate with each generation because the easy redundancies were removed first. ECM tools like TIMD and DIMD effectively eliminate signalling overhead for decisions that the decoder can reproduce independently — a principle that sounds simple but requires very careful design to ensure encoder and decoder always agree.
+  ECM's core philosophy is the same as every codec before it: find the residual correlation that the previous standard left uncaptured, and add a tool to exploit it. The tools get more elaborate with each generation because the easy redundancies were removed first. ECM tools like TIMD and DIMD effectively eliminate signalling overhead for decisions that the decoder can reproduce independently, a principle that sounds simple but requires very careful design to ensure encoder and decoder always agree.
 ]
 
 #algo(
@@ -103,12 +103,12 @@ VVC already had three in-loop filters: the Deblocking Filter (to smooth quantisa
 
 == The Neural Network Video Coding (NNVC) Track
 
-Running in parallel with ECM is a fundamentally different research programme inside JVET: *Neural Network Video Coding (NNVC)*. Where ECM takes VVC's classical structure and improves each hand-designed component, NNVC asks the more radical question: what if we replaced some — or all — of those hand-crafted components with learned neural networks?
+Running in parallel with ECM is a fundamentally different research programme inside JVET: *Neural Network Video Coding (NNVC)*. Where ECM takes VVC's classical structure and improves each hand-designed component, NNVC asks the more radical question: what if we replaced some or all of those hand-crafted components with learned neural networks?
 
 The distinction matters. ECM is evolution; NNVC is potential revolution.
 
 #history[
-  JVET established an ad hoc group on NNVC at its 19th meeting (June 2020) and began evaluating neural network tools for inclusion in future standards. The first common software for NNVC — called Neural Compression Software (NCS) — was released after the 27th JVET meeting, containing two NN-based in-loop filtering tools. Since then, JVET has maintained a growing body of NN-based common experiments alongside the ECM track. The two tracks are expected to converge: H.267 will almost certainly incorporate some neural components, even if the overall codec architecture remains hybrid.
+  JVET established an ad hoc group on NNVC at its 19th meeting (June 2020) and began evaluating neural network tools for inclusion in future standards. The first common software for NNVC, called Neural Compression Software (NCS), was released after the 27th JVET meeting, containing two NN-based in-loop filtering tools. Since then, JVET has maintained a growing body of NN-based common experiments alongside the ECM track. The two tracks are expected to converge: H.267 will almost certainly incorporate some neural components, even if the overall codec architecture remains hybrid.
 ]
 
 === What Does NNVC Replace?
@@ -127,10 +127,10 @@ The classical hybrid codec has many individually improvable components. Neural n
 
 A fully neural video codec would, in principle, achieve the best possible rate-distortion performance. But it faces the same hardware wall that haunts AV2 and every other new codec: to be useful at scale, a codec must have hardware decoders. A neural codec's decoder must run neural network inference. Neural inference on mobile silicon, at real-time 4K speeds, requires dedicated Neural Processing Units (NPUs) that are only now becoming ubiquitous in high-end phones (2024–2025) and are still absent from most set-top boxes and older TVs.
 
-This is why H.267 is not expected to be a fully neural codec. The current JVET consensus (as of 2026) is a *hybrid* approach: the overall architecture remains the classical hybrid loop (motion compensation + transform + entropy coding), but specific components — primarily in-loop filters, possibly intra synthesis — will be NN-based, with the complexity of those networks constrained to what can be decoded in real time on projected hardware by the late 2020s.
+This is why H.267 is not expected to be a fully neural codec. The current JVET consensus (as of 2026) is a *hybrid* approach: the overall architecture remains the classical hybrid loop (motion compensation + transform + entropy coding), but specific components (primarily in-loop filters, possibly intra synthesis) will be NN-based, with the complexity of those networks constrained to what can be decoded in real time on projected hardware by the late 2020s.
 
 #misconception[Neural network video codecs are already better than VVC and will replace it immediately.][
-  At the time of writing (2026), the best purely learned video codecs — DVC, DCVC, VCT (Chapter 59) — rival or slightly surpass VVC in BD-Rate on standard benchmarks, but only at high resolutions and at enormous computational cost. More importantly, they have no hardware decoders in consumer devices. H.267, expected around 2028–2029, will be the first *standard* to incorporate neural components. Widespread deployment in streaming and broadcast will follow hardware deployment by several years — realistically, broad consumer reach is not expected before 2032–2035.
+  At the time of writing (2026), the best purely learned video codecs (DVC, DCVC, VCT, covered in Chapter 59) rival or slightly surpass VVC in BD-Rate on standard benchmarks, but only at high resolutions and at enormous computational cost. More importantly, they have no hardware decoders in consumer devices. H.267, expected around 2028–2029, will be the first *standard* to incorporate neural components. Widespread deployment in streaming and broadcast will follow hardware deployment by several years; realistically, broad consumer reach is not expected before 2032–2035.
 ]
 
 #algo(
@@ -151,7 +151,7 @@ H.267 is the working name for the video coding standard that JVET is building on
 - JVET issued a *Call for Proposals* (CfP) for H.267 tools in 2023. Competing organisations submitted technology proposals; those are now being integrated into ECM.
 - The formal standardisation process is expected to run through roughly *January 2027* (when competing participants present final technology assessments) and to finalise around *July–October 2028*, with some estimates extending to end of 2029.
 - The technical target is *at least 40% bitrate reduction compared to VVC* for 4K and higher resolutions at matched subjective quality. ECM is currently at ~26% (random access); getting to 40% will require the neural tools or further undiscovered classical innovations.
-- If the historical pattern holds — standards take two to three years to reach hardware decoders, and hardware decoders take another two to three years to reach mainstream consumer devices — meaningful deployment of H.267 in streaming will begin around 2031–2033 and reach broad consumer reach around 2034–2036.
+- If the historical pattern holds, standards take two to three years to reach hardware decoders, and hardware decoders take another two to three years to reach mainstream consumer devices. Under that pattern, meaningful deployment of H.267 in streaming will begin around 2031–2033 and reach broad consumer reach around 2034–2036.
 
 That last timeline is striking. Engineers working on H.267 today are writing code that most consumers will not benefit from until their children are teenagers.
 
@@ -163,8 +163,9 @@ That last timeline is striking. Engineers working on H.267 today are writing cod
   import cetz.draw: *
   let y = 0
   let bar(x0, x1, col, label, yy) = {
+    let w = x1 - x0
     rect((x0, yy - 0.22), (x1, yy + 0.22), fill: col, stroke: none, radius: 2pt)
-    content(((x0 + x1) / 2, yy), text(size: 7pt, fill: white, weight: "bold")[#label])
+    content(((x0 + x1) / 2, yy), box(width: calc.max(w - 0.4, 0.5) * 1cm, inset: 1pt, align(center, text(size: 7pt, fill: white, weight: "bold")[#label])))
   }
   let tick(x, label) = {
     line((x, -0.6), (x, 1.8), stroke: (dash: "dashed", paint: rgb("#aaaaaa"), thickness: 0.5pt))
@@ -179,9 +180,9 @@ That last timeline is striking. Engineers working on H.267 today are writing cod
   tick(12, "2032")
   tick(14, "2034")
   bar(0, 8, rgb("#0b5394"), "ECM research", 1.4)
-  bar(6, 8.5, rgb("#783f04"), "H.267 final (exp.)", 0.85)
-  bar(8, 11, rgb("#0b6e4f"), "HW decoders (exp.)", 0.3)
-  bar(11, 14, rgb("#5b3a86"), "Broad deployment (exp.)", -0.25)
+  bar(6, 8.5, rgb("#783f04"), "H.267 final", 0.85)
+  bar(8, 11, rgb("#0b6e4f"), "HW decoders", 0.3)
+  bar(11, 14, rgb("#5b3a86"), "Broad deploy.", -0.25)
   content((14.5, 1.4), text(size: 7pt)[ECM])
   content((14.5, 0.85), text(size: 7pt)[H.267])
   content((14.5, 0.3), text(size: 7pt)[HW])
@@ -190,19 +191,19 @@ That last timeline is striking. Engineers working on H.267 today are writing cod
 
 == The Practical Layer: Encoding at Scale
 
-ECM and H.267 matter enormously for the long run. But right now, in 2026, the biggest lever a streaming service has is not which codec it uses — it is *how well* it uses the codecs it already has. The gap between a naively configured H.264 encoder and a sophisticatedly optimised AV1 or H.265 encoder running on the same content is often larger than the gap between H.264 and H.265 themselves. That is the insight that drove Netflix, Disney+, YouTube, and every major streamer to invest heavily in encoding infrastructure.
+ECM and H.267 matter enormously for the long run. But right now, in 2026, the biggest lever a streaming service has is not which codec it uses - it is *how well* it uses the codecs it already has. The gap between a naively configured H.264 encoder and a sophisticatedly optimised AV1 or H.265 encoder running on the same content is often larger than the gap between H.264 and H.265 themselves. That is the insight that drove Netflix, Disney+, YouTube, and every major streamer to invest heavily in encoding infrastructure.
 
 The key concepts are: the *bitrate ladder*, *per-title encoding*, *per-shot encoding*, *VMAF*, and the *Dynamic Optimizer*. We will build them up in order.
 
 === The Bitrate Ladder
 
-Video streaming services do not send a single version of a video. They send many versions — at different resolutions and bitrates — and let the player switch between them as network conditions change. This is *Adaptive Bitrate Streaming (ABR)*. The set of available representations is the *bitrate ladder*.
+Video streaming services do not send a single version of a video. They send many versions at different resolutions and bitrates, and let the player switch between them as network conditions change. This is *Adaptive Bitrate Streaming (ABR)*. The set of available representations is the *bitrate ladder*.
 
 #definition("Bitrate Ladder")[
   A bitrate ladder is an ordered list of (resolution, bitrate) pairs that a streaming service encodes for each video. A typical ladder might include representations at 240p/400kbps, 360p/750kbps, 480p/1.5 Mbps, 720p/3 Mbps, 1080p/6 Mbps, and 4K/16 Mbps. The player starts at a low rung, estimates network bandwidth, and switches to a higher rung when bandwidth allows.
 ]
 
-For most of the history of streaming — say, 2007 to 2015 — the bitrate ladder was *fixed*. Every video on a platform used the same ladder. This seemed efficient from an engineering standpoint: you only have to configure the encoder once, and you know exactly what files you will produce.
+For most of the history of streaming (say, 2007 to 2015) the bitrate ladder was *fixed*. Every video on a platform used the same ladder. This seemed efficient from an engineering standpoint: you only have to configure the encoder once, and you know exactly what files you will produce.
 
 But it was wasteful in a subtle way. A simple, low-motion documentary needs far fewer bits per second than an action film with explosions, rapid camera motion, and hundreds of moving objects. If both use the same ladder, the documentary is being grossly over-encoded at high bitrates (wasting storage and bandwidth) while the action film may be visibly under-encoded at low bitrates (hurting quality). The *optimal* ladder for each video is different, and a one-size-fits-all approach misses that.
 
@@ -215,18 +216,18 @@ To find the optimal ladder, Netflix uses what they call a *convex hull* approach
 #gomaths("Convex Hull")[
   Imagine you scatter a handful of nails into a board, then stretch a rubber band so it loops around all of them and let it snap tight. The rubber band traces out the *convex hull*: the smallest convex (outward-bulging, never dented inward) boundary that contains every point. Any nail strictly inside the loop is "wrapped up" by the others; the nails the band actually touches are the hull.
 
-  Tiny example. Take five points on a grid: $(0,0)$, $(2,0)$, $(2,2)$, $(0,2)$, and $(1,1)$. The first four are the corners of a square; the band snaps around them. The fifth point, $(1,1)$, sits in the middle, so the band never touches it — it is *inside* the hull.
+  Tiny example. Take five points on a grid: $(0,0)$, $(2,0)$, $(2,2)$, $(0,2)$, and $(1,1)$. The first four are the corners of a square; the band snaps around them. The fifth point, $(1,1)$, sits in the middle, so the band never touches it. It is *inside* the hull.
 
   In this chapter we only care about the *upper-left* part of the hull in (bitrate, quality) space: the points you cannot beat by moving left (cheaper) and up (better) at the same time. That efficient edge is exactly the set of encodes worth keeping; everything below it is wasteful. The same "outer boundary of the good trade-offs" idea reappears as the operational rate–distortion curve in Chapter 41.
 ]
 
-1. Encode the title at many (resolution, quantiser) combinations — sometimes hundreds of test encodes.
+1. Encode the title at many (resolution, quantiser) combinations, sometimes hundreds of test encodes.
 2. For each test encode, measure the quality (using VMAF, described next) and the resulting bitrate.
 3. Plot all the points in (bitrate, quality) space.
-4. The *convex hull* of those points — the outer boundary, where no other point offers both higher quality and lower bitrate — is the efficient frontier.
+4. The *convex hull* of those points is the efficient frontier: the outer boundary where no other point offers both higher quality and lower bitrate.
 5. Sample the convex hull at target bitrates to define the rungs of the ladder.
 
-#fig([Per-title convex hull: the outer boundary of (bitrate, VMAF quality) points across many test encodes becomes the bitrate ladder. Points inside the hull are dominated — another point offers the same quality at lower bitrate, or higher quality at the same bitrate.], cetz.canvas({
+#fig([Per-title convex hull: the outer boundary of (bitrate, VMAF quality) points across many test encodes becomes the bitrate ladder. Points inside the hull are dominated, meaning another point offers the same quality at lower bitrate, or higher quality at the same bitrate.], cetz.canvas({
   import cetz.draw: *
   // Axes
   line((0, 0), (7, 0), mark: (end: ">"))
@@ -259,13 +260,13 @@ The result: each title gets a ladder tailored to its complexity. Simple, talking
 
 === VMAF: Seeing Like a Human
 
-The per-title approach requires a quality metric that measures what viewers actually care about. *Peak Signal-to-Noise Ratio (PSNR)* — the metric that compares pixels mathematically — is notoriously poor at predicting perceived quality. A frame with a lot of high-frequency film grain scores low on PSNR even if it looks beautiful; a frame with large smooth blobs of wrong colour scores high on PSNR even if it looks wrong.
+The per-title approach requires a quality metric that measures what viewers actually care about. *Peak Signal-to-Noise Ratio (PSNR)*, the metric that compares pixels mathematically, is notoriously poor at predicting perceived quality. A frame with a lot of high-frequency film grain scores low on PSNR even if it looks beautiful; a frame with large smooth blobs of wrong colour scores high on PSNR even if it looks wrong.
 
-Netflix developed *VMAF (Video Multi-method Assessment Fusion)* in collaboration with the University of Southern California to address this. VMAF uses a machine learning model — originally a Support Vector Machine, later updated to neural regression — trained on thousands of video clips for which human subjects rated quality in controlled viewing studies. Its inputs are several perceptual features:
+Netflix developed *VMAF (Video Multi-method Assessment Fusion)* in collaboration with the University of Southern California to address this. VMAF uses a machine learning model (originally a Support Vector Machine, later updated to neural regression) trained on thousands of video clips for which human subjects rated quality in controlled viewing studies. Its inputs are several perceptual features:
 
-- *VIF (Visual Information Fidelity)* — how much mutual information is preserved between original and compressed frames.
-- *DLM (Detail Loss Metric)* — how well fine detail is preserved.
-- *Motion* — a measure of temporal activity (motion amplifies visibility of artefacts).
+- *VIF (Visual Information Fidelity)*: how much mutual information is preserved between original and compressed frames.
+- *DLM (Detail Loss Metric)*: how well fine detail is preserved.
+- *Motion*: a measure of temporal activity (motion amplifies visibility of artefacts).
 
 The model combines these into a single score between 0 and 100 that correlates far better with human judgement than PSNR across a wide range of content types and codecs.
 
@@ -309,16 +310,16 @@ VMAF is now an open standard. Netflix released the source code on GitHub, and it
 
 === Per-Shot Encoding and the Dynamic Optimizer
 
-Per-title encoding was a large step forward, but it still treated the entire title as a single entity. A two-hour film contains thousands of *shots* — individual camera takes — and each shot has a different character. A peaceful landscape scene needs far fewer bits than the battle that follows it; a night scene needs different allocation than the daytime equivalent; a fast-panning crowd scene is far harder to compress than a static close-up.
+Per-title encoding was a large step forward, but it still treated the entire title as a single entity. A two-hour film contains thousands of *shots* (individual camera takes), and each shot has a different character. A peaceful landscape scene needs far fewer bits than the battle that follows it; a night scene needs different allocation than the daytime equivalent; a fast-panning crowd scene is far harder to compress than a static close-up.
 
 *Per-shot encoding* takes the per-title philosophy to its natural conclusion: compute the optimal encoding parameters shot by shot rather than title by title.
 
 Netflix began rolling out optimised shot-based encodes for 4K content around 2019–2020. The mechanics are:
 
 1. *Shot detection:* Automatically split the video into shots (scenes between cuts) using temporal analysis.
-2. *Complexity analysis:* Estimate the compressibility of each shot using spatial and temporal features — texture complexity, motion magnitude, colour variance.
+2. *Complexity analysis:* Estimate the compressibility of each shot using spatial and temporal features: texture complexity, motion magnitude, colour variance.
 3. *Optimise the ladder per shot:* For each shot, find the (resolution, QP) combination that meets a VMAF target (say, 93) at the lowest bitrate.
-4. *Stitch the encodes:* Concatenate the per-shot encodes into a single deliverable bitstream for each rung of the ladder, ensuring that the stitching points are at valid stream boundaries.
+4. *Stitch the encodes:* Concatenate the per-shot encodes into a single deliverable bitstream for each rung of the ladder. The stitching points must fall at valid stream boundaries.
 
 The bitrate savings from per-shot encoding on top of per-title encoding are substantial. Netflix reported roughly 30% additional bitrate savings on 4K HDR content by moving from per-title to per-shot optimisation.
 
@@ -347,7 +348,7 @@ The measured impact was striking. Using the Dynamic Optimizer, Netflix reduced t
   year: "2015 (per-title), 2018–2020 (per-shot / DO)",
   authors: "Anne Aaron, Zhi Li, Megha Manohara, Yilin Wang et al. (Netflix Technology Blog)",
   aim: "Customise bitrate ladder and encoding parameters per title (or per shot) to minimise bitrate at target perceptual quality, as measured by VMAF.",
-  complexity: "Encoder: O(N_shots × N_candidates) test encodes, each requiring a full encode plus VMAF evaluation. For a feature film, thousands of encodes. Decoder: unchanged — the player sees a normal HLS/DASH stream.",
+  complexity: "Encoder: O(N_shots x N_candidates) test encodes, each requiring a full encode plus VMAF evaluation. For a feature film, thousands of encodes. Decoder: unchanged; the player sees a normal HLS/DASH stream.",
   strengths: "20–30% bitrate reduction over fixed-ladder encoding (per-title); additional 30% reduction from per-shot. Directly optimises for human perceptual quality. Codec-agnostic (works with H.264, H.265, AV1).",
   weaknesses: "Extremely compute-intensive. Requires shot detection, complexity analysis, and VMAF inference infrastructure. Longer encodes mean longer time-to-publish for new content.",
   superseded: "Continually extended; as of 2025–2026, ML-based ladder prediction that estimates the optimal ladder from content features without exhaustive test encodes is an active area.",
@@ -357,9 +358,9 @@ The measured impact was striking. Using the Dynamic Optimizer, Netflix reduced t
 
 The most sophisticated streaming encoders today go one step further: they use VMAF not just to evaluate the final encode, but to drive the encoder's internal *rate-distortion optimization loop*.
 
-Recall from Chapter 51 that the encoder's RDO loop evaluates every coding decision — which partition, which mode, which motion vector — by minimising the Lagrangian cost $J = D + lambda dot R$, where $D$ is distortion (usually sum of squared pixel errors, SSE) and $R$ is the number of bits. The Lagrange multiplier $lambda$ is tied to the quantiser parameter.
+Recall from Chapter 51 that the encoder's RDO loop evaluates every coding decision (which partition, which mode, which motion vector) by minimising the Lagrangian cost $J = D + lambda dot R$, where $D$ is distortion (usually sum of squared pixel errors, SSE) and $R$ is the number of bits. The Lagrange multiplier $lambda$ is tied to the quantiser parameter.
 
-The problem with using SSE as the distortion measure $D$ is the same problem as PSNR: it does not correlate well with perceived quality. If you replace SSE with a perceptual distortion measure derived from VMAF features — something that assigns higher cost to distortions that humans notice and lower cost to distortions they don't — the encoder's decisions improve.
+The problem with using SSE as the distortion measure $D$ is the same problem as PSNR: it does not correlate well with perceived quality. If you replace SSE with a perceptual distortion measure derived from VMAF features (one that assigns higher cost to distortions that humans notice and lower cost to distortions they don't) the encoder's decisions improve.
 
 This *VMAF-driven RDO* is an active area of both industrial and academic research. The practical implementation is challenging because VMAF is expensive to compute per-block (it is designed to operate on full frames, not individual coding blocks), so approximations and feature-based proxies are used. But even partial VMAF integration into the RDO loop shows measurable improvements in rate-distortion performance at fixed perceptual quality targets.
 
@@ -367,7 +368,7 @@ This *VMAF-driven RDO* is an active area of both industrial and academic researc
   import cetz.draw: *
   let box_at(x, y, w, h, col, label) = {
     rect((x, y), (x + w, y + h), fill: col.lighten(85%), stroke: 0.8pt + col, radius: 3pt)
-    content((x + w / 2, y + h / 2), text(size: 8pt, fill: col, weight: "bold")[#label])
+    content((x + w / 2, y + h / 2), box(width: (w - 0.4) * 1cm, inset: 2pt, align(center, text(size: 8pt, fill: col, weight: "bold")[#label])))
   }
   box_at(0.5, 3.5, 6, 0.75, rgb("#0b5394"), "Fixed bitrate ladder (pre-2015)")
   box_at(0.5, 2.5, 6, 0.75, rgb("#783f04"), "Per-title encoding (2015)")
@@ -465,7 +466,7 @@ Bitrate Ladder:
 Each rung is the *cheapest* encode that meets the target quality. The insight is that the rungs are content-adaptive: for a simple animated film, the 1080p rung might be achieved at 2 Mbps instead of 6 Mbps; for an action film, 6 Mbps might only reach VMAF 89. Using a fixed ladder imposes the wrong rung locations for every title simultaneously.
 
 #gopython("List Comprehensions")[
-  The line `non_dominated = [p for p in points if not is_dominated(p, points)]` uses a Python *list comprehension* — a concise way to build a new list by filtering or transforming an existing one.
+  The line `non_dominated = [p for p in points if not is_dominated(p, points)]` uses a Python *list comprehension*, a concise way to build a new list by filtering or transforming an existing one.
 
   The general form is:
   ```python
@@ -488,11 +489,11 @@ The approach works by training a machine learning model on historical encode dat
 
 Systems like ARTEMIS (presented at NSDI 2024) demonstrate this approach for live streaming. The trade-off is accuracy: ML-predicted ladders are nearly as good as exhaustively computed ones for typical content, but can miss by larger margins for unusual or exotic content types that are underrepresented in the training data.
 
-#checkpoint[What is the key difference between per-title encoding and per-shot encoding, and which saves more bitrate?][Per-title encoding customises the bitrate ladder to the complexity of an entire video title — an animation might need less bitrate per rung than an action film. Per-shot encoding goes further, optimising encoder parameters *independently for each shot* within a title, since a quiet dialogue scene and an explosion in the same film have very different compressibility. Netflix found that per-shot encoding saves roughly an additional 30% over per-title encoding on 4K HDR content, on top of the ~20% already saved by per-title encoding. So per-shot encoding saves more in total, at the cost of far greater compute.]
+#checkpoint[What is the key difference between per-title encoding and per-shot encoding, and which saves more bitrate?][Per-title encoding customises the bitrate ladder to the complexity of an entire video title. An animation might need less bitrate per rung than an action film. Per-shot encoding goes further, optimising encoder parameters *independently for each shot* within a title, since a quiet dialogue scene and an explosion in the same film have very different compressibility. Netflix found that per-shot encoding saves roughly an additional 30% over per-title encoding on 4K HDR content, on top of the ~20% already saved by per-title encoding. So per-shot encoding saves more in total, at the cost of far greater compute.]
 
 == Putting It Together: The Full Pipeline
 
-It is worth pausing to see how all the pieces fit into a single pipeline — both the standards layer (what codec you use) and the application layer (how you use it).
+It is worth pausing to see how all the pieces fit into a single pipeline, covering both the standards layer (what codec you use) and the application layer (how you use it).
 
 ```
 Raw video
@@ -535,7 +536,7 @@ By June 2026, the streaming landscape has settled into a tiered pattern:
 
 - *AV1* is the dominant new-content codec for premium streaming (Netflix, YouTube, Amazon), delivering better compression than H.264 or H.265 with no licensing costs.
 - *H.265/HEVC* remains widely deployed for broadcast, Blu-ray, and in markets where hardware AV1 decode is not yet universal.
-- *H.264/AVC* is still the universal compatibility baseline — almost every device on Earth can decode it, and it remains the fallback for legacy devices and ultra-low-latency live streaming.
+- *H.264/AVC* is still the universal compatibility baseline. Almost every device on Earth can decode it, and it remains the fallback for legacy devices and ultra-low-latency live streaming.
 - *VVC* has seen limited deployment, hindered by the same patent-pool ambiguity that plagued HEVC (Chapter 53).
 - *AV2* has finalised its bitstream specification and is entering encoder and decoder implementation, with broad hardware support expected around 2027–2028.
 - *ECM / H.267* is still in research and standardisation; no production deployment is expected before 2030.
@@ -552,7 +553,7 @@ The gap between standards and deployment is one of the central facts of the vide
   [ECM (projected)], [~1080 kbps], [~0.18×], [Projected ~26% further savings; research only],
 )
 
-These numbers are illustrative — real savings vary enormously by content type. The scoreboard makes the point graphically: the codec matters, but the encoding pipeline matters almost as much.
+These numbers are illustrative; real savings vary enormously by content type. The scoreboard makes the point graphically: the codec matters, but the encoding pipeline matters almost as much.
 
 #takeaways((
   "ECM (Enhanced Compression Model) is JVET's research codec that already exceeds VVC by ~26% BD-Rate, using tools like TIMD, DIMD, geometric partition extensions, cross-component coding, and neural in-loop filters.",
@@ -573,7 +574,7 @@ These numbers are illustrative — real savings vary enormously by content type.
 ]
 
 #solution("55.1")[
-  The problem is that 3000 kbps is "wasteful" for the animation (which could reach VMAF 94+ at 2000 kbps — the service is spending an unnecessary extra 1000 kbps per second) while being "insufficient" for the thriller (which only reaches VMAF 82 at 2000 kbps — it needs more bits at the 3000 kbps tier to look good, and the fixed rung doesn't match its complexity). Per-title encoding solves this by computing the *optimal* ladder for each title separately. The animation's 3000 kbps rung might be moved to 2000 kbps (same quality, lower bandwidth), while the thriller's 3000 kbps rung might be kept or even increased. Each title uses a ladder tailored to its Rate-VMAF curve.
+  The problem is that 3000 kbps is "wasteful" for the animation (which could reach VMAF 94+ at 2000 kbps: the service is spending an unnecessary extra 1000 kbps per second) while being "insufficient" for the thriller (which only reaches VMAF 82 at 2000 kbps and needs more bits at the 3000 kbps tier to look good; the fixed rung doesn't match its complexity). Per-title encoding solves this by computing the *optimal* ladder for each title separately. The animation's 3000 kbps rung might be moved to 2000 kbps (same quality, lower bandwidth), while the thriller's 3000 kbps rung might be kept or even increased. Each title uses a ladder tailored to its Rate-VMAF curve.
 ]
 
 #exercise("55.2", 2)[
@@ -581,7 +582,7 @@ These numbers are illustrative — real savings vary enormously by content type.
 ]
 
 #solution("55.2")[
-  BD-Rate measures the average percentage difference in bitrate between two codecs across a range of quality settings. It is computed by integrating the horizontal distance between two Rate-quality curves. A negative BD-Rate means the new codec achieves the same quality at a lower bitrate — it needs fewer bits per second to deliver the same visual experience. "−26.6%" means: "at any given VMAF quality level, ECM needs 26.6% fewer bits than VVC to deliver that quality." Concretely for a user: if VVC needed 6 Mbps to deliver a particular quality on your home internet connection, ECM would need only about 4.4 Mbps for the same quality. That means lower buffering risk on slow connections, lower data usage on mobile, and lower bandwidth bills for streaming services.
+  BD-Rate measures the average percentage difference in bitrate between two codecs across a range of quality settings. It is computed by integrating the horizontal distance between two Rate-quality curves. A negative BD-Rate means the new codec achieves the same quality at a lower bitrate; it needs fewer bits per second to deliver the same visual experience. "−26.6%" means: "at any given VMAF quality level, ECM needs 26.6% fewer bits than VVC to deliver that quality." Concretely for a user: if VVC needed 6 Mbps to deliver a particular quality on your home internet connection, ECM would need only about 4.4 Mbps for the same quality. That means lower buffering risk on slow connections, lower data usage on mobile, and lower bandwidth bills for streaming services.
 ]
 
 #exercise("55.3", 1)[
@@ -642,24 +643,24 @@ These numbers are illustrative — real savings vary enormously by content type.
 
 == Further Reading
 
-- #link("https://jvet.hhi.fraunhofer.de")[JVET ECM Software Repository] — the official Enhanced Compression Model source code and contribution documents. Versioned releases document every tool integrated.
+- #link("https://jvet.hhi.fraunhofer.de")[JVET ECM Software Repository]: the official Enhanced Compression Model source code and contribution documents. Versioned releases document every tool integrated.
 
-- #link("https://www.itu.int/en/ITU-T/Workshops-and-Seminars/2025/0117/Documents/Yan%20Ye.pdf")[Yan Ye, "Enhanced Compression Model for Beyond-VVC Capability," ITU-T Workshop, January 2025] — a comprehensive overview of ECM tools and BD-Rate results from one of JVET's key researchers.
+- #link("https://www.itu.int/en/ITU-T/Workshops-and-Seminars/2025/0117/Documents/Yan%20Ye.pdf")[Yan Ye, "Enhanced Compression Model for Beyond-VVC Capability," ITU-T Workshop, January 2025]: a comprehensive overview of ECM tools and BD-Rate results from one of JVET's key researchers.
 
-- #link("https://arxiv.org/abs/2404.07872")[R. Skupin et al., "Video Compression Beyond VVC: Quantitative Analysis of Intra Coding Tools in Enhanced Compression Model (ECM)," arXiv:2404.07872, 2024] — detailed per-tool analysis of ECM intra coding gains, with BD-Rate numbers for each tool individually and in combination.
+- #link("https://arxiv.org/abs/2404.07872")[R. Skupin et al., "Video Compression Beyond VVC: Quantitative Analysis of Intra Coding Tools in Enhanced Compression Model (ECM)," arXiv:2404.07872, 2024]: detailed per-tool analysis of ECM intra coding gains, with BD-Rate numbers for each tool individually and in combination.
 
-- #link("https://netflixtechblog.com/per-title-encode-optimization-7e99442b62a2")[Anne Aaron et al., "Per-Title Encode Optimization," Netflix Technology Blog, December 2015] — the original blog post introducing per-title encoding, with the convex hull methodology and initial bandwidth savings.
+- #link("https://netflixtechblog.com/per-title-encode-optimization-7e99442b62a2")[Anne Aaron et al., "Per-Title Encode Optimization," Netflix Technology Blog, December 2015]: the original blog post introducing per-title encoding, with the convex hull methodology and initial bandwidth savings.
 
-- #link("https://netflixtechblog.com/dynamic-optimizer-a-perceptual-video-encoding-optimization-framework-e19f1e3a277f")[Zhi Li et al., "Dynamic Optimizer — A Perceptual Video Encoding Optimization Framework," Netflix Technology Blog, March 2018] — the Dynamic Optimizer technical description, including VMAF integration and measured bitrate savings.
+- #link("https://netflixtechblog.com/dynamic-optimizer-a-perceptual-video-encoding-optimization-framework-e19f1e3a277f")[Zhi Li et al., "Dynamic Optimizer: A Perceptual Video Encoding Optimization Framework," Netflix Technology Blog, March 2018]: the Dynamic Optimizer technical description, including VMAF integration and measured bitrate savings.
 
-- #link("https://research.netflix.com/publication/optimized-shot-based-encodes-for-4k-now-streaming")[Netflix Research, "Optimized Shot-Based Encodes for 4K: Now Streaming!," 2020] — describes the rollout of per-shot encoding to Netflix's 4K HDR catalogue.
+- #link("https://research.netflix.com/publication/optimized-shot-based-encodes-for-4k-now-streaming")[Netflix Research, "Optimized Shot-Based Encodes for 4K: Now Streaming!," 2020]: describes the rollout of per-shot encoding to Netflix's 4K HDR catalogue.
 
-- #link("https://arxiv.org/abs/2309.05846")[M. Mentzer et al., "Designs and Implementations in Neural Network-Based Video Coding," arXiv:2309.05846, 2023] — a survey of NNVC approaches as studied by JVET, including common experiments on neural in-loop filtering, intra prediction, and inter coding.
+- #link("https://arxiv.org/abs/2309.05846")[M. Mentzer et al., "Designs and Implementations in Neural Network-Based Video Coding," arXiv:2309.05846, 2023]: a survey of NNVC approaches as studied by JVET, including common experiments on neural in-loop filtering, intra prediction, and inter coding.
 
-- #link("https://gorinsky.networks.imdea.org/pdf/ARTEMIS_Adaptive_Bitrate_Ladder_Optimization_for_Live_Video_Streaming_NSDI_2024_accepted_version.pdf")[Ghasemi et al., "ARTEMIS: Adaptive Bitrate Ladder Optimization for Live Video Streaming," NSDI 2024] — ML-based bitrate ladder prediction for live streaming, eliminating the need for exhaustive test encodes.
+- #link("https://gorinsky.networks.imdea.org/pdf/ARTEMIS_Adaptive_Bitrate_Ladder_Optimization_for_Live_Video_Streaming_NSDI_2024_accepted_version.pdf")[Ghasemi et al., "ARTEMIS: Adaptive Bitrate Ladder Optimization for Live Video Streaming," NSDI 2024]: ML-based bitrate ladder prediction for live streaming, eliminating the need for exhaustive test encodes.
 
-- #link("https://arxiv.org/abs/1812.00101")[Lu et al., "DVC: An End-to-End Deep Video Compression Framework," CVPR 2019 / arXiv:1812.00101] — one of the foundational papers on fully learned video compression, a precursor to the NNVC approach.
+- #link("https://arxiv.org/abs/1812.00101")[Lu et al., "DVC: An End-to-End Deep Video Compression Framework," CVPR 2019 / arXiv:1812.00101]: one of the foundational papers on fully learned video compression, a precursor to the NNVC approach.
 
 #bridge[
-  This chapter stood at the boundary between classical and neural compression. ECM is already incorporating neural components — CNN-based in-loop filters, learned intra synthesis — and NNVC is pushing further. But we have mostly treated neural networks as a black box: "a model that maps inputs to outputs and is trained on data." To understand *why* neural networks can outperform hand-crafted tools, and *how* they are trained for compression tasks, we need to open that black box. Chapter 56 is a Machine-Learning Primer written specifically for compression: what a neural network is, how backpropagation and gradient descent work, what a loss function is, and why the rate-distortion tradeoff fits naturally into the neural training framework. If you have read Chapters 1–55 and understood everything, Chapter 56 is the bridge to the final, deepest layer of the subject.
+  This chapter stood at the boundary between classical and neural compression. ECM is already incorporating neural components (CNN-based in-loop filters, learned intra synthesis), and NNVC is pushing further. But we have mostly treated neural networks as a black box: "a model that maps inputs to outputs and is trained on data." To understand *why* neural networks can outperform hand-crafted tools, and *how* they are trained for compression tasks, we need to open that black box. Chapter 56 is a Machine-Learning Primer written specifically for compression: what a neural network is, how backpropagation and gradient descent work, what a loss function is, and why the rate-distortion tradeoff fits naturally into the neural training framework. If you have read Chapters 1–55 and understood everything, Chapter 56 is the bridge to the final, deepest layer of the subject.
 ]

@@ -4,7 +4,7 @@
 = Genomic and Biological Sequence Compression
 
 #epigraph[
-  The human genome is the most compressible long document in existence — provided
+  The human genome is the most compressible long document in existence, provided
   you have another human genome to compress it against.
 ][_Folk wisdom among bioinformaticians_]
 
@@ -12,20 +12,20 @@ In 2012, a hospital in Boston sequenced the genomes of every newborn in its
 neonatal intensive care unit. The data arrived at 150 gigabytes per baby. Over
 the course of a year, they sequenced hundreds of children, and the storage bill
 was threatening to dwarf the cost of the sequencing machines themselves. The
-bottleneck was not the biology — it was the file format.
+bottleneck was not the biology. It was the file format.
 
 That file format was FASTQ: a plain text file that stores every short read the
 machine produces, each paired with a string of "quality scores" that say how
 confident the sequencer was about each base. Uncompressed, a single whole-genome
 sequencing run produces 100 to 300 gigabytes of FASTQ. Compressed with gzip,
-you claw back maybe 70 percent — still tens of gigabytes, and gzip has no idea
+you claw back maybe 70 percent. Still tens of gigabytes, and gzip has no idea
 it is looking at DNA. It is treating adenine and thymine the same as commas and
 colons.
 
 The deeper insight changes everything: *any two human genomes are 99.9 percent
 identical*. If you already have one human genome on file, a second one is not
 150 gigabytes of new information. It is a list of roughly 4 to 5 million
-positions where the two disagree — a difference file, a delta. And a difference
+positions where the two disagree: a difference file, a delta. And a difference
 file is tiny.
 
 This is the core idea of *reference-based compression*, and it is the subject
@@ -33,14 +33,14 @@ of this chapter. We will trace the chain from raw sequencing reads through the
 aligned-read format (BAM), through the reference-compressed format (CRAM), and
 through the statistical models that handle the trickiest part of all: quality
 scores. We will revisit the Burrows–Wheeler Transform and FM-index from
-Chapter 35 — not as compressors this time, but as search engines that make
+Chapter 35, not as compressors this time but as search engines that make
 reference-based alignment fast enough to be practical. And we will look at where
 the field is going in 2025 and 2026, with neural and LLM-assisted compressors
 beginning to challenge the classical tools.
 
 #recap[
   Chapter 35 introduced the Burrows–Wheeler Transform (BWT) and showed how the
-  same LF-mapping that underpins bzip2 can be turned into the *FM-index* — a
+  same LF-mapping that underpins bzip2 can be turned into the *FM-index*: a
   searchable, compressed representation of a long string that modern DNA aligners
   (Bowtie, BWA) use to find where sequencing reads match a reference genome.
   Chapters 66 through 68 explored the "know your data" philosophy in scientific
@@ -62,19 +62,19 @@ beginning to challenge the classical tools.
 == The Genomics Data Deluge
 
 Before we can compress a genome, we need to understand what genomic data actually
-looks like — because the format matters enormously for the compression strategy.
+looks like, because the format matters enormously for the compression strategy.
 
 A *genome* is the complete genetic instruction manual of an organism, written in
 an alphabet of four letters: A, C, G, and T (adenine, cytosine, guanine,
 thymine). The human genome is roughly 3.2 billion of these letters long. Stored
-naively at 2 bits per letter (since $log_2 4 = 2$), that is 800 megabytes — a
+naively at 2 bits per letter (since $log_2 4 = 2$), that is 800 megabytes: a
 perfectly manageable size for one person's genome. The problem is that we never
 store just one copy.
 
 A DNA sequencing machine does not read the genome like a book, cover to cover.
 It shatters the DNA into millions of tiny fragments, reads each fragment
-independently, and gives you a pile of short "reads" — typically 100 to 300
-letters each for the Illumina short-read technology that dominates the field.
+independently, and gives you a pile of short "reads" (typically 100 to 300
+letters each for the Illumina short-read technology that dominates the field).
 To reconstruct the original genome you must then figure out how all those
 overlapping pieces fit together, either by comparing them against a known
 *reference genome* or by assembling them from scratch.
@@ -82,7 +82,7 @@ overlapping pieces fit together, either by comparing them against a known
 A single sequencing run typically produces 30 to 100 copies of every position
 in the genome (called "30× to 100× coverage"), because you need redundancy to
 correct sequencing errors. So instead of storing 800 MB once, you are storing
-800 MB thirty times over, plus error annotations — and the raw output is not
+800 MB thirty times over, plus error annotations. The raw output is not
 one tidy sequence but hundreds of millions of short fragments.
 
 === The File Format Zoo
@@ -90,8 +90,8 @@ one tidy sequence but hundreds of millions of short fragments.
 #definition("FASTA")[
   A plain-text format for storing one or more biological sequences. Each entry
   starts with a header line beginning with `>` and a name, followed by one or
-  more lines of sequence data. FASTA stores only the sequence letters — no
-  quality scores, no alignment information. It is used for reference genomes,
+  more lines of sequence data. FASTA stores only the sequence letters (no
+  quality scores, no alignment information). It is used for reference genomes,
   protein sequences, and assembled contigs.
 ]
 
@@ -173,8 +173,8 @@ To understand the scale of the problem, here is a rough accounting for a single
       rect((x, 0), (x + bar-w, h),
         fill: if i == 3 { rgb("#0b6e4f").lighten(40%) } else { rgb("#0b5394").lighten(60%) },
         stroke: 0.5pt + rgb("#1a1a1a").lighten(30%))
-      content((x + bar-w / 2, h + 0.25), std.text(size: 7pt)[#lbl])
-      content((x + bar-w / 2, -0.4), std.text(size: 7pt)[#label], anchor: "north")
+      content((x + bar-w / 2, h + 0.25), box(width: 1.4cm, align(center, std.text(size: 7pt)[#lbl])))
+      content((x + bar-w / 2, -0.4), box(width: 1.4cm, align(center, std.text(size: 7pt)[#label])), anchor: "north")
     }
     // Y axis label
     content((-0.6, 5 * 0.05 * 200 / 2 / 10), text(size: 7pt)[File size], angle: 90deg)
@@ -200,7 +200,7 @@ For genomic reads, the "prediction" is the reference genome. Here is the logic:
    genome, maintained by the Genome Reference Consortium).
 2. A sequencer produces a read: `ACGTTTGCAAGTCCAT...` (150 bases).
 3. An aligner maps that read to the reference, finding that it matches position
-   12,345,678 on chromosome 3 — with one mismatch: position 12 of the read
+   12,345,678 on chromosome 3, with one mismatch: position 12 of the read
    is T in the sample but C in the reference.
 4. Instead of storing all 150 bases, you store: "chromosome 3, position
    12,345,678, length 150, mismatch at offset 12: T instead of C."
@@ -211,7 +211,7 @@ For genomic reads, the "prediction" is the reference genome. Here is the logic:
   Reference-based compression is *delta coding against an external source*. The
   reference genome plays the same role as a video's previous frame in inter-
   frame video compression (Chapter 51), or as a dictionary entry in LZW
-  (Chapter 29). The crucial
+  (Chapter 29). The key
   difference is scale: a video frame differs from the previous frame by perhaps
   5–20%; a human genome differs from the reference by only ~0.1%. The residual
   is almost nothing.
@@ -221,15 +221,15 @@ For genomic reads, the "prediction" is the reference genome. Here is the logic:
 
 A CRAM file is not one monolithic compressed blob. It is a collection of
 *slices*, each covering a genomic region (a stretch of chromosome). Within each
-slice, the data is separated into independent *data series* — and each data
-series is compressed with its own entropy coder, because different types of data
-have very different statistics:
+slice, the data is separated into independent *data series*, each compressed
+with its own entropy coder, because different types of data have very different
+statistics:
 
 - *Read positions* (where on the chromosome does each read map): delta-coded
   from the previous read's position, then entropy-coded. Highly compressible.
 - *Sequence differences* (mismatches, insertions, deletions): the rare cases
   where the read differs from the reference. These are the actual genetic
-  variants. Very sparse — most reads have zero or one.
+  variants. Very sparse: most reads have zero or one.
 - *Quality scores*: one integer per base per read. This is the dominant cost
   in practice. Quality scores fluctuate a lot and compress poorly (see next
   section).
@@ -264,7 +264,7 @@ getting.
 
 Here is a fact that surprises most people: in a CRAM file, the *sequence bases*
 (A, C, G, T) often account for only a small fraction of the total file size.
-The dominant cost is the *quality scores* — the per-base confidence values
+The dominant cost is the *quality scores*, the per-base confidence values
 attached to each read.
 
 Why? Because sequences, after reference subtraction, are nearly all identical
@@ -283,7 +283,7 @@ correlated, but not in a simple or predictable way.
   distributed the entropy would be $log_2 42 approx 5.4$ bits per quality
   character. In practice, Illumina quality scores cluster around Q = 30–40
   for most bases (the machine is usually confident), so the true entropy is
-  lower — roughly 3–4 bits per quality character. But since there is one
+  lower, roughly 3–4 bits per quality character. But since there is one
   quality character per base, and bases take only 2 bits each after alignment,
   quality scores can cost *twice as many bits as the bases themselves*.
 ]
@@ -293,7 +293,7 @@ correlated, but not in a simple or predictable way.
 Within CRAM 3.1, quality scores are entropy-coded with range coding or rANS
 after applying a *context model*: the coder conditions each quality value on the
 neighboring quality values and on the position within the read (the first and
-last few bases of a read are systematically lower quality — a well-known
+last few bases of a read are systematically lower quality, a well-known
 Illumina artifact). This context modeling is the same idea as PPM (Chapter 33),
 applied to quality values instead of text characters.
 
@@ -304,16 +304,16 @@ essentially zero. You cannot do much better than 3–4 bits per score losslessly
 
 === Lossy Quality Binning: Trading Precision for Space
 
-The large insight that unlocks much greater compression is biological: *you do
+The insight that drives much greater compression is biological: *you do
 not need all 42 quality levels to call genetic variants accurately*.
 
 Illumina's GATK variant caller (the industry standard for finding genetic
 mutations) was tested exhaustively, and it turns out that 8 quality bins are
 sufficient for nearly all downstream analyses: Q=0, Q=10, Q=20, Q=25, Q=30,
 Q=35, Q=40, and "maximum." By rounding each quality score to the nearest bin,
-you reduce the alphabet from 42 values to 8 — $log_2 8 = 3$ bits in the best
-case, and in practice 2–3 bits with entropy coding. More importantly, the
-quantized values are smoother (less noisy), so context models work better.
+you reduce the alphabet from 42 values to 8 ($log_2 8 = 3$ bits in the best
+case, and in practice 2–3 bits with entropy coding). The quantized values are
+also smoother (less noisy), so context models work better.
 
 CRAM supports this as an optional lossy mode. Illumina's *DRAGEN* platform
 (which includes the *ORA* compression format, acquired from Enancio) uses an
@@ -346,8 +346,8 @@ partly by applying reference alignment internally and partly by quality binning.
 We said that reference-based compression works by *aligning* each read to a
 reference genome, then storing only the differences. But here is a problem we
 glossed over: the reference genome is 3.2 billion bases long. A read is 150
-bases. Finding where a 150-base read matches in 3.2 billion bases — allowing
-for a few mismatches — sounds like it would take enormous computation. And we
+bases. Finding where a 150-base read matches in 3.2 billion bases, allowing
+for a few mismatches, sounds like it would take enormous computation. And we
 need to do this for hundreds of millions of reads.
 
 The tool that makes this tractable is exactly what Chapter 35 introduced: the
@@ -357,14 +357,14 @@ The tool that makes this tractable is exactly what Chapter 35 introduced: the
 the BWT of a string $T$. It stores the BWT of $T$ plus two auxiliary tables
 (the LF-mapping and a sampled suffix array) that together support *backward
 search*: finding all occurrences of a pattern $P$ in $T$ in $O(|P|)$ time,
-while the index itself takes $O(|T| log |T|)$ bits — much less than a
+while the index itself takes $O(|T| log |T|)$ bits, much less than a
 full-text index.]
 
 In the genomics context, the "text" $T$ is the reference genome (all 3.2
 billion bases, concatenated from all chromosomes). The "pattern" $P$ is a
-sequencing read. The aligner builds the FM-index of $T$ once — a one-time
-upfront cost of a few hours of computation — and then queries it for every read.
-Each query takes O(read length) time, which is O(150) — essentially constant
+sequencing read. The aligner builds the FM-index of $T$ once (a one-time
+upfront cost of a few hours of computation) and then queries it for every read.
+Each query takes O(read length) time, which is O(150): essentially constant
 compared to the billions of positions in the genome.
 
 The two most widely used aligners, *Bowtie2* (Ben Langmead, 2009, updated 2012)
@@ -389,7 +389,7 @@ genomic data analysis pipeline runs one of these aligners to convert FASTQ files
       let x = i * (box-w + gap)
       rect((x, 0), (x + box-w, box-h),
         fill: rgb("#eef4fb"), stroke: 0.8pt + rgb("#0b5394"))
-      content((x + box-w / 2, box-h / 2 + 0.1), text(size: 7.5pt)[#top])
+      content((x + box-w / 2, box-h / 2 + 0.1), box(width: 2.0cm, inset: 1pt, align(center, text(size: 7.5pt)[#top])))
       content((x + box-w / 2, -0.25), text(size: 7pt, fill: rgb("#783f04"))[#bot])
       if i < stages.len() - 1 {
         line((x + box-w, box-h / 2), (x + box-w + gap, box-h / 2),
@@ -410,7 +410,7 @@ the characters of `banana` so that identical characters cluster, making entropy
 coding easier. Here, we use the same BWT for a completely different purpose:
 *searching*. Given the BWT of the reference genome, the FM-index's backward
 search can answer "does this read occur in the genome, and if so, where?" in
-linear time in the read length. No scanning, no hashing — just backward
+linear time in the read length. No scanning, no hashing: just backward
 induction through the BWT's LF-mapping. The compressed index that stores the
 reference is itself the search engine that makes compression possible. This is
 one of the most elegant examples of *compression as dual-purpose infrastructure*
@@ -431,7 +431,7 @@ that treat the genome as a sequence with internal repetition, without needing
 an external reference.
 
 The most capable reference-free compressors as of 2024–2025 are based on
-*finite-context models* mixed with *repeat models* — a combination closely
+*finite-context models* mixed with *repeat models*, a combination closely
 related to context mixing (Chapter 34), adapted to exploit the repetitive
 structure of DNA.
 
@@ -446,7 +446,7 @@ structure of DNA.
   superseded: "Successor to JARVIS2 (2021); further work ongoing toward neural-assisted variants.",
 )[
   JARVIS3 achieves compression of assembled human genomes at approximately
-  0.3–0.5 bits per base — far below the theoretical 2 bits/base for random DNA,
+  0.3–0.5 bits per base, far below the theoretical 2 bits/base for random DNA,
   and well below gzip's ~1.5 bits/base. On FASTQ (with quality scores), ratios
   are less dramatic because quality scores dominate.
 ]
@@ -454,15 +454,15 @@ structure of DNA.
 === How Context Models Work on DNA
 
 Genomic sequences are not random. The human genome is ~41% GC (guanine +
-cytosine) at the global level, but locally it varies enormously — GC-rich
+cytosine) at the global level, but locally it varies enormously. GC-rich
 "CpG islands" flank genes, while repetitive elements (Alu sequences, LINE
 elements) repeat nearly verbatim millions of times.
 
 A *finite-context model* of order $k$ keeps a table that maps every $k$-base
 context (e.g., `ACGTAC`) to a probability distribution over the next base. For
-small $k$ (say, $k = 6$), there are only $4^6 = 4096$ possible contexts — a
+small $k$ (say, $k = 6$), there are only $4^6 = 4096$ possible contexts: a
 small table. For large $k$ (say, $k = 20$), there are $4^(20) > 10^(12)$ possible
-contexts — impossible to store fully, so hash tables or trie structures are
+contexts, impossible to store fully, so hash tables or trie structures are
 used. Higher-order models capture the long repeats in genomes; lower-order
 models handle regions with genuine randomness.
 
@@ -470,8 +470,8 @@ A *repeat model* is the genomic analogue of an LZ-style back-reference
 (Chapter 28): if the current position looks like a previously seen stretch of
 sequence, the model predicts a continuation of that earlier stretch. This is
 especially effective for the ~50% of the human genome that consists of
-transposable elements — ancient sequences that copied themselves thousands of
-times.
+transposable elements (ancient sequences that copied themselves thousands of
+times).
 
 JARVIS3 mixes many models (finite-context models of different orders, plus
 repeat models) using probability mixing, exactly as PAQ and cmix do for text
@@ -490,7 +490,7 @@ model?
 using a large language model as an *orchestrator* that autonomously searches
 for the best combination of encoding strategies for a given genome. Rather than
 training a neural network to compress directly, AgentGC uses an LLM to guide
-an evolutionary search over a library of encoding choices — trying different
+an evolutionary search over a library of encoding choices, trying different
 combinations of transforms, models, and entropy coders and keeping the ones
 that work best for the data at hand.
 
@@ -543,7 +543,7 @@ And our sequencer produces this read (20 bases):
 READ: ACGTTTGCATGTCCATGG
 ```
 
-*Step 1 — Align.* The aligner finds that the read starts at position 0 of the
+*Step 1: Align.* The aligner finds that the read starts at position 0 of the
 reference (a perfect match for positions 0–8), with one mismatch: position 9
 is G in the read but A in the reference. Let us write out the alignment:
 
@@ -553,27 +553,27 @@ READ: ACGTTTGCATGTCCATGG
                 ^ mismatch: A→G at offset 9
 ```
 
-*Step 2 — Encode the residual.* Instead of storing all 18 bases (at 2 bits
+*Step 2: Encode the residual.* Instead of storing all 18 bases (at 2 bits
 each = 36 bits raw, or about 4.5 bytes), CRAM stores:
 
 - Position: 0 (or a delta from the previous read's position)
 - Length: 18
 - CIGAR: `18M` (18 matches/mismatches, no indels)
 - NM (number of mismatches): 1
-- MD string (mismatch details): `9A9` — meaning "9 matches, then reference
+- MD string (mismatch details): `9A9`, meaning "9 matches, then reference
   had A, then 9 more matches"
 
-The sequence itself is *not stored at all* — it is perfectly reconstructable
+The sequence itself is *not stored at all*: it is perfectly reconstructable
 from the reference plus the MD string.
 
-*Step 3 — Count the savings.* The MD string `9A9` is 3 bytes. The position,
+*Step 3: Count the savings.* The MD string `9A9` is 3 bytes. The position,
 length, CIGAR, and flag fields add another ~15 bytes of metadata. Total: maybe
 18 bytes to represent a read whose sequence takes 18 bytes (at 1 byte per base
 in text). But in a real genome where reads have almost no mismatches, many
-reads need *zero* MD string — just position and length. And quality scores are
+reads need *zero* MD string (just position and length). Quality scores are
 stored separately, entropy-coded with context models.
 
-*Step 4 — What if there are insertions or deletions?* Suppose the read has one
+*Step 4: What if there are insertions or deletions?* Suppose the read has one
 inserted base (not in the reference):
 
 ```
@@ -593,7 +593,7 @@ rare in typical human germline sequencing.
   counting quality scores or metadata)?
 ][
   Zero bytes. If the read perfectly matches the reference at a known position,
-  the sequence can be reconstructed entirely from the reference — CRAM stores
+  the sequence can be reconstructed entirely from the reference: CRAM stores
   only the position, length, and CIGAR string `100M`. The sequence itself is
   not stored at all.
 ]
@@ -605,7 +605,7 @@ about how much is achievable?
 
 #gomaths("Conditional entropy and the compression limit for DNA")[
   Recall from Chapter 18 that the _conditional entropy_ $H(X | Y)$ measures the
-  average surprise left in $X$ once you already know $Y$ — and that it can only
+  average surprise left in $X$ once you already know $Y$, and that it can only
   shrink as you condition on more: $H(X | Y) <= H(X)$. For DNA we use this with
   $X$ = the next base and $Y$ = the preceding $k$ bases. We call the result the
   *order-$k$* entropy: order-0 conditions on nothing, order-1 on the previous
@@ -634,7 +634,7 @@ about how much is achievable?
   actually much lower per base: you are storing the same genome 30 times over,
   so an ideal compressor would achieve roughly 1/30 of the assembled-genome
   cost. That is about 0.01 bits per base in theory. CRAM achieves roughly
-  0.1 bits per base in practice — still a long way from the theoretical limit,
+  0.1 bits per base in practice, still a long way from the theoretical limit,
   with quality scores accounting for most of what remains.
 ]
 
@@ -652,7 +652,7 @@ about how much is achievable?
 == A Python Sketch: Reference Subtraction and Delta Coding
 
 CRAM's full implementation is thousands of lines of C in the `htslib` library.
-But the core idea — subtract the reference, encode the residual — fits in a
+But the core idea (subtract the reference, encode the residual) fits in a
 handful of Python lines. The following sketch illustrates the concept without
 implementing a real SAM/BAM parser.
 
@@ -681,7 +681,7 @@ implementing a real SAM/BAM parser.
   `@dataclass` decorator (from the standard `dataclasses` module) writes the
   tedious parts for you: it auto-generates the constructor, a readable
   `repr`, and equality, from nothing but the field names and their type hints.
-  The `@` line is a *decorator* — a function that takes the class below it and
+  The `@` line is a *decorator*: a function that takes the class below it and
   returns an enhanced version of it.
 
   ```python
@@ -693,13 +693,13 @@ implementing a real SAM/BAM parser.
       y: int
 
   p = Point(3, 4)      # constructor is free
-  print(p)             # Point(x=3, y=4)  — repr is free
-  print(p.x + p.y)     # 7 — access fields by name
-  print(p == Point(3, 4))  # True — equality is free
+  print(p)             # Point(x=3, y=4)  - repr is free
+  print(p.x + p.y)     # 7 - access fields by name
+  print(p == Point(3, 4))  # True - equality is free
   ```
 
   Without `@dataclass` you would hand-write an `__init__`, an `__eq__`, and a
-  `__repr__` — about a dozen lines of boilerplate for the same result. We use a
+  `__repr__`. That is about a dozen lines of boilerplate for the same result. We use a
   dataclass below to hold one aligned read's fields (position, mismatches,
   quality bytes) as a tidy record.
 ]
@@ -781,31 +781,31 @@ The answer depends on the use case:
     let bw = 3.2
     let bh = 0.65
     rect((0, 3.5), (bw, 3.5 + bh), fill: rgb("#eef4fb"), stroke: 0.8pt + rgb("#0b5394"))
-    content((bw / 2, 3.5 + bh / 2), text(size: 8pt)[Do you have the reference?])
+    content((bw / 2, 3.5 + bh / 2), box(width: 2.8cm, inset: 2pt, align(center, text(size: 8pt)[Do you have the reference?])))
 
     // Yes branch
     line((bw / 2, 3.5), (bw / 2, 2.8), mark: (end: ">"), stroke: 0.8pt)
     content((bw / 2 + 0.3, 3.15), text(size: 7.5pt)[Yes])
     rect((0, 2.1), (bw, 2.8), fill: rgb("#eef4fb"), stroke: 0.8pt + rgb("#0b5394"))
-    content((bw / 2, 2.45), text(size: 8pt)[Is speed more important than size?])
+    content((bw / 2, 2.45), box(width: 2.8cm, inset: 2pt, align(center, text(size: 8pt)[Is speed more important than size?])))
 
     // Yes → BAM
     line((bw, 2.45), (bw + 0.6, 2.45), mark: (end: ">"), stroke: 0.8pt)
     content((bw + 0.25, 2.65), text(size: 7.5pt)[Yes])
     rect((bw + 0.6, 2.1), (bw + 0.6 + 1.6, 2.8), fill: rgb("#d4e8d4"), stroke: 0.8pt + rgb("#0b6e4f"))
-    content((bw + 0.6 + 0.8, 2.45), text(size: 8pt)[*Use BAM*])
+    content((bw + 0.6 + 0.8, 2.45), box(width: 1.3cm, inset: 2pt, align(center, text(size: 8pt)[*Use BAM*])))
 
     // No → CRAM
     line((bw / 2, 2.1), (bw / 2, 1.4), mark: (end: ">"), stroke: 0.8pt)
     content((bw / 2 + 0.3, 1.75), text(size: 7.5pt)[No])
     rect((0, 0.7), (bw, 1.4), fill: rgb("#d4e8d4"), stroke: 0.8pt + rgb("#0b6e4f"))
-    content((bw / 2, 1.05), text(size: 8pt)[*Use CRAM 3.1* (lossless or 8-bin lossy)])
+    content((bw / 2, 1.05), box(width: 2.8cm, inset: 2pt, align(center, text(size: 7.5pt)[*Use CRAM 3.1*\ (lossless or 8-bin lossy)])))
 
     // No ref → reference-free
     line((0, 3.5 + bh / 2), (-0.6, 3.5 + bh / 2), mark: (end: ">"), stroke: 0.8pt)
     content((-0.3, 3.5 + bh / 2 + 0.2), text(size: 7.5pt)[No])
     rect((-2.2, 3.2), (-0.6, 3.9), fill: rgb("#fbf7ef"), stroke: 0.8pt + rgb("#783f04"))
-    content((-1.4, 3.55), text(size: 7.5pt)[JARVIS3 or gzip])
+    content((-1.4, 3.55), box(width: 1.4cm, inset: 2pt, align(center, text(size: 7.5pt)[JARVIS3\ or gzip])))
   })
 )
 
@@ -831,11 +831,11 @@ together over 20 years as the bioinformatics community understood the data
 better and better.
 
 The pattern is always the same:
-1. *What varies?* Not the whole sequence — mostly just the mismatches and indels.
-2. *What is the dominant cost?* Not the bases, which compress to almost nothing —
-   it is the quality scores, which are noisy and resist compression.
+1. *What varies?* Not the whole sequence. Mostly just the mismatches and indels.
+2. *What is the dominant cost?* Not the bases, which compress to almost nothing.
+   It is the quality scores, which are noisy and resist compression.
 3. *What is acceptable to lose?* For most analyses, full 42-level quality
-   precision is not needed — 8 bins suffice.
+   precision is unnecessary. Eight bins suffice.
 4. *What infrastructure enables step 1?* The BWT/FM-index, which makes
    alignment fast enough to be practical.
 
@@ -848,8 +848,8 @@ ratios are, because the "what varies" is only 0.1%.
 
 #history[
   The *Human Genome Project*, completed in 2003, produced a reference genome
-  for the first time. That reference genome — the text that every CRAM file is
-  compressed against — was assembled from DNA donated by a small number of
+  for the first time. That reference genome (the text that every CRAM file is
+  compressed against) was assembled from DNA donated by a small number of
   individuals, and it took a decade of work by hundreds of laboratories to
   produce. Today a single sequencing run takes hours and costs $300–$1000.
   The reference genome changed compression from impossible to trivial, in the
@@ -860,8 +860,8 @@ ratios are, because the "what varies" is only 0.1%.
   the Sanger Institute in 2011. Its standardization by the *GA4GH* in 2014
   (version 2.0) and the subsequent 3.0 (2017) and 3.1 (2022) releases have
   made it the de facto archive format for human sequencing data worldwide. As
-  of 2024, the major public genome repositories — the European Nucleotide
-  Archive (ENA), NCBI's Sequence Read Archive (SRA), and the UK Biobank — all
+  of 2024, the major public genome repositories (the European Nucleotide
+  Archive (ENA), NCBI's Sequence Read Archive (SRA), and the UK Biobank) all
   store data in CRAM.
 ]
 
@@ -878,7 +878,7 @@ ratios are, because the "what varies" is only 0.1%.
   "Reference-based compression stores only the differences between each read and the reference genome; since human genomes differ by only 0.1%, the residual is tiny.",
   "CRAM separates data into independent series (positions, mismatches, quality scores, metadata) and entropy-codes each with the best-matched coder (rANS, range coder, or gzip).",
   "Quality scores dominate the file size because they are noisy and resist compression; lossy binning to 8 levels (as in CRAM's optional lossy mode) trades precision for space.",
-  "The Burrows–Wheeler Transform / FM-index from Chapter 35 reappears here as the engine of fast alignment, not compression — a reminder that the same mathematical structure can serve multiple purposes.",
+  "The Burrows-Wheeler Transform / FM-index from Chapter 35 reappears here as the engine of fast alignment, not compression. The same mathematical structure serves multiple purposes.",
   "Reference-free compressors (JARVIS3, 2024) use context mixing and repeat models to compress assembled genomes below 0.5 bits/base without needing an external reference.",
   "Neural and LLM-assisted genomic compressors (AgentGC, 2026) are improving rapidly but remain research tools; CRAM is the production workhorse.",
 ))
@@ -908,7 +908,7 @@ ratios are, because the "what varies" is only 0.1%.
 ]
 #solution("69.2")[
   (a) $Q = 30 => p = 10^(-30/10) = 10^(-3) = 0.001$ (1 in 1000 chance of error).
-  (b) Q = 28: $p = 10^(-2.8) approx 0.00158$. Q = 32: $p = 10^(-3.2) approx 0.00063$. The true probability can be off by a factor of ~2.5 if we record Q=30 for a base that was actually Q=28 or Q=32. (c) Variant callers (like GATK) use quality scores as weights in a log-likelihood model. Tests show that 8-bin quality discretization changes variant calls at a rate below clinical significance — the extra precision beyond 8 levels is measuring noise, not signal.
+  (b) Q = 28: $p = 10^(-2.8) approx 0.00158$. Q = 32: $p = 10^(-3.2) approx 0.00063$. The true probability can be off by a factor of ~2.5 if we record Q=30 for a base that was actually Q=28 or Q=32. (c) Variant callers (like GATK) use quality scores as weights in a log-likelihood model. Tests show that 8-bin quality discretization changes variant calls at a rate below clinical significance. The extra precision beyond 8 levels is measuring noise, not signal.
 ]
 
 #exercise("69.3", 2)[
@@ -921,7 +921,7 @@ ratios are, because the "what varies" is only 0.1%.
   Compare to storing the read as raw text (100 bytes).
 ]
 #solution("69.3")[
-  Expected mismatches per read: $0.003 times 100 = 0.3$ on average (we just multiply the per-base error probability by the 100 bases, using expectation as a weighted average from Chapter 10). Since each base is "correct" with probability $0.997$ and there are 100 of them, the chance a read has *zero* mismatches is $0.997^(100) approx 0.74$ — so about three-quarters of reads need no mismatch record at all. Average mismatch storage: $0.3 times 3 = 0.9$ bytes. Total per read: $16 + 0.9 approx 17$ bytes. Compared to 100 bytes raw text, this is a *5.9× compression* before any entropy coding, and before quality scores.
+  Expected mismatches per read: $0.003 times 100 = 0.3$ on average (we just multiply the per-base error probability by the 100 bases, using expectation as a weighted average from Chapter 10). Since each base is "correct" with probability $0.997$ and there are 100 of them, the chance a read has *zero* mismatches is $0.997^(100) approx 0.74$, so about three-quarters of reads need no mismatch record at all. Average mismatch storage: $0.3 times 3 = 0.9$ bytes. Total per read: $16 + 0.9 approx 17$ bytes. Compared to 100 bytes raw text, this is a *5.9× compression* before any entropy coding, and before quality scores.
 ]
 
 #exercise("69.4", 2)[
@@ -931,7 +931,7 @@ ratios are, because the "what varies" is only 0.1%.
   built on it) makes it useful for DNA alignment?
 ]
 #solution("69.4")[
-  In Chapter 35 the BWT was a way to *rearrange* a string so that identical characters cluster, helping entropy coders. The FM-index built on the BWT has a different property: it allows *backward search*, finding all occurrences of a short pattern in a long text in time proportional only to the pattern length — not the text length. This means you can find where a 150-base sequencing read matches within a 3.2-billion-base genome in roughly 150 steps, using an index that stores the compressed genome. The key property is the LF-mapping (the relationship between the first and last columns of the sorted rotations), which supports step-by-step backward induction through the text without decompressing it.
+  In Chapter 35 the BWT was a way to *rearrange* a string so that identical characters cluster, helping entropy coders. The FM-index built on the BWT has a different property: it allows *backward search*, finding all occurrences of a short pattern in a long text in time proportional only to the pattern length, not the text length. This means you can find where a 150-base sequencing read matches within a 3.2-billion-base genome in roughly 150 steps, using an index that stores the compressed genome. The key is the LF-mapping (the relationship between the first and last columns of the sorted rotations), which supports step-by-step backward induction through the text without decompressing it.
 ]
 
 #exercise("69.5", 3)[
@@ -980,7 +980,7 @@ ratios are, because the "what varies" is only 0.1%.
   print(f"Entropy of all-same: {quality_entropy(s1):.3f} bits/char")
   print(f"Entropy of varying:  {quality_entropy(s2):.3f} bits/char")
   ```
-  All-same: entropy = 0.0 bits/char (one symbol, completely predictable — a
+  All-same: entropy = 0.0 bits/char (one symbol, completely predictable, so a
   perfect compressor stores zero bits per character). Varying: each distinct
   ASCII character appears once in a 10-char string, so all probabilities are
   1/10, entropy = $log_2 10 approx 3.32$ bits/char. Higher entropy means the
@@ -992,28 +992,28 @@ ratios are, because the "what varies" is only 0.1%.
 
 - *Fritz, M. H.-Y. et al. (2011).* "Efficient storage of high throughput DNA sequencing data using reference-based compression." #link("https://genome.cshlp.org/content/21/5/734")[_Genome Research_ 21(5):734–740.] The original CRAM paper.
 
-- *GA4GH CRAM specification and myths.* #link("https://www.ga4gh.org/news/guest-post-seven-myths-about-cram-the-community-standard-for-genomic-data-compression/")[Seven myths about CRAM] (GA4GH guest post) — an excellent overview of common misunderstandings.
+- *GA4GH CRAM specification and myths.* #link("https://www.ga4gh.org/news/guest-post-seven-myths-about-cram-the-community-standard-for-genomic-data-compression/")[Seven myths about CRAM] (GA4GH guest post). An overview of common misunderstandings.
 
-- *Illumina ORA white paper.* #link("https://www.illumina.com/science/genomics-research/articles/design-ora-lossless-genomic-compression.html")["Design considerations and methodology of .ORA format."] — the productized reference-based FASTQ compressor.
+- *Illumina ORA white paper.* #link("https://www.illumina.com/science/genomics-research/articles/design-ora-lossless-genomic-compression.html")["Design considerations and methodology of .ORA format."] The productized reference-based FASTQ compressor.
 
-- *Langmead, B. & Salzberg, S. (2012).* "Fast gapped-read alignment with Bowtie 2." #link("https://www.nature.com/articles/nmeth.1923")[_Nature Methods_ 9:357–359.] — the FM-index-based aligner behind most short-read pipelines.
+- *Langmead, B. & Salzberg, S. (2012).* "Fast gapped-read alignment with Bowtie 2." #link("https://www.nature.com/articles/nmeth.1923")[_Nature Methods_ 9:357–359.] The FM-index-based aligner behind most short-read pipelines.
 
-- *Li, H. & Durbin, R. (2009).* "Fast and accurate short read alignment with Burrows–Wheeler Aligner." #link("https://academic.oup.com/bioinformatics/article/25/14/1754/225615")[_Bioinformatics_ 25(14):1754–1760.] — the BWA aligner, companion to Bowtie.
+- *Li, H. & Durbin, R. (2009).* "Fast and accurate short read alignment with Burrows-Wheeler Aligner." #link("https://academic.oup.com/bioinformatics/article/25/14/1754/225615")[_Bioinformatics_ 25(14):1754–1760.] The BWA aligner, companion to Bowtie.
 
-- *Pratas, D., Hosseini, M. & Pinho, A. J. (2024).* "JARVIS3: An efficient encoder for genomic data." #link("https://academic.oup.com/bioinformatics/article/40/12/btae725/7914925")[_Bioinformatics_ 40(12):btae725.] — the state-of-the-art reference-free compressor.
+- *Pratas, D., Hosseini, M. & Pinho, A. J. (2024).* "JARVIS3: An efficient encoder for genomic data." #link("https://academic.oup.com/bioinformatics/article/40/12/btae725/7914925")[_Bioinformatics_ 40(12):btae725.] The state-of-the-art reference-free compressor.
 
-- *AgentGC (2026).* "Evolutionary Learning-based Lossless Compression for Genomics Data with LLM-driven Multiple Agent." #link("https://arxiv.org/abs/2601.13559")[arXiv:2601.13559.] — LLM-orchestrated genomic compression.
+- *AgentGC (2026).* "Evolutionary Learning-based Lossless Compression for Genomics Data with LLM-driven Multiple Agent." #link("https://arxiv.org/abs/2601.13559")[arXiv:2601.13559.] LLM-orchestrated genomic compression.
 
-- *Hecate (2026).* "A Modular Genomic Compressor." #link("https://arxiv.org/abs/2603.15390")[arXiv:2603.15390.] — modular approach with per-segment codec selection.
+- *Hecate (2026).* "A Modular Genomic Compressor." #link("https://arxiv.org/abs/2603.15390")[arXiv:2603.15390.] Modular approach with per-segment codec selection.
 
 #bridge[
   We have just seen how reference-based compression works when the reference
-  is *another organism of the same species* — something you can store once and
+  is *another organism of the same species*, something you can store once and
   reuse forever. Chapter 70 pushes this idea even further: what if you want to
   store data *in* DNA itself, not just compress data *about* DNA? DNA data
   storage encodes arbitrary binary data as sequences of A, C, G, T, and the
-  encoding constraints — avoiding long runs, maintaining balanced GC content,
-  correcting synthesis and sequencing errors — look remarkably like the
+  encoding constraints (avoiding long runs, maintaining balanced GC content,
+  correcting synthesis and sequencing errors) look remarkably like the
   constrained-coding and error-correction problems we will see in Chapter 72.
   The same four-letter alphabet that encodes life turns out to be a compelling
   medium for archival data storage, with a theoretical density of around

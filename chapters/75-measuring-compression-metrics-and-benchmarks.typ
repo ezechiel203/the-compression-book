@@ -4,14 +4,14 @@
 = Measuring Compression: Metrics and Benchmarks
 
 #epigraph[
-  You can't improve what you can't measure — but you can fool yourself badly with the wrong measurement.
+  You can't improve what you can't measure. But you can fool yourself badly with the wrong measurement.
 ][Paraphrased from a Netflix engineering postmortem, 2015]
 
-Imagine you are a judge at a cooking competition. You taste two dishes and declare a winner. But what if one dish was saltier — and you were judging on saltiness alone? You might crown the worst-tasting food on the table. The same trap devours compression researchers every single day.
+Imagine you are a judge at a cooking competition. You taste two dishes and declare a winner. But what if one dish was saltier, and you were judging on saltiness alone? You might crown the worst-tasting food on the table. The same trap devours compression researchers every single day.
 
-A codec is a piece of software that squeezes data and then stretches it back out. How do you decide which codec is better? You measure. But measure the *wrong thing* and you reward the wrong codec, ship the wrong product, and — in the video-streaming world — waste billions of dollars sending pixels no human eye can distinguish. This chapter is about measuring right.
+A codec is a piece of software that squeezes data and then stretches it back out. How do you decide which codec is better? You measure. But measure the *wrong thing* and you reward the wrong codec, ship the wrong product, and (in the video-streaming world) waste billions of dollars sending pixels no human eye can distinguish. This chapter is about measuring right.
 
-We will cover the full hierarchy of compression metrics: the simple ratios people compute in one line of code, the rate-distortion curves that reveal how a codec behaves at every quality level, the Bjøntegaard Delta that collapses a whole curve into one honest number, and the perceptual quality metrics — SSIM, VMAF, LPIPS, DISTS — that try to quantify what your eyes actually see rather than what a formula says about pixel errors. We will also examine how benchmark corpora are designed, what pitfalls corrupt them, and how the listening and viewing tests that serve as the gold standard are run. By the end you will be able to read a codec comparison table, spot its flaws, and design a fair evaluation of your own.
+We will cover the full hierarchy of compression metrics: the simple ratios people compute in one line of code, the rate-distortion curves that reveal how a codec behaves at every quality level, the Bjøntegaard Delta that collapses a whole curve into one honest number, and the perceptual quality metrics (SSIM, VMAF, LPIPS, DISTS) that try to quantify what your eyes actually see rather than what a formula says about pixel errors. We will also examine how benchmark corpora are designed, what pitfalls corrupt them, and how the listening and viewing tests that serve as the gold standard are run. By the end you will be able to read a codec comparison table, spot its flaws, and design a fair evaluation of your own.
 
 #recap[
   Volume I (Chapters 18–19) taught us Shannon entropy: the theoretical minimum number of bits needed to represent a source. Chapters 37–42 built the DCT-based image pipeline and introduced _lossy_ compression, where we deliberately discard information to save space. Chapters 51–66 covered video codecs and neural learned compression. Chapter 73 explored the engineering of fast codecs. Chapter 74 surveyed where compression lives in the software stack. Now we zoom out and ask: once we have two codecs, how do we decide which is better?
@@ -21,7 +21,7 @@ We will cover the full hierarchy of compression metrics: the simple ratios peopl
   "Compute and interpret the four basic compression metrics: compression ratio, space savings, bits per pixel (bpp), and bits per character/byte (bpc).",
   "Read and draw rate-distortion (R-D) curves, understand what the axes mean, and explain what it means for one curve to dominate another.",
   "Explain BD-rate and BD-PSNR: what they measure, how they are calculated, and what pitfalls can make them misleading.",
-  "Compare PSNR, SSIM, MS-SSIM, VMAF, LPIPS, and DISTS — what each metric captures, where it fails, and when to use it.",
+  "Compare PSNR, SSIM, MS-SSIM, VMAF, LPIPS, and DISTS: what each metric captures, where it fails, and when to use it.",
   "Describe the gold-standard subjective evaluation methods: MOS, MUSHRA, and double-blind listening tests.",
   "Identify the classic benchmark corpora (Calgary, Canterbury, Silesia, enwik8/9) and the pitfalls of corpus selection and evaluation methodology.",
 ))
@@ -36,7 +36,7 @@ The most intuitive metric is the *compression ratio* (CR): how many bytes did we
 
 $ "CR" = ("uncompressed size (bytes)") / ("compressed size (bytes)") $
 
-If your original file is 1,000,000 bytes and the compressed version is 250,000 bytes, the compression ratio is 4.0 — sometimes written 4:1, meaning "four bytes became one." A ratio of 1.0 means no compression happened at all. A ratio below 1.0 means the compressed file is *bigger* than the original, which can genuinely happen with already-compressed or random data (see Chapter 19).
+If your original file is 1,000,000 bytes and the compressed version is 250,000 bytes, the compression ratio is 4.0, sometimes written 4:1, meaning "four bytes became one." A ratio of 1.0 means no compression happened at all. A ratio below 1.0 means the compressed file is *bigger* than the original, which can genuinely happen with already-compressed or random data (see Chapter 19).
 
 #gomaths("Ratios and percentages")[
   A *ratio* compares two quantities by division. "4:1" reads as "four to one" and means the first quantity is four times the second. To convert a ratio to a *percentage*, note that CR = 4 means the compressed file is $1/4 = 25%$ the size of the original. The percentage of the original kept is $100\% / "CR"$.
@@ -56,7 +56,7 @@ A CR of 4 gives a space savings of 75 %. A CR of 2 gives 50 %. Space savings is 
 
 === Bits Per Pixel (bpp)
 
-For images and video, the natural unit is *bits per pixel* (bpp). An uncompressed 24-bit colour image — the kind your camera produces before saving as JPEG — uses exactly 24 bpp: 8 bits each for the red, green, and blue channels. After JPEG compression at moderate quality, that same image might use 1.5 bpp to 3 bpp. The lower the bpp, the more aggressively the image has been compressed.
+For images and video, the natural unit is *bits per pixel* (bpp). An uncompressed 24-bit colour image (the kind your camera produces before saving as JPEG) uses exactly 24 bpp: 8 bits each for the red, green, and blue channels. After JPEG compression at moderate quality, that same image might use 1.5 bpp to 3 bpp. The lower the bpp, the more aggressively the image has been compressed.
 
 Bits per pixel ties compression directly to *what is being compressed* (pixels), which makes it meaningful to compare across different image sizes. Saying "our encoder uses 1.2 bpp" tells you something universal; saying "our encoder produces 100 KB files" tells you almost nothing without also knowing the image dimensions.
 
@@ -84,7 +84,7 @@ This metric surfaces in two places. In text compression benchmarks (the Calgary 
 
 === Which Metric to Use?
 
-These four metrics (CR, space savings, bpp, bpc) all measure the *same underlying thing* — how many bits the compressed representation uses — from different angles. The rule of thumb is:
+These four metrics (CR, space savings, bpp, bpc) all measure the same underlying thing from different angles: how many bits the compressed representation uses. The rule of thumb is:
 
 - Use *compression ratio* when talking about general-purpose compressors (gzip, zstd, bzip2).
 - Use *bpp* when comparing image or video codecs.
@@ -115,7 +115,7 @@ Each codec can be operated at many different quality levels by turning a "qualit
   line((0,0), (7,0), mark: (end: ">"))
   line((0,0), (0,5.5), mark: (end: ">"))
   content((3.5, -0.5), [Rate (bpp)], anchor: "north")
-  content((-0.6, 2.8), [Quality (PSNR dB)], anchor: "east", angle: 90deg)
+  content((-0.5, 2.8), text(size: 9pt)[Quality (PSNR dB)], anchor: "east", angle: 90deg)
 
   // Codec A curve (better)
   set-style(stroke: (paint: rgb("#0b5394"), thickness: 1.8pt))
@@ -147,10 +147,10 @@ Each codec can be operated at many different quality levels by turning a "qualit
 
 We say Codec A *dominates* Codec B if Codec A's R-D curve lies entirely *above and to the left* of Codec B's curve. "Above" means higher quality at the same bitrate; "to the left" means the same quality at a lower bitrate. A dominating codec is strictly better in every possible tradeoff scenario.
 
-Often the curves cross — meaning one codec wins at low bitrates and the other wins at high bitrates. In that case you cannot say one is "better" overall without knowing which bitrate range you care about.
+Often the curves cross. One codec wins at low bitrates and the other wins at high bitrates. In that case you cannot say one is "better" overall without knowing which bitrate range you care about.
 
 #keyidea[
-  The R-D curve is the *minimum* you should show when comparing lossy codecs. Any comparison that reports a single point — "our codec achieves 35 dB PSNR at 1 bpp" — is hiding the full story. Always show at least 4–5 operating points spanning the practical quality range.
+  The R-D curve is the *minimum* you should show when comparing lossy codecs. Any comparison that reports a single point ("our codec achieves 35 dB PSNR at 1 bpp") is hiding the full story. Always show at least 4–5 operating points spanning the practical quality range.
 ]
 
 === Drawing an R-D Curve in Practice
@@ -161,7 +161,7 @@ In practice, you run the encoder at several quality levels, measure the output b
   Here is a simple Python 3.14 script that collects R-D data from a hypothetical image encoder and plots the curve. The `subprocess` module runs shell commands from Python.
 
   ```python
-  # rd_plot.py — sketch of R-D data collection
+  # rd_plot.py - sketch of R-D data collection
   # Requires: pip install matplotlib
 
   import subprocess, json
@@ -202,7 +202,7 @@ In practice, you run the encoder at several quality levels, measure the output b
 
 == PSNR: The Reigning Champion with a Glass Jaw
 
-The y-axis of most R-D curves shows *PSNR* — Peak Signal-to-Noise Ratio. PSNR has dominated codec evaluation for decades. It is fast to compute, deterministic, and easy to understand. It is also, in the words of Netflix engineers, "not good enough."
+The y-axis of most R-D curves shows *PSNR* (Peak Signal-to-Noise Ratio). PSNR has dominated codec evaluation for decades. It is fast to compute, deterministic, and easy to understand. It is also, in the words of Netflix engineers, "not good enough."
 
 === What PSNR Measures
 
@@ -223,7 +223,7 @@ Higher PSNR = lower MSE = less error. Typical values for good JPEG compression a
 #gomaths("Decibels and PSNR")[
   A *decibel* (dB) is a logarithmic unit for expressing ratios. For power-like quantities, $10 log_10(x)$ converts a ratio $x$ to decibels. Doubling power adds ~3 dB; multiplying by 10 adds 10 dB.
 
-  *Why use dB for PSNR?* Human perception of image quality is roughly logarithmic — the difference between 25 dB and 26 dB looks about as significant as the difference between 35 dB and 36 dB, even though the absolute MSE change is very different.
+  *Why use dB for PSNR?* Human perception of image quality is roughly logarithmic. The difference between 25 dB and 26 dB looks about as significant as the difference between 35 dB and 36 dB, even though the absolute MSE change is very different.
 
   *Example:* If MSE = 100, then:
   $"PSNR" = 10 log_10(255^2 / 100) = 10 log_10(650.25) approx 10 times 2.813 = 28.1 "dB"$
@@ -251,10 +251,10 @@ Despite its flaws, PSNR is not useless. It is reproducible, fast, deterministic,
 
 == SSIM: Bringing in Structure
 
-In 2004, Zhou Wang, Alan Bovik, Hamid Sheikh, and Eero Simoncelli at the University of Texas / New York University published a seminal paper introducing the *Structural Similarity Index* (SSIM). Their core insight: human vision is exquisitely sensitive to structural information — edges, shapes, and spatial relationships — and a good quality metric should reflect this.
+In 2004, Zhou Wang, Alan Bovik, Hamid Sheikh, and Eero Simoncelli at the University of Texas / New York University published a seminal paper introducing the *Structural Similarity Index* (SSIM). Their core insight was that human vision is exquisitely sensitive to structural information (edges, shapes, and spatial relationships) and that a good quality metric should reflect this.
 
 #history[
-  Wang and Bovik had been collaborating since 2001 on what they called the Universal Quality Index (UQI). When they partnered with Sheikh and Simoncelli, who brought expertise in human visual neuroscience, the result was SSIM — published in _IEEE Transactions on Image Processing_, April 2004 (vol. 13, no. 4, pp. 600–612). It became one of the most cited papers in image processing, with over 60,000 citations by 2026. The core idea was deceptively simple: instead of measuring *error*, measure *similarity* along three dimensions that the human visual system cares about.
+  Wang and Bovik had been collaborating since 2001 on what they called the Universal Quality Index (UQI). When they partnered with Sheikh and Simoncelli, who brought expertise in human visual neuroscience, the result was SSIM, published in _IEEE Transactions on Image Processing_, April 2004 (vol. 13, no. 4, pp. 600–612). It became one of the most cited papers in image processing, with over 60,000 citations by 2026. The core idea was deceptively simple: instead of measuring *error*, measure *similarity* along three dimensions that the human visual system cares about.
 ]
 
 === How SSIM Works
@@ -276,7 +276,7 @@ $ "SSIM"(x, y) = ((2 mu_x mu_y + C_1)(2 sigma_(x y) + C_2)) / ((mu_x^2 + mu_y^2 
 where $mu_x, mu_y$ are local means, $sigma_x^2, sigma_y^2$ are local variances, $sigma_(x y)$ is the cross-correlation, and $C_1, C_2$ are small constants to prevent division by zero.
 
 #mathrecall[
-  $mu$ (Greek "mu") is just the *mean* — the average pixel brightness in a patch. $sigma^2$ (sigma-squared) is the *variance* — the average squared distance of pixels from that mean, a measure of how "spread out" the brightnesses are; its square root $sigma$ is the *standard deviation*, here standing in for contrast. The *cross-correlation* $sigma_(x y)$ measures whether the two patches brighten and darken *together* in the same places. All three were built from scratch in Chapter 10.
+  $mu$ (Greek "mu") is just the *mean*, the average pixel brightness in a patch. $sigma^2$ (sigma-squared) is the *variance*, the average squared distance of pixels from that mean, a measure of how "spread out" the brightnesses are; its square root $sigma$ is the *standard deviation*, here standing in for contrast. The *cross-correlation* $sigma_(x y)$ measures whether the two patches brighten and darken *together* in the same places. All three were built from scratch in Chapter 10.
 ]
 
 In practice, SSIM is computed on small local windows (typically 11×11 pixels with a Gaussian weight) across the whole image, then averaged to get a single score between 0 and 1.
@@ -304,16 +304,16 @@ A known weakness of basic SSIM is that it operates at a single spatial scale, ma
 
 == VMAF: Netflix's Machine-Learning Metric
 
-By the mid-2010s, Netflix was encoding tens of millions of videos and streaming them to millions of screens of wildly different sizes — from 4K televisions to tiny phone displays. PSNR was clearly failing: their engineers observed that videos with lower PSNR often looked *better* to viewers, especially after sharpening or denoising pre-processing steps. A better metric was needed — one trained directly to match human opinion.
+By the mid-2010s, Netflix was encoding tens of millions of videos and streaming them to millions of screens of wildly different sizes, from 4K televisions to tiny phone displays. PSNR was clearly failing: their engineers observed that videos with lower PSNR often looked *better* to viewers, especially after sharpening or denoising pre-processing steps. A better metric was needed, one trained directly to match human opinion.
 
-In 2016, Netflix released *VMAF* (Video Multimethod Assessment Fusion) as an open-source project on GitHub. VMAF's core idea is to combine multiple elementary quality metrics — including VIF (Visual Information Fidelity), detail loss measure (DLM), and motion-based features — using a *support vector machine (SVM)* trained on thousands of hours of human quality ratings (MOS scores). The training data was collected through carefully controlled subjective viewing tests at Netflix.
+In 2016, Netflix released *VMAF* (Video Multimethod Assessment Fusion) as an open-source project on GitHub. VMAF combines multiple elementary quality metrics (VIF (Visual Information Fidelity), detail loss measure (DLM), and motion-based features) using a *support vector machine (SVM)* trained on thousands of hours of human quality ratings (MOS scores). The training data was collected through carefully controlled subjective viewing tests at Netflix.
 
 #gopython("Support vector machine, in one paragraph")[
-  A *support vector machine* is a machine-learning model that learns to draw a boundary separating examples of different kinds — or, in VMAF's case, to learn a smooth function that maps a list of input numbers to one output number. You feed it a *training set*: many examples, each a list of features (here: the VIF score, the DLM score, the motion score, …) paired with the "right answer" a human gave (the MOS). The SVM then finds the weighting of those features that best reproduces the human answers, while keeping the boundary as simple as possible so it generalises to new clips it has never seen. You do not need its internals here; just hold onto the idea "a formula whose coefficients were *fitted to human ratings* rather than chosen by a theorist." That single fact — learning from people instead of from first principles — is the whole reason VMAF beats PSNR. (Chapter 56 builds the machine-learning toolkit from scratch.)
+  A *support vector machine* is a machine-learning model that learns to draw a boundary separating examples of different kinds, or, in VMAF's case, to learn a smooth function that maps a list of input numbers to one output number. You feed it a *training set*: many examples, each a list of features (here: the VIF score, the DLM score, the motion score, ...) paired with the "right answer" a human gave (the MOS). The SVM then finds the weighting of those features that best reproduces the human answers, while keeping the boundary as simple as possible so it generalises to new clips it has never seen. You do not need its internals here; just hold onto the idea "a formula whose coefficients were *fitted to human ratings* rather than chosen by a theorist." That single fact - learning from people instead of from first principles - is the whole reason VMAF beats PSNR. (Chapter 56 builds the machine-learning toolkit from scratch.)
 ]
 
 #history[
-  Netflix open-sourced VMAF in June 2016, developed primarily by Zhi Li and colleagues at Netflix. It was first deployed internally to drive encoding decisions for Netflix's own library — meaning VMAF now influences the quality of billions of video streams. In 2019, VMAF received a Technology and Engineering Emmy Award from the Academy of Television Arts and Sciences. By 2026, VMAF v2 had been released, incorporating neural network components and addressing known failure modes of the original SVM-based system. Netflix's blog post from June 2026, "VMAF v1: Good Is Not Good Enough," announced the transition to VMAF v2 for production.
+  Netflix open-sourced VMAF in June 2016, developed primarily by Zhi Li and colleagues at Netflix. It was first deployed internally to drive encoding decisions for Netflix's own library, which means VMAF now influences the quality of billions of video streams. In 2019, VMAF received a Technology and Engineering Emmy Award from the Academy of Television Arts and Sciences. By 2026, VMAF v2 had been released, incorporating neural network components and addressing known failure modes of the original SVM-based system. Netflix's blog post from June 2026, "VMAF v1: Good Is Not Good Enough," announced the transition to VMAF v2 for production.
 ]
 
 === How VMAF Is Computed
@@ -334,7 +334,7 @@ A trained SVM (or in VMAF v2, a neural network) combines these features into a s
   aim: "Predict perceptual video quality by fusing multiple elementary metrics through machine-learning, trained on human Mean Opinion Scores.",
   complexity: "$O(N)$ in pixels per frame, plus per-frame feature extraction overhead (~10–50× slower than PSNR).",
   strengths: "Best correlation with human quality judgements among objective metrics as of 2024–2026; handles sharpening, denoising, and pre-processing effects correctly; multiple models (phone, 4K) tuned to viewing conditions.",
-  weaknesses: "Computationally expensive; trained on Netflix content — may not generalise to all content types (animation, medical imaging, satellite imagery); can be gamed by adversarial pre-processing; difficult to interpret individual scores without context.",
+  weaknesses: "Computationally expensive; trained on Netflix content so may not generalise to all content types (animation, medical imaging, satellite imagery); can be gamed by adversarial pre-processing; difficult to interpret individual scores without context.",
   superseded: "Still the dominant metric for streaming; being challenged by deep-learning metrics (LPIPS, DISTS) for research.",
 )[
   VMAF is the de facto standard for video streaming quality evaluation in production environments. Encoders like FFmpeg expose `libvmaf` natively. The key lesson from VMAF's development: a metric trained on human data beats a metric derived purely from theory.
@@ -342,12 +342,12 @@ A trained SVM (or in VMAF v2, a neural network) combines these features into a s
 
 === Practical VMAF Use
 
-VMAF scores above 93 are generally considered excellent (broadcast quality or better). Scores of 70–93 are good but with visible compression artefacts in some content. Scores below 70 are noticeable quality problems. Netflix uses VMAF internally to automate bitrate-ladder decisions — choosing the optimal (bitrate, quality) operating points for each piece of content without human review.
+VMAF scores above 93 are generally considered excellent (broadcast quality or better). Scores of 70–93 are good but with visible compression artefacts in some content. Scores below 70 are noticeable quality problems. Netflix uses VMAF internally to automate bitrate-ladder decisions, choosing the optimal (bitrate, quality) operating points for each piece of content without human review.
 
 #checkpoint[
   A video encoder produces two versions of a clip: Version A achieves 36 dB PSNR and 71 VMAF; Version B achieves 34 dB PSNR and 88 VMAF. Which should you release?
 ][
-  Version B. VMAF 88 is solidly in the "good quality" range for streaming; VMAF 71 is borderline. The fact that Version A has higher PSNR is misleading — PSNR and VMAF often disagree precisely because PSNR ignores perceptual structure. Trust the perceptual metric.
+  Version B. VMAF 88 is solidly in the "good quality" range for streaming; VMAF 71 is borderline. The fact that Version A has higher PSNR is misleading. PSNR and VMAF often disagree precisely because PSNR ignores perceptual structure. Trust the perceptual metric.
 ]
 
 == LPIPS and DISTS: Deep Learning Meets Perception
@@ -356,7 +356,7 @@ The arrival of deep convolutional neural networks (CNNs) in the 2010s opened a n
 
 === LPIPS
 
-Zhang et al.'s paper, "The Unreasonable Effectiveness of Deep Features as a Perceptual Metric" (CVPR 2018), introduced *LPIPS* (Learned Perceptual Image Patch Similarity). They collected a large dataset of human quality judgements (the BAPPS dataset), then showed that comparing the *feature representations* of a pretrained VGG or AlexNet network — not the pixels themselves — aligned much more closely with human perception than PSNR, SSIM, or MS-SSIM.
+Zhang et al.'s paper, "The Unreasonable Effectiveness of Deep Features as a Perceptual Metric" (CVPR 2018), introduced *LPIPS* (Learned Perceptual Image Patch Similarity). They collected a large dataset of human quality judgements (the BAPPS dataset), then showed that comparing the *feature representations* of a pretrained VGG or AlexNet network, rather than the pixels themselves, aligned much more closely with human perception than PSNR, SSIM, or MS-SSIM.
 
 LPIPS computes a distance: two images are *far apart* in LPIPS when their feature maps differ significantly, even if their pixel values are close. This lets LPIPS correctly handle texture resynthesis (same material, different realisation) and structural differences (an edge shifted by a few pixels).
 
@@ -364,7 +364,7 @@ Lower LPIPS = more similar = better quality. Typical values are 0.0 (identical) 
 
 === DISTS
 
-*DISTS* (Deep Image Structure and Texture Similarity), introduced by Ding et al. in 2020, goes one step further. LPIPS is sensitive to the exact texture realisation — meaning that a texture patch that looks identical to human eyes but uses different random phases will get a high (bad) LPIPS score. DISTS was designed to be *texture-tolerant*: it separates structure similarity (which it penalises) from texture similarity (which it rewards even for perceptually equivalent textures). This makes DISTS particularly useful for evaluating generative compression methods, where the decoder may synthesise plausible texture rather than reconstructing it exactly.
+*DISTS* (Deep Image Structure and Texture Similarity), introduced by Ding et al. in 2020, goes one step further. LPIPS is sensitive to the exact texture realisation: a texture patch that looks identical to human eyes but uses different random phases will get a high (bad) LPIPS score. DISTS was designed to be *texture-tolerant*: it separates structure similarity (which it penalises) from texture similarity (which it rewards even for perceptually equivalent textures). This makes DISTS particularly useful for evaluating generative compression methods, where the decoder may synthesise plausible texture rather than reconstructing it exactly.
 
 #algo(
   name: "LPIPS",
@@ -373,7 +373,7 @@ Lower LPIPS = more similar = better quality. Typical values are 0.0 (identical) 
   aim: "Measure perceptual image similarity using feature maps from a deep neural network pre-trained on image classification.",
   complexity: "One forward pass through a VGG-16 network per image pair; GPU-accelerated in practice.",
   strengths: "Excellent correlation with human perceptual judgements; works across many image types and distortion types; handles texture resynthesis reasonably well.",
-  weaknesses: "Computationally expensive (requires GPU for speed); black box — hard to interpret why two scores differ; may not generalise outside the training distribution; scores are relative, not absolute.",
+  weaknesses: "Computationally expensive (requires GPU for speed); black box, hard to interpret why two scores differ; may not generalise outside the training distribution; scores are relative, not absolute.",
   superseded: "Being complemented (not replaced) by DISTS for texture-rich scenarios; FID for distribution-level comparisons in generative models.",
 )[
   LPIPS became the default perceptual metric in the neural image compression community from 2019 onward. Almost every paper in learned image compression now reports bpp, PSNR, MS-SSIM, and LPIPS as a standard set.
@@ -382,7 +382,7 @@ Lower LPIPS = more similar = better quality. Typical values are 0.0 (identical) 
 === A Practical Metric Comparison
 
 #scoreboard(
-  caption: "Quality metric properties — summary comparison",
+  caption: "Quality metric properties: summary comparison",
   [*Metric*], [*Scale*], [*Perceptual?*], [*Speed*],
   [PSNR], [0–∞ dB], [Poor], [Very fast],
   [SSIM], [0–1], [Fair], [Fast],
@@ -402,14 +402,14 @@ Suppose you are comparing Codec A and Codec B. You run each codec at four qualit
 
 BD-rate answers the question: *at the same quality level, how much fewer bits does Codec A need compared to Codec B, expressed as a percentage?*
 
-A BD-rate of −20 % means Codec A achieves the same quality as Codec B with 20 % fewer bits — a significant improvement. A BD-rate of +5 % means Codec A needs 5 % *more* bits to achieve the same quality — a regression.
+A BD-rate of -20 % means Codec A achieves the same quality as Codec B with 20 % fewer bits. A BD-rate of +5 % means Codec A needs 5 % *more* bits to achieve the same quality, which is a regression.
 
 === The History
 
 In April 2001, Gisle Bjøntegaard submitted a contribution to the ITU-T Video Coding Experts Group (VCEG) meeting in Austin, Texas. The document, ITU-T SG16 Q.6 VCEG-M33, proposed a method to "calculate the average PSNR differences between RD-curves." His key insight was to fit a *third-order polynomial* (cubic curve) through four R-D data points, compute the integral of that polynomial, and compare the integrals of two codecs. Because bitrate values span a wide range (e.g., 100 kbps to 5000 kbps), Bjøntegaard proposed using the *logarithm* of the bitrate on the x-axis, so that the integration gives equal weight to each factor-of-two change in bitrate rather than to each kilobit-per-second step.
 
 #history[
-  Gisle Bjøntegaard's 2001 document VCEG-M33 was written by hand by one person in a committee document, and initially just circulated internally within VCEG. It was never published in a journal or conference proceedings. Yet the method it proposed — now universally called *BD-rate* — became the mandatory reporting format for all major video codec standardisation bodies (ITU-T, ISO/IEC MPEG) and the de facto standard in the academic video compression literature. Bjøntegaard himself has noted the irony that one of the most widely used metrics in video compression is not a peer-reviewed paper but an internal committee memo.
+  Gisle Bjøntegaard's 2001 document VCEG-M33 was written by hand by one person in a committee document, and initially just circulated internally within VCEG. It was never published in a journal or conference proceedings. Yet the method it proposed, now universally called *BD-rate*, became the mandatory reporting format for all major video codec standardisation bodies (ITU-T, ISO/IEC MPEG) and the de facto standard in the academic video compression literature. Bjøntegaard himself has noted the irony that one of the most widely used metrics in video compression is not a peer-reviewed paper but an internal committee memo.
 ]
 
 === How BD-Rate Is Computed
@@ -419,7 +419,7 @@ The algorithm, step by step:
 1. *Choose your anchor codec* (Codec B). Encode a test clip at four quality levels (four QP values). For each, record (bitrate in kbps, PSNR in dB).
 2. *Do the same for the test codec* (Codec A).
 3. *Fit a cubic polynomial* through the four points $(log "bitrate", "PSNR")$ for each codec. Call them $f_A$ and $f_B$.
-4. *Find the overlapping PSNR range* — the range of PSNR values covered by *both* curves. This is the integration interval $[P_"min", P_"max"]$.
+4. *Find the overlapping PSNR range*: the range of PSNR values covered by *both* curves. This is the integration interval $[P_"min", P_"max"]$.
 5. *Integrate both polynomials* over that range:
    $ I_A = integral_(P_"min")^(P_"max") f_A^(-1)(p) d p, quad I_B = integral_(P_"min")^(P_"max") f_B^(-1)(p) d p $
    where $f^(-1)$ maps PSNR to log-bitrate.
@@ -441,7 +441,7 @@ A negative BD-rate means Codec A uses fewer bits (Codec A is better). A positive
   year: "2001",
   authors: "Gisle Bjøntegaard (ITU-T VCEG-M33)",
   aim: "Summarise the average bitrate difference between two R-D curves as a single percentage, integrating over quality levels.",
-  complexity: "Requires 4 operating points per codec; polynomial fitting and numerical integration — $O(1)$ computation once data is collected.",
+  complexity: "Requires 4 operating points per codec; polynomial fitting and numerical integration, $O(1)$ computation once data is collected.",
   strengths: "Standard, reproducible, accepted by ITU-T and ISO/IEC; collapses an R-D curve comparison to one number; log-bitrate axis gives equal weight to relative (not absolute) bitrate differences.",
   weaknesses: "Only valid over the overlapping PSNR/quality range; sensitive to the choice of operating points; cubic polynomial may not fit well if the R-D curve is not smooth; PSNR as the quality axis inherits all of PSNR's weaknesses; can be gamed by choosing anchor operating points strategically.",
   superseded: "Extensions use VMAF or SSIM as the y-axis; Akima spline variants address the 4-point limitation.",
@@ -451,18 +451,18 @@ A negative BD-rate means Codec A uses fewer bits (Codec A is better). A positive
 
 === BD-PSNR (the dual metric)
 
-The *dual* of BD-rate is *BD-PSNR*: at the same bitrate, how many dB of PSNR does Codec A gain compared to Codec B? A BD-PSNR of +1.5 dB means Codec A achieves 1.5 dB higher quality at the same bitrate — quite significant.
+The *dual* of BD-rate is *BD-PSNR*: at the same bitrate, how many dB of PSNR does Codec A gain compared to Codec B? A BD-PSNR of +1.5 dB means Codec A achieves 1.5 dB higher quality at the same bitrate, which is quite significant.
 
 The two metrics answer slightly different questions. BD-rate is more intuitive for bandwidth and storage engineers ("we need 20% less bandwidth"). BD-PSNR is more intuitive for quality engineers ("we get 2 dB better quality"). Mathematically, they are equivalent descriptions of the same curve-area difference.
 
 === BD-Rate Pitfalls
 
 #pitfall[
-  *Operating points outside the overlap region.* BD-rate is only defined over the PSNR range covered by both codecs. If you compare an H.264 encoder (which you tested at QP 22/27/32/37) against an AV1 encoder (which you tested at very different quality settings), the overlap region may be tiny — and the BD-rate will be computed over a narrow, possibly unrepresentative range.
+  *Operating points outside the overlap region.* BD-rate is only defined over the PSNR range covered by both codecs. If you compare an H.264 encoder (which you tested at QP 22/27/32/37) against an AV1 encoder (which you tested at very different quality settings), the overlap region may be tiny, and the BD-rate will be computed over a narrow, possibly unrepresentative range.
 ]
 
 #pitfall[
-  *Using BD-rate with a perceptual y-axis.* BD-rate was designed for PSNR. When people use it with VMAF or SSIM on the y-axis — and many do — the cubic polynomial assumptions may not hold. The "BD-VMAF" or "BD-SSIM" number can be misleading if the VMAF curve has a different shape than PSNR assumes. Check the curve shape before trusting the number.
+  *Using BD-rate with a perceptual y-axis.* BD-rate was designed for PSNR. When people use it with VMAF or SSIM on the y-axis (and many do), the cubic polynomial assumptions may not hold. The "BD-VMAF" or "BD-SSIM" number can be misleading if the VMAF curve has a different shape than PSNR assumes. Check the curve shape before trusting the number.
 ]
 
 #pitfall[
@@ -474,7 +474,7 @@ The two metrics answer slightly different questions. BD-rate is more intuitive f
 Suppose Codec A (test) and Codec B (anchor) produce the following data on a test clip:
 
 #table(
-  columns: (auto, auto, auto, auto, auto),
+  columns: (auto, 1fr, auto, 1fr, auto),
   align: (left, right, right, right, right),
   fill: (_, row) => if row == 0 { rgb("#d0e8ff") } else { none },
   table.header([*Point*], [*Rate A (kbps)*], [*PSNR A (dB)*], [*Rate B (kbps)*], [*PSNR B (dB)*]),
@@ -484,13 +484,13 @@ Suppose Codec A (test) and Codec B (anchor) produce the following data on a test
   [QP 37], [380],  [31.2], [510],  [31.0],
 )
 
-In every row, Codec A achieves essentially the same PSNR as Codec B but uses fewer bits. The BD-rate will be negative — let us estimate it crudely, the way you can sanity-check any BD-rate by hand. At QP 22, Codec A uses $3450/4200 approx 82\%$ of Codec B's bits (18% savings). At QP 37, it uses $380/510 approx 74\%$ (26% savings). The four per-row savings are about 18%, 22%, 23%, and 26%.
+In every row, Codec A achieves essentially the same PSNR as Codec B but uses fewer bits. The BD-rate will be negative. Let us estimate it crudely, the way you can sanity-check any BD-rate by hand. At QP 22, Codec A uses $3450/4200 approx 82\%$ of Codec B's bits (18% savings). At QP 37, it uses $380/510 approx 74\%$ (26% savings). The four per-row savings are about 18%, 22%, 23%, and 26%.
 
-The true BD-rate does not simply average those four numbers; it does the proper integral from step 5, fitting a smooth cubic through each codec's points and comparing the areas under them on a log-bitrate axis. But because the PSNR rows already line up almost exactly (42.1 vs 42.0, 38.4 vs 38.2, …), the integral barely has to interpolate, so it lands very close to the average of the per-row savings: roughly −22%. That is the point of the worked example — when the operating points are well matched, the intimidating integral collapses to "average the bitrate savings across the curve," and Codec A offers about a 22% bitrate saving over Codec B at equal quality. When the points are *not* well matched, the curve-fitting is exactly what saves you from comparing apples to oranges.
+The true BD-rate does not simply average those four numbers; it does the proper integral from step 5, fitting a smooth cubic through each codec's points and comparing the areas under them on a log-bitrate axis. But because the PSNR rows already line up almost exactly (42.1 vs 42.0, 38.4 vs 38.2, ...), the integral barely has to interpolate, so it lands very close to the average of the per-row savings: roughly -22%. That is the point of the worked example. When the operating points are well matched, the intimidating integral collapses to "average the bitrate savings across the curve," and Codec A offers about a 22% bitrate saving over Codec B at equal quality. When the points are *not* well matched, the curve-fitting is exactly what saves you from comparing apples to oranges.
 
 == The Gold Standard: Subjective Tests
 
-All the objective metrics above — PSNR, SSIM, VMAF, LPIPS — are *proxies* for what we actually want to measure: *what a human sees*. When it truly matters — when a video codec is being standardised, when a new audio format is being deployed, when a streaming platform is evaluating a major encoding change — the gold standard is a carefully designed *subjective evaluation test*.
+All the objective metrics above (PSNR, SSIM, VMAF, LPIPS) are *proxies* for what we actually want to measure: *what a human sees*. When it truly matters (when a video codec is being standardised, when a new audio format is being deployed, when a streaming platform is evaluating a major encoding change) the gold standard is a carefully designed *subjective evaluation test*.
 
 === Mean Opinion Score (MOS)
 
@@ -504,22 +504,22 @@ The simplest subjective metric is the *Mean Opinion Score* (MOS). Each human lis
 
 The scores from a panel of listeners (typically 20–100 people for audio; 10–30 for video) are averaged to produce the MOS. For audio, this is defined by ITU-T Recommendation P.800; for video, by ITU-T P.910.
 
-The problem with MOS is that it is *absolute* — each sample is rated in isolation, without comparison to a reference. This makes MOS less sensitive to small quality differences, because listeners calibrate their scales differently from each other. A MOS of 3.9 vs. 4.1 might not be statistically significant with a small panel.
+The problem with MOS is that it is *absolute*: each sample is rated in isolation, without comparison to a reference. This makes MOS less sensitive to small quality differences, because listeners calibrate their scales differently from each other. A MOS of 3.9 vs. 4.1 might not be statistically significant with a small panel.
 
 === MUSHRA: Finer Granularity
 
-For audio quality evaluation — the standard used in codec comparisons — the preferred method is *MUSHRA* (MUltiple Stimuli with Hidden Reference and Anchor), defined by ITU-R Recommendation BS.1534-3.
+For audio quality evaluation (the standard used in codec comparisons), the preferred method is *MUSHRA* (MUltiple Stimuli with Hidden Reference and Anchor), defined by ITU-R Recommendation BS.1534-3.
 
 In a MUSHRA test, the listener is presented simultaneously with:
 - A *reference* (the original, uncompressed audio)
-- A *hidden reference* (the original again, but unlabelled — if the listener does not rate it 90+, their session may be excluded as invalid)
+- A *hidden reference* (the original again, but unlabelled; if the listener does not rate it 90+, their session may be excluded as invalid)
 - One or more *anchors* (deliberately degraded low-quality signals, typically a 3.5 kHz low-pass filtered version of the reference, rated as "bad" anchors to calibrate the scale)
 - The *test items* (the codecs being evaluated)
 
 The listener can switch freely between all signals and assigns each a score from 0 to 100 on a continuous scale: Excellent (80–100), Good (60–80), Fair (40–60), Poor (20–40), Bad (0–20). The ability to directly compare all signals simultaneously makes MUSHRA far more sensitive than MOS for detecting small differences.
 
 #keyidea[
-  MUSHRA requires fewer participants than MOS to achieve statistical significance, typically 12–25 trained listeners for audio. The key insight is that *direct comparison* amplifies sensitivity — listeners can detect differences they could not rate reliably in isolation.
+  MUSHRA requires fewer participants than MOS to achieve statistical significance, typically 12–25 trained listeners for audio. The key insight is that *direct comparison* amplifies sensitivity. Listeners can detect differences they could not rate reliably in isolation.
 ]
 
 === Double-Blind Comparison Tests
@@ -538,17 +538,17 @@ Subjective tests are expensive: you need a controlled viewing environment, train
 
 == Benchmark Corpora: What Data Do You Test On?
 
-A metric answers "how good is this output?" A benchmark corpus answers "how good is this codec on *typical* data?" Both matter — and corpus design is a surprisingly subtle problem.
+A metric answers "how good is this output?" A benchmark corpus answers "how good is this codec on *typical* data?" Both matter, and corpus design is a surprisingly subtle problem.
 
 === The Classic Corpora
 
-*The Calgary Corpus* (1987): One of the first standardised text compression benchmarks, assembled by Tim Bell, Ian Witten, and John Cleary at the University of Calgary. It contains 18 files totalling about 3.3 MB — a mix of English text, C source code, binary executable files, scientific data, and raster images. For a decade, the Calgary corpus was the standard benchmark for lossless compression.
+*The Calgary Corpus* (1987): One of the first standardised text compression benchmarks, assembled by Tim Bell, Ian Witten, and John Cleary at the University of Calgary. It contains 18 files totalling about 3.3 MB, a mix of English text, C source code, binary executable files, scientific data, and raster images. For a decade, the Calgary corpus was the standard benchmark for lossless compression.
 
 By the mid-1990s, its problems were clear: the files were small and unrepresentative of modern data. The 3.3 MB corpus could be memorised by a sufficiently creative encoder. Researchers began training compressors on the Calgary corpus itself, defeating the purpose of an independent test.
 
 *The Canterbury Corpus* (1997): Assembled by Ross Arnold and Timothy Bell as an update to Calgary. It dropped some Calgary files, added new ones, and raised the total to about 3 MB. Better, but still small.
 
-*The Silesia Corpus* (2003): Created by Sebastian Deorowicz and Szymon Grabowski at the Silesian University of Technology as a direct response to the limitations of Calgary and Canterbury. Silesia contains 12 files totalling about 211 MB — an order of magnitude larger than Canterbury — representing modern file types: English text, XML, HTML, binary executables, a medical CT scan image, a genetics database, and more. Silesia became the standard for lossless compression benchmarks.
+*The Silesia Corpus* (2003): Created by Sebastian Deorowicz and Szymon Grabowski at the Silesian University of Technology as a direct response to the limitations of Calgary and Canterbury. Silesia contains 12 files totalling about 211 MB (an order of magnitude larger than Canterbury), representing modern file types: English text, XML, HTML, binary executables, a medical CT scan image, a genetics database, and more. Silesia became the standard for lossless compression benchmarks.
 
 *enwik8 and enwik9* (Matt Mahoney, Large Text Compression Benchmark): enwik8 is the first $10^8$ bytes of an English Wikipedia dump; enwik9 is the first $10^9$ bytes. These are the standard benchmarks for the Hutter Prize and the Large Text Compression Benchmark (LTCB), which tracks the state-of-the-art in general-purpose compression. Compressing enwik9 well is essentially equivalent to modelling the structure of human language and knowledge.
 
@@ -580,7 +580,7 @@ For most applications, decompression is in the critical path: data is compressed
   Here is a Python 3.14 script that measures the compression and decompression throughput of the `zlib` module (which implements DEFLATE, as discussed in Chapter 30) in MB/s.
 
   ```python
-  # throughput.py — measure compression speed
+  # throughput.py - measure compression speed
   import zlib, time, os
 
   def measure_throughput(data: bytes) -> dict[str, float]:
@@ -641,9 +641,9 @@ For most applications, decompression is in the critical path: data is compressed
   line(C, A)
 
   // Labels at corners
-  content(A, align(center)[*Ratio*\ (compress more)], anchor: "south", padding: 5pt)
-  content(B, align(center)[*Speed*\ (compress faster)], anchor: "east", padding: 5pt)
-  content(C, align(center)[*Memory*\ (use less RAM)], anchor: "west", padding: 5pt)
+  content(A, box(width: 3.5cm, align(center, text(size: 9pt)[*Ratio*\ (compress more)])), anchor: "south", padding: 5pt)
+  content(B, box(width: 3.5cm, align(center, text(size: 9pt)[*Speed*\ (compress faster)])), anchor: "east", padding: 5pt)
+  content(C, box(width: 3.5cm, align(center, text(size: 9pt)[*Memory*\ (use less RAM)])), anchor: "west", padding: 5pt)
 
   // Codec positions (dots)
   set-style(stroke: none)
@@ -665,7 +665,7 @@ For most applications, decompression is in the critical path: data is compressed
 
 == Common Evaluation Mistakes and How to Avoid Them
 
-This section catalogues the most frequent errors in compression benchmark papers and product comparisons — some inadvertent, some (unfortunately) deliberate.
+This section catalogues the most frequent errors in compression benchmark papers and product comparisons, some inadvertent, some (unfortunately) deliberate.
 
 === The Anchor Problem
 
@@ -714,9 +714,9 @@ After all this theory, here is a practical checklist for evaluating compression 
 
 == A Note on Neural Compression Metrics (2024–2026)
 
-As learned (neural) image and video codecs matured in Chapters 56–66, the compression community has encountered new metric challenges. Neural decoders — particularly those based on generative adversarial networks (GANs) or diffusion models — can produce images that look perceptually excellent but fail traditional metrics badly.
+As learned (neural) image and video codecs matured in Chapters 56–66, the compression community has encountered new metric challenges. Neural decoders (particularly those based on generative adversarial networks (GANs) or diffusion models) can produce images that look perceptually excellent but fail traditional metrics badly.
 
-Consider: a generative image codec at very low bitrates might decode a compressed landscape photo into a beautiful, sharp image with plausible grass and sky — but with completely different grass blades than the original. A human finds this indistinguishable from high quality. PSNR would give it a catastrophic score; MS-SSIM would give it a mediocre score; LPIPS would score it much better; DISTS would score it best of all.
+Consider a generative image codec at very low bitrates. It might decode a compressed landscape photo into a beautiful, sharp image with plausible grass and sky, but with completely different grass blades than the original. A human finds this indistinguishable from high quality. PSNR would give it a catastrophic score; MS-SSIM would give it a mediocre score; LPIPS would score it much better; DISTS would score it best of all.
 
 This has led to the *rate-distortion-perception trade-off*, formalised by Blau and Michaeli (2019) and further extended in 2024–2026 work. The key finding: *there is a fundamental tension between minimising distortion (matching the original pixel-by-pixel) and maximising perceptual quality (producing the most realistic-looking image)*. You cannot perfectly optimise both simultaneously. The choice of which metric you optimise determines which trade-off you land on.
 
@@ -725,14 +725,14 @@ This has led to the *rate-distortion-perception trade-off*, formalised by Blau a
 ]
 
 #takeaways((
-  "The four basic compression metrics — compression ratio, space savings, bpp, and bpc — all measure how many bits the compressed output uses; none measure quality.",
+  "The four basic compression metrics (compression ratio, space savings, bpp, and bpc) all measure how many bits the compressed output uses; none measure quality.",
   "An R-D curve plots quality (y-axis) against bitrate (x-axis) across many operating points. One curve dominates another when it lies entirely above-and-to-the-left. Always show curves, not single points.",
   "PSNR is fast and reproducible but poorly correlated with human perception; it is blind to spatial structure and easily fooled by texture resynthesis or small shifts.",
   "SSIM and MS-SSIM improved on PSNR by comparing luminance, contrast, and structural similarity in local windows. They correlate better with human quality ratings.",
   "VMAF (Netflix, 2016) uses machine learning trained on human opinion scores and is now the de facto standard for streaming video quality evaluation.",
   "LPIPS (CVPR 2018) and DISTS (2020) use deep network feature maps as a distance metric; DISTS is especially appropriate when texture resynthesis is acceptable.",
   "BD-rate (Bjøntegaard, ITU-T VCEG-M33, 2001) summarises the average bitrate savings between two R-D curves as a single percentage. A negative BD-rate means the test codec saves bits. Always check the anchor, the operating points, and the quality metric on the y-axis.",
-  "Subjective tests — MOS and MUSHRA — are the gold standard. MUSHRA is more sensitive than MOS because it uses direct comparison and a 0–100 scale.",
+  "Subjective tests (MOS and MUSHRA) are the gold standard. MUSHRA is more sensitive than MOS because it uses direct comparison and a 0-100 scale.",
   "Corpus design is as important as metric choice. Benchmark on diverse, held-out data. Match corpus content type to your application. Report both compression ratio and throughput.",
   "For generative neural codecs, traditional distortion metrics (PSNR, SSIM) can be misleading. DISTS, FID, and user studies are more appropriate.",
 ))
@@ -754,7 +754,7 @@ This has led to the *rate-distortion-perception trade-off*, formalised by Blau a
 
   (c) Total pixels = 1920 × 1080 = 2,073,600. JPEG size in bits = 320,000 bytes × 8 = 2,560,000 bits. bpp = 2,560,000 / 2,073,600 ≈ 1.23 bpp.
 
-  (d) The original 24 bpp has been reduced to 1.23 bpp — a factor of ~19.5× reduction. JPEG at quality 75 achieves substantial compression while typically retaining visually acceptable quality.
+  (d) The original 24 bpp has been reduced to 1.23 bpp, a factor of approximately 19.5x reduction. JPEG at quality 75 achieves substantial compression while typically retaining visually acceptable quality.
 ]
 
 #exercise("75.2", 1)[
@@ -783,20 +783,20 @@ This has led to the *rate-distortion-perception trade-off*, formalised by Blau a
   A paper reports: "Our codec achieves a BD-rate of −22% versus H.264." A critic says: "This result is meaningless without more information." What three specific pieces of information should the paper have disclosed to make the BD-rate claim verifiable?
 ]
 #solution("75.4")[
-  At minimum, the paper should disclose: (1) *The anchor encoder settings* — which H.264 encoder (libx264? JM reference?), at which presets and QP values; (2) *The quality metric on the y-axis* — was this BD-rate computed with PSNR, VMAF, or SSIM on the y-axis? The choice matters significantly; (3) *The test content* — which sequences, at which resolutions and frame rates. A −22% BD-rate on 4K film content is very different from −22% on 720p animation. Without these three disclosures, the result cannot be reproduced or trusted.
+  At minimum, the paper should disclose: (1) *The anchor encoder settings*: which H.264 encoder (libx264? JM reference?), at which presets and QP values; (2) *The quality metric on the y-axis*: was this BD-rate computed with PSNR, VMAF, or SSIM on the y-axis? The choice matters significantly; (3) *The test content*: which sequences, at which resolutions and frame rates. A -22% BD-rate on 4K film content is very different from -22% on 720p animation. Without these three disclosures, the result cannot be reproduced or trusted.
 ]
 
 #exercise("75.5", 2)[
   Design a benchmark for evaluating a new *audio codec* intended for voice calls (not music). Specify: (a) the corpus you would use, (b) the objective metrics you would report, (c) the subjective test methodology, and (d) one pitfall you would specifically guard against.
 ]
 #solution("75.5")[
-  (a) *Corpus:* Use standard speech corpora — the ITU-T P.50 appendix synthetic sentences, or the TIMIT dataset, supplemented with real-world captures covering different speaking rates, accents, and background noise conditions. Target bitrates of 6–32 kbps. Avoid music (out of scope).
+  (a) *Corpus:* Use standard speech corpora: the ITU-T P.50 appendix synthetic sentences, or the TIMIT dataset, supplemented with real-world captures covering different speaking rates, accents, and background noise conditions. Target bitrates of 6–32 kbps. Avoid music (out of scope).
 
   (b) *Objective metrics:* PESQ (ITU-T P.862 / P.862.2), ViSQOL (Google's neural MOS predictor), and WER (Word Error Rate) of a standard ASR model as a functional quality measure.
 
   (c) *Subjective:* A MUSHRA test (ITU-R BS.1534-3) with at least 20 trained listeners, using the original wideband speech as the reference, a 3.5 kHz lowpass-filtered anchor, and all codecs as stimuli. Rate each 8-second clip on the 0–100 scale.
 
-  (d) *Pitfall:* Avoid evaluating only on the specific accent/dialect used in the training corpus — neural codecs can learn accent-specific shortcuts. Include at least 3 distinct accents/languages in the evaluation.
+  (d) *Pitfall:* Avoid evaluating only on the specific accent/dialect used in the training corpus. Neural codecs can learn accent-specific shortcuts. Include at least 3 distinct accents/languages in the evaluation.
 ]
 
 #exercise("75.6", 3)[
@@ -838,26 +838,26 @@ This has led to the *rate-distortion-perception trade-off*, formalised by Blau a
 
 == Further Reading
 
-- #link("https://medium.com/innovation-labs-blog/bjontegaard-delta-rate-metric-c8c82c1bc42c")[Sharabayko, M. "Bjøntegaard Delta-Rate Metric." Medium, Innovation Labs Blog.] — Accessible explanation of BD-rate with numeric examples.
+- #link("https://medium.com/innovation-labs-blog/bjontegaard-delta-rate-metric-c8c82c1bc42c")[Sharabayko, M. "Bjøntegaard Delta-Rate Metric." Medium, Innovation Labs Blog.] Accessible explanation of BD-rate with numeric examples.
 
-- #link("https://arxiv.org/pdf/2401.04039")[Bjøntegaard Delta (BD): A Tutorial Overview of the Metric, Evolution, Challenges, and Recommendations. arXiv:2401.04039, 2024.] — Comprehensive 2024 survey of BD-rate's history, variants, and pitfalls; highly recommended before writing a codec paper.
+- #link("https://arxiv.org/pdf/2401.04039")[Bjøntegaard Delta (BD): A Tutorial Overview of the Metric, Evolution, Challenges, and Recommendations. arXiv:2401.04039, 2024.] Comprehensive 2024 survey of BD-rate's history, variants, and pitfalls; highly recommended before writing a codec paper.
 
-- #link("https://www.reznik.org/papers/MHV22_BD_BR-CameraReady.pdf")[Reznik et al. "Revisiting Bjøntegaard Delta Bitrate (BD-BR) Computation for Codec Compression Efficiency Comparison." Mile-High Video 2022.] — Identifies numerical problems in the original BD-rate formula and proposes corrections.
+- #link("https://www.reznik.org/papers/MHV22_BD_BR-CameraReady.pdf")[Reznik et al. "Revisiting Bjøntegaard Delta Bitrate (BD-BR) Computation for Codec Compression Efficiency Comparison." Mile-High Video 2022.] Identifies numerical problems in the original BD-rate formula and proposes corrections.
 
-- #link("https://www.cns.nyu.edu/pub/lcv/wang03-preprint.pdf")[Wang, Z., Bovik, A. C., Sheikh, H. R. & Simoncelli, E. P. "Image Quality Assessment: From Error Visibility to Structural Similarity." IEEE TIP, April 2004.] — The original SSIM paper; clear and accessible.
+- #link("https://www.cns.nyu.edu/pub/lcv/wang03-preprint.pdf")[Wang, Z., Bovik, A. C., Sheikh, H. R. & Simoncelli, E. P. "Image Quality Assessment: From Error Visibility to Structural Similarity." IEEE TIP, April 2004.] The original SSIM paper; clear and accessible.
 
-- #link("https://netflixtechblog.com/toward-a-better-quality-metric-for-the-video-community-7ed94e752a30")[Netflix Technology Blog. "Toward a Better Quality Metric for the Video Community." 2016.] — Netflix's original VMAF announcement with motivation and technical overview.
+- #link("https://netflixtechblog.com/toward-a-better-quality-metric-for-the-video-community-7ed94e752a30")[Netflix Technology Blog. "Toward a Better Quality Metric for the Video Community." 2016.] Netflix's original VMAF announcement with motivation and technical overview.
 
-- #link("https://richzhang.github.io/PerceptualSimilarity/index_files/poster_cvpr.pdf")[Zhang, R., Isola, P., Efros, A. A., Shechtman, E. & Wang, O. "The Unreasonable Effectiveness of Deep Features as a Perceptual Metric." CVPR 2018.] — Introduces LPIPS; demonstrates that deep features beat hand-crafted metrics for perceptual similarity.
+- #link("https://richzhang.github.io/PerceptualSimilarity/index_files/poster_cvpr.pdf")[Zhang, R., Isola, P., Efros, A. A., Shechtman, E. & Wang, O. "The Unreasonable Effectiveness of Deep Features as a Perceptual Metric." CVPR 2018.] Introduces LPIPS; demonstrates that deep features beat hand-crafted metrics for perceptual similarity.
 
-- #link("https://arxiv.org/pdf/2211.12109")[Video compression dataset and benchmark of learning-based video-quality metrics. arXiv:2211.12109.] — Systematic evaluation of how well objective metrics predict human quality judgements for compressed video.
+- #link("https://arxiv.org/pdf/2211.12109")[Video compression dataset and benchmark of learning-based video-quality metrics. arXiv:2211.12109.] Systematic evaluation of how well objective metrics predict human quality judgements for compressed video.
 
-- #link("https://arxiv.org/html/2409.08772")[The Practice of Averaging Rate-Distortion Curves over Testsets Can Cause Misleading Conclusions. arXiv:2409.08772, 2024.] — Important methodological warning for neural codec evaluators.
+- #link("https://arxiv.org/html/2409.08772")[The Practice of Averaging Rate-Distortion Curves over Testsets Can Cause Misleading Conclusions. arXiv:2409.08772, 2024.] Important methodological warning for neural codec evaluators.
 
-- #link("https://handwiki.org/wiki/Silesia_corpus")[Silesia corpus — HandWiki.] — History and contents of the standard lossless compression benchmark corpus.
+- #link("https://handwiki.org/wiki/Silesia_corpus")[Silesia corpus, HandWiki.] History and contents of the standard lossless compression benchmark corpus.
 
-- #link("http://www.mattmahoney.net/dc/text.html")[Mahoney, M. Large Text Compression Benchmark (enwik8/enwik9).] — The leaderboard that has tracked the state-of-the-art in text compression since 2006.
+- #link("http://www.mattmahoney.net/dc/text.html")[Mahoney, M. Large Text Compression Benchmark (enwik8/enwik9).] The leaderboard tracking the state of the art in text compression since 2006.
 
 #bridge[
-  We now have a complete toolkit for measuring compression honestly: basic metrics, R-D curves, BD-rate, perceptual quality metrics, and subjective tests. The next chapter zooms out from the technical to the human. Chapter 76, "A People's History of Compression," tells the story of the inventors behind every algorithm we have studied — Shannon working alone at Bell Labs, Huffman racing against a deadline, Lempel and Ziv corresponding across the world, and the dozens of engineers and researchers whose names rarely appear in headlines but whose work runs invisibly inside every device you own.
+  We now have a complete toolkit for measuring compression honestly: basic metrics, R-D curves, BD-rate, perceptual quality metrics, and subjective tests. The next chapter zooms out from the technical to the human. Chapter 76, "A People's History of Compression," tells the story of the inventors behind every algorithm we have studied. Shannon working alone at Bell Labs, Huffman racing against a deadline, Lempel and Ziv corresponding across the world, and the dozens of engineers and researchers whose names rarely appear in headlines but whose work runs invisibly inside every device you own.
 ]

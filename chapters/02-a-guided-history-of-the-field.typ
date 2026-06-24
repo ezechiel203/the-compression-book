@@ -5,12 +5,12 @@
 
 #epigraph[The past is never dead. It's not even past.][William Faulkner]
 
-Imagine you are a telegraph operator in 1844. A customer hands you a message: "SEND HELP IMMEDIATELY FATHER ILL." You will charge by the word, so the customer has already compressed their panic into eleven. Now imagine you have a machine that could shrink those words further — automatically, without losing a letter. How far could you go? And who figured it out?
+Imagine you are a telegraph operator in 1844. A customer hands you a message: "SEND HELP IMMEDIATELY FATHER ILL." You will charge by the word, so the customer has already compressed their panic into eleven. Now imagine you have a machine that could shrink those words further, automatically, without losing a letter. How far could you go? And who figured it out?
 
-That question took roughly 175 years to answer, and the journey is one of the great stories in the history of ideas. This chapter is your map. We will move fast — one date, one name, one breakthrough per stop — because the goal right now is orientation, not depth. Every section you read here will expand into a full chapter later in the book. Think of this as a first viewing of a city from a helicopter: you won't know every street yet, but you'll never be lost again.
+That question took roughly 175 years to answer, and the journey is one of the great stories in the history of ideas. This chapter is your map. We will move fast (one date, one name, one breakthrough per stop), because the goal right now is orientation, not depth. Every section you read here will expand into a full chapter later in the book. Think of this as a first viewing of a city from a helicopter: you won't know every street yet, but you'll never be lost again.
 
 #recap[
-  In Chapter 1 we established the big picture: compression is the art of finding and removing redundancy, it splits into lossless (bit-perfect) and lossy (approximate) families, and the field rests on two pillars — a mathematical model of the data and a coder that turns that model into bits. We also introduced tinyzip, the running Python project. Now we place all of that in time.
+  In Chapter 1 we established the big picture: compression is the art of finding and removing redundancy, it splits into lossless (bit-perfect) and lossy (approximate) families, and the field rests on two pillars: a mathematical model of the data and a coder that turns that model into bits. We also introduced tinyzip, the running Python project. Now we place all of that in time.
 ]
 
 #objectives((
@@ -27,9 +27,9 @@ Long before computers existed, humans faced the same compression problem: how do
 
 === The Telegraph and Morse Code (1837–1844)
 
-Samuel Morse and Alfred Vail built the first practical electrical telegraph in the late 1830s. Their insight about efficiency was simple but genuine: common letters should have short codes. The letter E — the most frequent letter in English — became a single dot. The letter Z, rare in everyday prose, became dot-dot-dot-dot in early Morse, and was later swapped to the familiar dash-dash-dot-dot. Vail reportedly counted the letter-frequency distribution by visiting a printing shop and counting the type-case: more type of a letter meant it appeared more often, so it deserved a shorter code.
+Samuel Morse and Alfred Vail built the first practical electrical telegraph in the late 1830s. Their insight about efficiency was simple but genuine: common letters should have short codes. The letter E (the most frequent letter in English) became a single dot. The letter Z, rare in everyday prose, became dot-dot-dot-dot in early Morse, and was later swapped to the familiar dash-dash-dot-dot. Vail reportedly determined letter frequency by visiting a printing shop and counting the type-case: more type of a letter meant it appeared more often, so it deserved a shorter code.
 
-This is Huffman coding, two centuries early, done by hand. Vail and Morse lacked the mathematics to prove their code was optimal — that would wait for 1952 — but they had the right instinct.
+This is Huffman coding, two centuries early, done by hand. Vail and Morse lacked the mathematics to prove their code was optimal (that proof would wait until 1952), but they had the right instinct.
 
 #algo(
   name: "Morse Code",
@@ -41,7 +41,7 @@ This is Huffman coding, two centuries early, done by hand. Vail and Morse lacked
   weaknesses: "Not uniquely decodable without inter-symbol gaps; not proved optimal; no formal model of the source",
   superseded: "Huffman coding (1952) for digital systems; Morse still used in amateur radio",
 )[
-  Morse is the world's first deployed variable-length code and the clearest proof that the core idea of compression — assign short codewords to common symbols — predates the computer by a century. It also illustrates why informal intuition, though powerful, is not enough: it took until 1952 to prove that the greedy approach is provably optimal, and until 1948 to even define what "optimal" means.
+  Morse is the world's first deployed variable-length code and the clearest proof that compression's core idea (assign short codewords to common symbols) predates the computer by a century. It also illustrates why informal intuition, though powerful, is not enough: it took until 1952 to prove that the greedy approach is provably optimal, and until 1948 to even define what "optimal" means.
 ]
 
 === Shorthand and Pre-Digital Compression
@@ -56,18 +56,18 @@ Neither telegraphy nor shorthand had a theory behind them. They were engineering
 
 On July 12, 1948, the Bell System Technical Journal published Part I of a paper called "A Mathematical Theory of Communication" by Claude Elwood Shannon, a 32-year-old mathematician at Bell Telephone Laboratories in New Jersey. Part II followed in October. The two parts together are arguably the most important scientific paper of the twentieth century for information technology.
 
-Shannon had been thinking since the early 1940s. During World War II he worked on cryptography — the science of hiding information — and realized that hiding information and compressing it were deeply related: both involve removing predictable patterns. He was also influenced by earlier quantitative work from Nyquist (1924) and Hartley (1928) at Bell Labs, who had studied how much information a telegraph channel could carry.
+Shannon had been thinking since the early 1940s. During World War II he worked on cryptography (the science of hiding information) and realized that hiding information and compressing it were deeply related: both involve removing predictable patterns. He was also influenced by earlier quantitative work from Nyquist (1924) and Hartley (1928) at Bell Labs, who had studied how much information a telegraph channel could carry.
 
 Shannon's breakthrough was to refuse to care about meaning. To him, a message was simply a sequence of symbols drawn at random from some probability distribution. The right measure of how much information it contained, he argued, was how much it *surprised* you. A common event carries little information (you already expected it); a rare event carries a lot. He turned this intuition into a formula and called the resulting quantity *entropy*, borrowing the word from thermodynamics.
 
 #gomaths("What entropy measures")[
-  This box previews two pieces of notation — the logarithm $log_2$ and the sum symbol $sum$ — that we build from scratch later (logarithms in Chapter 7, sums in Chapter 11). You can skip every box like this and the main story still reads cleanly. But here is just enough to follow along.
+  This box previews two pieces of notation (the logarithm $log_2$ and the sum symbol $sum$) that we build from scratch later (logarithms in Chapter 7, sums in Chapter 11). You can skip every box like this and the main story still reads cleanly. But here is just enough to follow along.
 
   A *probability* $p$ is a number between 0 and 1 saying how likely something is: a fair coin lands heads with probability $p = 0.5$, a fair die shows a 3 with probability $p = 1\/6 approx 0.167$. (We build probability properly in Chapter 9.)
 
   The *base-2 logarithm* $log_2(x)$ answers one question: "$2$ to what power gives $x$?" So $log_2(2) = 1$ (because $2^1 = 2$), $log_2(8) = 3$ (because $2^3 = 8$), and $log_2(1) = 0$ (because $2^0 = 1$). It is the natural way to count bits, because each extra bit doubles how many things you can name.
 
-  Now the idea. Imagine a coin. If it is fair (50% heads, 50% tails), each flip surprises you a lot — you have no idea what's coming. If it is a trick coin that always lands heads, each flip surprises you not at all.
+  Now the idea. Imagine a coin. If it is fair (50% heads, 50% tails), each flip surprises you a lot. You have no idea what's coming. If it is a trick coin that always lands heads, each flip surprises you not at all.
 
   Shannon measured the surprise of a single event with probability $p$ as:
 
@@ -79,12 +79,12 @@ Shannon's breakthrough was to refuse to care about meaning. To him, a message wa
 
   $ H = -sum_i p_i log_2 p_i $
 
-  Read aloud: "for each outcome $i$, multiply its probability $p_i$ by its surprise $log_2(1\/p_i)$, then add them all together." For a fair coin (two outcomes, each $p = 0.5$): $H = -(0.5 log_2 0.5 + 0.5 log_2 0.5) = 1$ bit. For a coin that shows heads 99% of the time: $H approx 0.08$ bits — almost no uncertainty.
+  Read aloud: "for each outcome $i$, multiply its probability $p_i$ by its surprise $log_2(1\/p_i)$, then add them all together." For a fair coin (two outcomes, each $p = 0.5$): $H = -(0.5 log_2 0.5 + 0.5 log_2 0.5) = 1$ bit. For a coin that shows heads 99% of the time: $H approx 0.08$ bits, almost no uncertainty.
 
   The key takeaway: entropy tells you, in bits, *how unpredictable* a source is. It is the theoretical minimum number of bits you need per symbol to describe the source losslessly. You will encounter this formula constantly throughout the book; Chapter 18 derives it carefully from first principles.
 ]
 
-Shannon's source coding theorem (proved in the same 1948 paper) made entropy useful: it said that the average number of bits per symbol in any lossless code must be at least $H$ bits, and you can get as close to $H$ as you like by coding long enough sequences together. This set compression's fundamental limit. It also defined *redundancy* — the gap between what you use and what $H$ says you need — as exactly the thing to eliminate.
+Shannon's source coding theorem (proved in the same 1948 paper) made entropy useful: it said that the average number of bits per symbol in any lossless code must be at least $H$ bits, and you can get as close to $H$ as you like by coding long enough sequences together. This set compression's fundamental limit. It also defined *redundancy* as exactly the thing to eliminate: the gap between what you use and what $H$ says you need.
 
 #keyidea[
   Shannon entropy $H$ is compression's speed of light: an absolute lower bound you can approach but never beat (for a fixed probabilistic model of the data). Every lossless compressor in this book is, in essence, an attempt to close the gap between its actual bit rate and $H$.
@@ -93,22 +93,22 @@ Shannon's source coding theorem (proved in the same 1948 paper) made entropy use
 Shannon also sketched, in 1948, the idea of *lossy* compression: if you allow some error, you can go even lower. He formalized this as *rate–distortion theory* in a 1959 paper, which gave us the theoretical basis for JPEG, MP3, and everything in between.
 
 #history[
-  Shannon credits some intellectual debt to Harry Nyquist's 1924 paper "Certain Factors Affecting Telegraph Speed" and Ralph Hartley's 1928 "Transmission of Information." Hartley's formula $I = n log_2 s$ (for $n$ symbols from an alphabet of size $s$) was the precursor to entropy, but without probability — Hartley assumed all messages were equally likely. Shannon's leap was to weight by probability, which made the theory both more general and more powerful. Shannon himself said he chose the name "entropy" because John von Neumann told him: "Call it entropy — no one knows what entropy really is, so in a debate you will always have the advantage."
+  Shannon credits some intellectual debt to Harry Nyquist's 1924 paper "Certain Factors Affecting Telegraph Speed" and Ralph Hartley's 1928 "Transmission of Information." Hartley's formula $I = n log_2 s$ (for $n$ symbols from an alphabet of size $s$) was the precursor to entropy, but it lacked probability: Hartley assumed all messages were equally likely. Shannon's leap was to weight by probability, which made the theory more general and more powerful. Shannon himself said he chose the name "entropy" because John von Neumann told him: "Call it entropy - no one knows what entropy really is, so in a debate you will always have the advantage."
 ]
 
 == The First Algorithms: Huffman vs. Shannon (1948–1952)
 
-Shannon's 1948 paper contained not just the theory but also a practical code: the *Shannon–Fano* code, which Shannon developed with Robert Fano. The idea was to sort symbols by frequency and divide the list repeatedly in half, assigning 0 to one half and 1 to the other. It worked, and it was close to optimal — but not quite.
+Shannon's 1948 paper contained not just the theory but also a practical code: the *Shannon–Fano* code, which Shannon developed with Robert Fano. The idea was to sort symbols by frequency and divide the list repeatedly in half, assigning 0 to one half and 1 to the other. It worked, and it was close to optimal. But not quite.
 
 In 1951, Robert Fano taught an information theory course at MIT. For the final exam, students could either take a traditional test or work on an open problem. David Huffman, a doctoral student, chose the open problem: find the optimal prefix code. The rest of the class worked on improving Shannon–Fano; Huffman started fresh. After months of failing to prove that any known approach was optimal, he was about to give up when, late one night, the greedy solution came to him: always merge the two least-probable symbols first.
 
-He went to Fano the next morning. Fano's own approach — which he had been working on for years — was demonstrably suboptimal. The student had beaten the professor. Huffman's paper, "A Method for the Construction of Minimum-Redundancy Codes," appeared in the Proceedings of the IRE in September 1952.
+He went to Fano the next morning. Fano's own approach, which he had been working on for years, was demonstrably suboptimal. The student had beaten the professor. Huffman's paper, "A Method for the Construction of Minimum-Redundancy Codes," appeared in the Proceedings of the IRE in September 1952.
 
 #aside[
-  Huffman later said he might never have found the solution if he hadn't been under the pressure of a deadline. He was a humble man who rarely lectured on his discovery, preferring to let others teach it. When colleagues urged him to file a patent — which would have given him substantial royalties, since Huffman codes went on to appear in virtually every compressor ever built — he declined, preferring that the discovery remain freely available to all.
+  Huffman later said he might never have found the solution if he hadn't been under the pressure of a deadline. He was a humble man who rarely lectured on his discovery, preferring to let others teach it. When colleagues urged him to file a patent (which would have given him substantial royalties, since Huffman codes went on to appear in virtually every compressor ever built), he declined, preferring that the discovery remain freely available to all.
 ]
 
-Huffman coding is the subject of Chapter 24. For now the punchline is: it produces a code where the most common symbols get the fewest bits, and it is provably optimal among all *prefix codes* (codes where no codeword is a prefix of another). The algorithm runs in what computer scientists write as $O(n log n)$ time — a shorthand (taught from scratch in Chapter 14) meaning the work grows just a little faster than the size $n$ of the input, i.e. it is fast and practical. Its weakness — that it must know the probabilities in advance and that fractional bits are wasted when $log_2 (1\/p)$ is not an integer — would motivate the arithmetic coding work of the 1970s.
+Huffman coding is the subject of Chapter 24. For now the punchline is: it produces a code where the most common symbols get the fewest bits, and it is provably optimal among all *prefix codes* (codes where no codeword is a prefix of another). The algorithm runs in what computer scientists write as $O(n log n)$ time, a shorthand (taught from scratch in Chapter 14) meaning the work grows just a little faster than the size $n$ of the input, i.e. it is fast and practical. Two weaknesses limited it: it must know the probabilities in advance, and fractional bits are wasted when $log_2 (1\/p)$ is not an integer. Both of these drove the arithmetic coding work of the 1970s.
 
 == Redundancy in Practice: The 1950s–1970s
 
@@ -118,35 +118,35 @@ Shannon had provided the theory. The 1950s and 1960s were a quiet period: comput
 
 The simplest idea that actually works: if the same symbol appears many times in a row, say the number of repetitions rather than the symbol itself. A sequence like AAAAAAAABBBB becomes "8A4B." This is *run-length encoding* (RLE), and it was in practical use from the earliest days of fax machines and computer graphics. The CCITT Group 3 fax standard (1980) is built on RLE: a scanned black-and-white page is mostly white, so runs of white pixels compress enormously.
 
-RLE appears inside many later systems — bzip2 uses it, JPEG uses a variant for runs of zero coefficients — and it will reappear throughout the book. It is always the baseline, the simplest possible thing that removes repetition.
+RLE appears inside many later systems (bzip2 uses it, JPEG uses a variant for runs of zero coefficients) and will reappear throughout the book. It is always the baseline, the simplest possible thing that removes repetition.
 
 === Arithmetic Coding: The Idea (1960s–1970s)
 
-Huffman coding's flaw is that it must assign a whole number of bits to each symbol. If a symbol has probability 0.999, Huffman must give it at least 1 bit, when the information content is only $-log_2(0.999) approx 0.0014$ bits — a factor of 700× waste. The fix is to code the *entire message* as a single number in the interval $[0, 1)$, choosing a sub-interval for each symbol proportional to its probability.
+Huffman coding's flaw is that it must assign a whole number of bits to each symbol. If a symbol has probability 0.999, Huffman must give it at least 1 bit, when the information content is only $-log_2(0.999) approx 0.0014$ bits, a factor of 700x waste. The fix is to code the *entire message* as a single number in the interval $[0, 1)$, choosing a sub-interval for each symbol proportional to its probability.
 
 This idea was floating around in the 1960s. Peter Elias at MIT described it informally around 1963 (without publishing). Independently, Jorma Rissanen and Richard Pasco at IBM Research published practical finite-precision implementations in 1976. Ian Witten, Radford Neal, and John Cleary published the landmark practical implementation in the *Communications of the ACM* in 1987, the version most textbooks describe.
 
-The arithmetic coding story is threaded with patent drama that will occupy a full chapter (Chapter 26). The short version: IBM and others filed patents on arithmetic coding variants throughout the 1980s and early 1990s, which led the bzip2 author (Julian Seward) to deliberately avoid it in 1996 by using Huffman instead. The patents lapsed around 2007, by which point the ecosystem had mostly moved on. Then in 2022, Microsoft filed a new patent on a variant of ANS — a story we reach in a moment.
+The arithmetic coding story is threaded with patent drama that will occupy a full chapter (Chapter 26). The short version: IBM and others filed patents on arithmetic coding variants throughout the 1980s and early 1990s, which led the bzip2 author (Julian Seward) to deliberately avoid it in 1996 by using Huffman instead. The patents lapsed around 2007, by which point the ecosystem had mostly moved on. Then in 2022, Microsoft filed a new patent on a variant of ANS, a story we reach shortly.
 
 == The Dictionary Revolution: Ziv and Lempel (1977–1978)
 
 In 1977, Abraham Lempel and Jacob Ziv at the Technion in Israel published "A Universal Algorithm for Sequential Data Compression" in *IEEE Transactions on Information Theory*. In 1978 they published a follow-up. The two papers are universally called LZ77 and LZ78.
 
-Their insight was fundamentally different from everything before it. Huffman and arithmetic coding are *statistical* methods: they exploit the frequency of individual symbols. Ziv and Lempel proposed *dictionary* methods: look for repeated *strings* — sequences of symbols that appeared earlier in the data — and encode them as references to those previous occurrences. The first time you see the word "compression" in a document you must spell it out; the second time you can write "go back 47 characters and copy the next 11."
+Their insight was fundamentally different from everything before it. Huffman and arithmetic coding are *statistical* methods: they exploit the frequency of individual symbols. Ziv and Lempel proposed *dictionary* methods: look for repeated *strings* (sequences of symbols that appeared earlier in the data) and encode them as references to those previous occurrences. The first time you see the word "compression" in a document you must spell it out; the second time you can write "go back 47 characters and copy the next 11."
 
-This does not require knowing any probabilities in advance. It discovers structure in the data *during* compression, building a dictionary on the fly. And Ziv and Lempel proved something remarkable: their algorithm is *universally optimal* — it converges to the true entropy rate of any stationary ergodic source as the block length grows, without any prior knowledge of the source. This was not just a clever hack; it was a theoretically grounded breakthrough.
+This does not require knowing any probabilities in advance. It discovers structure in the data *during* compression, building a dictionary on the fly. And Ziv and Lempel proved something remarkable: their algorithm is *universally optimal*, converging to the true entropy rate of any stationary ergodic source as the block length grows, without any prior knowledge of the source. This was not just a clever hack. It was a theoretically grounded breakthrough.
 
 #gomaths("What 'universal' means in compression")[
-  A compression algorithm is *universal* if it achieves the entropy rate $H$ of any source in the limit of long blocks, without being told the source's statistics in advance. (A *source* here just means whatever is producing the data — a person typing English, a camera, a sensor. We treat it as a machine that emits symbols according to some fixed but unknown probabilities; Chapters 9 and 18 make this precise.) In contrast, Huffman coding is *optimal* for a known distribution but must be given the frequencies; it is not universal in the strong sense.
+  A compression algorithm is *universal* if it achieves the entropy rate $H$ of any source in the limit of long blocks, without being told the source's statistics in advance. (A *source* here just means whatever is producing the data: a person typing English, a camera, a sensor. We treat it as a machine that emits symbols according to some fixed but unknown probabilities; Chapters 9 and 18 make this precise.) In contrast, Huffman coding is *optimal* for a known distribution but must be given the frequencies; it is not universal in the strong sense.
 
-  Ziv and Lempel showed LZ77/78 achieve universality by proving that the number of distinct phrases the algorithm produces grows at the right rate relative to $H$. This is a deep result — it says that even a completely unknown source can eventually be compressed to its theoretical limit just by observing it long enough. Chapter 28 proves a simplified version.
+  Ziv and Lempel showed LZ77/78 achieve universality by proving that the number of distinct phrases the algorithm produces grows at the right rate relative to $H$. This is a deep result: even a completely unknown source can eventually be compressed to its theoretical limit just by observing it long enough. Chapter 28 proves a simplified version.
 ]
 
 LZ77's immediate practical descendant was *LZSS* (Storer and Szymanski, 1982), which refined the encoding of matches and literals. Then in 1984, Terry Welch at Sperry Corporation published *LZW* (Lempel–Ziv–Welch), which simplified LZ78 by building the dictionary automatically without explicit length/distance codes. LZW became the engine of the Unix `compress` command and, fatefully, the CompuServe GIF format (1987).
 
 == The Patent Wars Begin: GIF, PNG, and the Open-Source Response (1985–2000)
 
-The GIF story is one of the great cautionary tales of the field. CompuServe's Graphics Interchange Format (1987) used LZW compression. LZW was patented by Sperry (later Unisys) in December 1985 as US Patent 4,558,302. For years nobody paid much attention. Then in December 1994 — just as the World Wide Web was exploding and GIF was becoming the default image format — Unisys announced it would enforce the patent and demand royalties from software that used GIF.
+The GIF story is one of the great cautionary tales of the field. CompuServe's Graphics Interchange Format (1987) used LZW compression. LZW was patented by Sperry (later Unisys) in December 1985 as US Patent 4,558,302. For years nobody paid much attention. Then in December 1994, just as the World Wide Web was exploding and GIF was becoming the default image format, Unisys announced it would enforce the patent and demand royalties from software that used GIF.
 
 The internet was furious. The reaction was immediate and creative: the community designed *PNG* (Portable Network Graphics), a patent-free alternative. PNG uses *DEFLATE* compression (explained in a moment), not LZW, and adds prediction filters before compression (guessing each pixel from its neighbors reduces the residual entropy). PNG was released in 1996 and is now the standard lossless format for the web.
 
@@ -167,7 +167,7 @@ Katz's life is a genuinely sad story. He reverse-engineered the dominant PKware 
 DEFLATE's design is beautiful in its simplicity: LZ77 finds repeated strings and replaces them with (distance, length) pairs; Huffman coding encodes those pairs and the remaining literal bytes. The combination squeezes both repetition (dictionary) and frequency skew (entropy coding). Chapter 30 dissects it completely.
 
 #keyidea[
-  DEFLATE = LZ77 (repeated-string matching) + Huffman (frequency-sensitive symbol coding). This two-layer structure — a model that finds structure, followed by an entropy coder that converts that structure into minimal bits — is the template for almost every compressor you will meet.
+  DEFLATE = LZ77 (repeated-string matching) + Huffman (frequency-sensitive symbol coding). This two-layer structure (a model that finds structure, followed by an entropy coder that converts that structure into minimal bits) is the template for almost every compressor you will meet.
 ]
 
 == The Lossless Golden Age: BWT, PPM, and the Ratio Champions (1990–2006)
@@ -176,23 +176,23 @@ The 1990s were a golden era for lossless compression research, driven by cheap s
 
 === Burrows–Wheeler Transform (1994)
 
-Michael Burrows and David Wheeler at DEC's Systems Research Center in Palo Alto published "A Block-Sorting Lossless Data Compression Algorithm" in 1994 as a technical report (DEC SRC Research Report 124 — they never formally submitted it to a journal). The transform it describes is now called the BWT.
+Michael Burrows and David Wheeler at DEC's Systems Research Center in Palo Alto published "A Block-Sorting Lossless Data Compression Algorithm" in 1994 as a technical report (DEC SRC Research Report 124; they never formally submitted it to a journal). The transform it describes is now called the BWT.
 
-The BWT is not a compressor by itself. It is a *sorting* transform: it rearranges the bytes of a block so that similar contexts cluster together. The intuition: in English the letter just *before* "he" is very often "t" (from the word "the"), so if you sort the text by the context that follows each letter, all those t's get swept into the same neighbourhood. After the BWT, long runs of the same character appear that did not exist in the original — a stretch of `ttttt` where the text was full of "the". Those runs are then easy to compress with a simple coder such as run-length encoding followed by an entropy coder. Julian Seward used the BWT as the heart of *bzip2*, released July 18, 1996 — the same month as PNG. bzip2 achieves meaningfully better compression than gzip at the cost of slower speed and more memory. Chapter 35 covers it in full.
+The BWT is not a compressor by itself. It is a *sorting* transform: it rearranges the bytes of a block so that similar contexts cluster together. The intuition: in English the letter just *before* "he" is very often "t" (from the word "the"), so if you sort the text by the context that follows each letter, all those t's get swept into the same neighbourhood. After the BWT, long runs of the same character appear that did not exist in the original: a stretch of `ttttt` where the text was full of "the". Those runs are then easy to compress with a simple coder such as run-length encoding followed by an entropy coder. Julian Seward used the BWT as the heart of *bzip2*, released July 18, 1996, the same month as PNG. bzip2 achieves meaningfully better compression than gzip at the cost of slower speed and more memory. Chapter 35 covers it in full.
 
-The BWT had a second life beginning around 2000, when Ferragina and Manzini discovered it could be turned into a *compressed self-index* (the FM-index): a data structure that stores the data in compressed form and allows substring searches without decompression. This became the foundation of modern DNA read aligners — essentially every genome sequencer on the planet uses a BWT-based data structure. Chapter 35 covers that connection too.
+The BWT had a second life beginning around 2000, when Ferragina and Manzini discovered it could be turned into a *compressed self-index* (the FM-index): a data structure that stores the data in compressed form and allows substring searches without decompression. This became the foundation of modern DNA read aligners. Essentially every genome sequencer on the planet now uses a BWT-based data structure. Chapter 35 covers that connection too.
 
 === Prediction by Partial Matching: PPM (1984–2000)
 
 John Cleary and Ian Witten proposed *Prediction by Partial Matching* (PPM) in 1984. The idea: maintain a statistical model that predicts the next symbol given the last $k$ symbols (the *context*). When the high-order context has seen the next symbol before, use that (very sharp) prediction; when it hasn't, fall back to shorter contexts. The entropy coder then codes the actual symbol with the predicted probability. This kind of context-dependent modeling achieves compression ratios that dictionary methods can't match on text.
 
-PPM was refined throughout the 1990s by Alistair Moffat (PPMC, 1990) and Dmitry Shkarin (PPMd, 2002), and it remained the state of the art for text compression well into the 2000s. It is the direct intellectual ancestor of large language models viewed as compressors — the theme we will reach in Chapter 23.
+PPM was refined throughout the 1990s by Alistair Moffat (PPMC, 1990) and Dmitry Shkarin (PPMd, 2002), and it remained the state of the art for text compression well into the 2000s. It is also the direct intellectual ancestor of large language models viewed as compressors, a theme we take up in Chapter 23.
 
 === Context Mixing and the PAQ Family (2002–present)
 
-Matt Mahoney at Florida Institute of Technology published "Fast Text Compression with Neural Networks" at the AAAI FLAIRS conference in 2000, introducing the idea of *context mixing*: instead of picking one best model, blend many models' predictions together. In 2002 he released PAQ1, the first of the PAQ family. The PAQ models blend dozens of contexts, a small neural network, and various pattern detectors — all weighted by their recent accuracy.
+Matt Mahoney at Florida Institute of Technology published "Fast Text Compression with Neural Networks" at the AAAI FLAIRS conference in 2000, introducing the idea of *context mixing*: instead of picking one best model, blend many models' predictions together. In 2002 he released PAQ1, the first of the PAQ family. The PAQ models blend dozens of contexts, a small neural network, and various pattern detectors, all weighted by their recent accuracy.
 
-The PAQ family and its descendants (PAQ8, ZPAQ, cmix) sit at the extreme end of the compression/speed trade-off: they achieve the best lossless compression ratios ever recorded on standard benchmarks, but they are orders of magnitude slower than practical tools and require gigabytes of memory. In 2023, Saurabh Kumar's fast-cmix won the Hutter Prize. In 2024, Kaido Orav's fx-cmix and then fx2-cmix (with Byron Knoll) set the current enwik9 record: 110,793,128 bytes (compared to 1,000,000,000 bytes uncompressed — a ratio of roughly 9:1 on Wikipedia text). Chapters 33 and 34 cover PPM and context mixing in depth.
+The PAQ family and its descendants (PAQ8, ZPAQ, cmix) sit at the extreme end of the compression/speed trade-off: they achieve the best lossless compression ratios ever recorded on standard benchmarks, but they are orders of magnitude slower than practical tools and require gigabytes of memory. In 2023, Saurabh Kumar's fast-cmix won the Hutter Prize. In 2024, Kaido Orav's fx-cmix and then fx2-cmix (with Byron Knoll) set the current enwik9 record: 110,793,128 bytes compressed from 1,000,000,000 bytes uncompressed, a ratio of roughly 9:1 on Wikipedia text. Chapters 33 and 34 cover PPM and context mixing in depth.
 
 === The Hutter Prize (2006)
 
@@ -201,7 +201,7 @@ Marcus Hutter, a researcher at IDSIA in Switzerland, founded the *Hutter Prize* 
 The prize was later expanded to 500,000 euros and enwik9 (one billion bytes of Wikipedia) in 2020. It remains active as of June 2026. Chapter 36 covers benchmarks, corpora, and the Hutter Prize.
 
 #gopython("Measuring compression ratio in Python")[
-  These code boxes are a taste of what is coming; we teach Python from absolute zero in Chapters 15–17, so you never need to understand the syntax yet — skip it freely. For the curious: `def ratio(...)` names a reusable recipe (a *function*); the words after the colons (`int`, `-> float`) are just labels noting that the inputs are whole numbers and the answer is a decimal.
+  These code boxes are a taste of what is coming; we teach Python from absolute zero in Chapters 15–17, so you never need to understand the syntax yet. Skip it freely. For the curious: `def ratio(...)` names a reusable recipe (a *function*); the words after the colons (`int`, `-> float`) are just labels noting that the inputs are whole numbers and the answer is a decimal.
 
   Throughout this book we will compute compression ratios. The simplest measurement in Python:
 
@@ -222,11 +222,11 @@ The prize was later expanded to 500,000 euros and enwik9 (one billion bytes of W
 
 == The Audio Revolution: From PCM to MP3 (1974–1999)
 
-While lossless compression matured, a parallel revolution was happening in *lossy* compression for audio. The key insight was psychoacoustics: the human ear does not hear all sounds equally. Sounds that are quiet, very high-pitched, or masked by louder simultaneous sounds can be thrown away entirely — and if they are, the listener won't notice.
+While lossless compression matured, a parallel revolution was happening in *lossy* compression for audio. The key insight was psychoacoustics: the human ear does not hear all sounds equally. Sounds that are quiet, very high-pitched, or masked by louder simultaneous sounds can be discarded entirely without the listener noticing.
 
 The mathematical tools came first. In 1974, Nasir Ahmed, T. Natarajan, and K.R. Rao published the *Discrete Cosine Transform* (DCT) in *IEEE Transactions on Computers*. The DCT converts a block of signal samples into frequency coefficients, concentrating most of the signal energy in a few low-frequency terms. This makes it easy to discard the high-frequency, low-energy components that ears (and eyes) are insensitive to.
 
-Karlheinz Brandenburg began his doctoral work on perceptual audio coding at the University of Erlangen-Nuremberg in 1977. Over more than a decade, Brandenburg and his colleagues developed the psychoacoustic model that would become MPEG Audio Layer III — MP3. The standard was finalized as ISO/IEC 11172-3 in 1993. The file extension .mp3 was chosen in a Fraunhofer IIS internal poll in July 1995.
+Karlheinz Brandenburg began his doctoral work on perceptual audio coding at the University of Erlangen-Nuremberg in 1977. Over more than a decade, Brandenburg and his colleagues developed the psychoacoustic model that would become MPEG Audio Layer III, known as MP3. The standard was finalized as ISO/IEC 11172-3 in 1993. The file extension .mp3 was chosen in a Fraunhofer IIS internal poll in July 1995.
 
 In September 1998, Fraunhofer and Thomson began enforcing their MP3 patent portfolio, demanding royalties from software companies. This triggered the royalty-free audio codec movement. The Xiph.Org Foundation developed *Ogg Vorbis* (frozen in 2000), a free MDCT-based codec. The last significant US MP3 patents expired in April 2017, and Fraunhofer terminated its licensing program the same month.
 
@@ -234,13 +234,13 @@ MP3 changed the world in a way that is hard to overstate. The music industry, pe
 
 == The Image Wars: JPEG, JPEG 2000, and the Web (1992–2006)
 
-For images, the story begins with *JPEG*, standardized in 1992 as ISO/IEC 10918-1 / ITU-T T.81. JPEG uses the DCT on 8×8 pixel blocks, quantizes the frequency coefficients (discarding small values), and then entropy-codes the result with Huffman coding. It achieved compression ratios of 10:1 to 20:1 on photographs with acceptable quality — a revolution for distributing images on the early internet.
+For images, the story begins with *JPEG*, standardized in 1992 as ISO/IEC 10918-1 / ITU-T T.81. JPEG uses the DCT on 8×8 pixel blocks, quantizes the frequency coefficients (discarding small values), and then entropy-codes the result with Huffman coding. It achieved compression ratios of 10:1 to 20:1 on photographs with acceptable quality, which was transformative for distributing images on the early internet.
 
-JPEG's weaknesses were obvious: blocking artifacts (that characteristic pixelated look at high compression), and no alpha transparency. The successor, *JPEG 2000* (ISO 15444-1, 2000/2001), replaced the block DCT with wavelet transforms, achieving better quality and scalability — you can decode any resolution from the same file. It is genuinely superior to JPEG on almost every technical measure. Yet by 2006 it had essentially failed to achieve consumer adoption. The reasons were a mix: it was slower to decode, required more memory, had its own patent uncertainties, and the web had already standardized on JPEG. Technical superiority is not sufficient; adoption dynamics matter. JPEG 2000 did find success in cinema (the DCI standard) and medical imaging, where its advantages outweigh the costs. Chapter 43 covers this story in full.
+JPEG's weaknesses were obvious: blocking artifacts (that characteristic pixelated look at high compression), and no alpha transparency. The successor, *JPEG 2000* (ISO 15444-1, 2000/2001), replaced the block DCT with wavelet transforms, achieving better quality and scalability: you can decode any resolution from the same file. It is genuinely superior to JPEG on almost every technical measure. Yet by 2006 it had essentially failed to achieve consumer adoption. The reasons were a mix: it was slower to decode, required more memory, had its own patent uncertainties, and the web had already standardized on JPEG. Technical superiority is not sufficient; adoption dynamics matter. JPEG 2000 did find success in cinema (the DCI standard) and medical imaging, where its advantages outweigh the costs. Chapter 43 covers this story in full.
 
 == Video Compression: The Hybrid Codec Template (1988–2013)
 
-Video compression is image compression with time added: most of the redundancy is between consecutive frames, not within a single frame. The *motion compensation* idea — predict each block of pixels from where it came in the previous frame, then code only the residual error — was established in the ITU-T H.261 standard in 1988.
+Video compression is image compression with time added: most of the redundancy is between consecutive frames, not within a single frame. The *motion compensation* idea (predict each block of pixels from where it came in the previous frame, then code only the residual error) was established in the ITU-T H.261 standard in 1988.
 
 The hybrid macroblock + motion compensation + DCT + entropy coding template proved durable. It became:
 
@@ -266,30 +266,30 @@ Each generation roughly doubled efficiency. Each also generated substantial pate
       rect((x, 0), (x + 1.3, h * 0.5),
         fill: rgb("#0b5394").lighten(if i == 0 { 10% } else if i == 5 { 70% } else if i == 1 { 40% } else if i == 2 { 50% } else if i == 3 { 55% } else { 60% }),
         stroke: (paint: rgb("#0b5394"), thickness: 0.5pt))
-      content((x + 0.65, h * 0.5 + 0.25),
-        text(size: 6pt, fill: rgb("#1a1a1a"))[#codecs.at(i)])
+      content((x + 0.65, h * 0.5 + 0.3),
+        box(width: 1.1cm, inset: 1pt, align(center, text(size: 6pt, fill: rgb("#1a1a1a"))[#codecs.at(i)])))
     }
 
     line((0, 0), (11.5, 0), stroke: (paint: rgb("#1a1a1a"), thickness: 0.7pt))
-    content((5.75, -0.4), text(size: 7.5pt)[Compression efficiency (higher bar = better ratio)])
+    content((5.75, -0.45), box(width: 9cm, inset: 1pt, align(center, text(size: 7.5pt)[Compression efficiency (higher bar = better ratio)])))
   })
 )
 
 == The Royalty-Free Movement: VP8, AV1, and the Alliance for Open Media (2010–2020)
 
-The H.265/HEVC patent debacle — three competing patent pools with incompatible terms, making licensing a legal nightmare — created the political conditions for the most significant industry alliance in compression history.
+The H.265/HEVC patent debacle (three competing patent pools with incompatible terms, making licensing a legal nightmare) created the political conditions for the most significant industry alliance in compression history.
 
 Google had acquired On2 Technologies in February 2010 for approximately \$124.6 million, gaining control of the VP8 video codec. They released it as royalty-free in May 2010 under the WebM project. VP8 was the basis for WebP, a royalty-free image format. VP9 (2013) improved further.
 
 In September 2015, Amazon, Apple, ARM, Cisco, Google, Intel, Microsoft, Mozilla, Netflix, NVIDIA, and Samsung formed the *Alliance for Open Media* (AOMedia) to develop a truly open, royalty-free video codec. The result was *AV1*, released in 2018. AV1 achieves roughly 30% better compression than HEVC and is available royalty-free. YouTube, Netflix, Twitch, and most major streaming platforms now use AV1. Hardware decoder support arrived in consumer products by 2020–2022.
 
-The parallel in images: *AVIF* (AV1 Image File Format), specified in 2019, gained Chrome support in 2020 and Firefox support in 2021. And *JPEG XL* — a next-generation format merging Google's PIK codec and Cloudinary's FUIF — was finalized as ISO/IEC 18181 in 2021–2022. JPEG XL's Chrome story has its own drama: Google added it in 2021, removed it in Chrome 110 (2023) citing weak ecosystem interest, then re-added it in Chrome 145 (February 2026) via a memory-safe Rust decoder called jxl-rs. Chapter 45 covers the modern image format wars.
+The parallel in images: *AVIF* (AV1 Image File Format), specified in 2019, gained Chrome support in 2020 and Firefox support in 2021. And *JPEG XL*, a next-generation format merging Google's PIK codec and Cloudinary's FUIF, was finalized as ISO/IEC 18181 in 2021–2022. JPEG XL's Chrome story has its own drama: Google added it in 2021, removed it in Chrome 110 (2023) citing weak ecosystem interest, then re-added it in Chrome 145 (February 2026) via a memory-safe Rust decoder called jxl-rs. Chapter 45 covers the modern image format wars.
 
 == ANS: The Entropy Coding Revolution (2007–2015)
 
 By 2007, entropy coding had two main options: Huffman (fast but slightly suboptimal) and arithmetic coding (optimal but patented and slower). A Polish mathematician, Jarek Duda, changed this.
 
-Duda's idea, developed between 2007 and 2013, is called *Asymmetric Numeral Systems* (ANS). The insight is to think of compression as encoding into a numeral system where the "base" is not fixed (like base 10 or base 2) but varies symbol by symbol according to the source probabilities. Encoding becomes: multiply the current state by a scaling factor and add the symbol. Decoding reverses this. The result is a coder that matches arithmetic coding in compression ratio while running at speeds close to Huffman — because the decode operation is a simple lookup or arithmetic step with no interval bisection.
+Duda's idea, developed between 2007 and 2013, is called *Asymmetric Numeral Systems* (ANS). The insight is to think of compression as encoding into a numeral system where the "base" is not fixed (like base 10 or base 2) but varies symbol by symbol according to the source probabilities. Encoding becomes: multiply the current state by a scaling factor and add the symbol. Decoding reverses this. The result is a coder that matches arithmetic coding in compression ratio while running at speeds close to Huffman, because the decode operation is a simple lookup or arithmetic step with no interval bisection.
 
 ANS comes in two flavors: *rANS* (range ANS, a streaming mode) and *tANS* (table ANS, a finite-state machine). Yann Collet independently implemented and popularized rANS in Zstandard (2016). tANS is the foundation of the Huffman-replacement in zstd's ANS entropy coder. Apple used ANS in their LZFSE codec (2015). JPEG XL uses ANS. VVC/H.266 uses a variant. It is now the entropy coder of choice whenever the highest performance matters.
 
@@ -319,7 +319,7 @@ The 2018 follow-up (Ballé et al., "Variational Image Compression with a Scale H
 
 === Generative Compression (2020–2026)
 
-The next step was to stop optimizing for PSNR (which is not a perceptual metric) and instead train the decoder to produce *visually realistic* outputs even if they differ from the original. HiFiC (Mentzer et al., NeurIPS 2020) used a GAN loss to produce images rated subjectively better than traditional codecs at *half the bitrate*. The 2024–2026 period saw one-step diffusion codecs (StableCodec, OneDC) operating at 0.01 bits per pixel — roughly 100× below JPEG's minimum practical range — with outputs that look like plausible photographs even though they are not faithful reconstructions. The philosophical questions this raises (you are receiving a generated approximation, not your original photo) are taken up in Chapter 58.
+The next step was to stop optimizing for PSNR (which is not a perceptual metric) and instead train the decoder to produce *visually realistic* outputs even if they differ from the original. HiFiC (Mentzer et al., NeurIPS 2020) used a GAN loss to produce images rated subjectively better than traditional codecs at *half the bitrate*. The 2024–2026 period saw one-step diffusion codecs (StableCodec, OneDC) operating at 0.01 bits per pixel, roughly 100x below JPEG's minimum practical range, with outputs that look like plausible photographs even though they are not faithful reconstructions. The philosophical questions this raises (you are receiving a generated approximation, not your original photo) are taken up in Chapter 58.
 
 === LLMs as Compressors (2023–2026)
 
@@ -341,7 +341,7 @@ While the main compression story was advancing, parallel revolutions were happen
 
 *Floating-point arrays.* Scientific computing generates enormous arrays of floating-point numbers (climate models, particle physics simulations, fluid dynamics). Peter Lindstrom at Lawrence Livermore National Laboratory introduced *zfp* in 2014, an error-bounded floating-point compressor that guarantees the error in each value is below a user-specified threshold. Chapter 66 covers scientific data compression.
 
-*Model compression.* As deep learning models grew to hundreds of billions of parameters, compressing the models themselves became critical. Weight quantization (using 8-bit or 4-bit integers instead of 32-bit floats), pruning, knowledge distillation, and low-rank factorization are now standard tools for deploying models on limited hardware. BitNet b1.58 (2024) showed that large language models could be trained natively with ternary weights (each weight is minus-one, zero, or plus-one), storing only about 1.58 bits per weight — since $log_2 3 approx 1.58$. Chapters 63 and 64 cover model compression.
+*Model compression.* As deep learning models grew to hundreds of billions of parameters, compressing the models themselves became critical. Weight quantization (using 8-bit or 4-bit integers instead of 32-bit floats), pruning, knowledge distillation, and low-rank factorization are now standard tools for deploying models on limited hardware. BitNet b1.58 (2024) showed that large language models could be trained natively with ternary weights (each weight is minus-one, zero, or plus-one), storing only about 1.58 bits per weight, since $log_2 3 approx 1.58$. Chapters 63 and 64 cover model compression.
 
 *DNA data storage.* Yaniv Erlich and Dina Zielinski demonstrated in 2017 (Science) that DNA molecules could store approximately 215 petabytes per gram, using fountain codes for error tolerance. This speculative but genuine long-term storage medium imposes new constraints on compression (GC content balance, avoiding long homopolymer runs) that are unlike any electronic medium. Chapter 70 covers DNA storage.
 
@@ -353,18 +353,18 @@ As of June 2026, compression is simultaneously mature and in ferment.
 
 *What is emerging:* Learned image codecs surpassing AVIF on quality metrics but not yet standardized or hardware-accelerated. Neural audio codecs (SoundStream, EnCodec, DAC) serving as tokenizers for audio language models. LLM-as-compressor demonstrations with state-of-the-art ratios but impractical decode speed. ANS-based entropy coders in nearly every modern codec. BitNet and sub-2-bit model quantization pushing LLMs toward memory-constrained devices.
 
-*What is on the horizon:* H.267/NNVC neural video codecs (JVET target ~2028). Semantic compression — encoding not the signal but its *meaning* — emerging as a research direction for wireless machine-to-machine communication. Compression rate as a measure of LLM capability becoming increasingly mainstream as a benchmark. The AV2 codec from AOMedia (late 2025) targeting ~30% improvement over AV1.
+*What is on the horizon:* H.267/NNVC neural video codecs (JVET target ~2028). Semantic compression (encoding not the signal but its *meaning*) is emerging as a research direction for wireless machine-to-machine communication. Compression rate as a measure of LLM capability is gaining ground as a benchmark. The AV2 codec from AOMedia (late 2025) targets ~30% improvement over AV1.
 
-The field has always been a dialogue between mathematics and engineering, between theory and patents, between the ideal compressor (Kolmogorov complexity — uncomputable) and the practical one (zstd — fast, good, free). That dialogue continues.
+The field has always been a dialogue between mathematics and engineering, between theory and patents, between the ideal compressor (Kolmogorov complexity, which is uncomputable) and the practical one (zstd: fast, good, free). That dialogue continues.
 
 #checkpoint[
   Which three eras does compression history divide into most naturally?
 ][
-  (1) Pre-theory: Morse, shorthand, RLE — intuition-driven, before 1948. (2) Classical theory and algorithms: Shannon 1948 through the LZ family, Huffman, JPEG, DEFLATE — mathematics-guided, roughly 1948–2015. (3) Neural era: learned codecs, LLM-as-compressor, generative compression — data-driven, 2016–present. The boundaries are fuzzy; PPM and context mixing straddle eras 2 and 3.
+  (1) Pre-theory: Morse, shorthand, RLE, intuition-driven, before 1948. (2) Classical theory and algorithms: Shannon 1948 through the LZ family, Huffman, JPEG, DEFLATE, mathematics-guided, roughly 1948–2015. (3) Neural era: learned codecs, LLM-as-compressor, generative compression, data-driven, 2016–present. The boundaries are fuzzy; PPM and context mixing straddle eras 2 and 3.
 ]
 
-#gopython("Counting words in a text — a first step toward compression")[
-  Understanding a source's statistics is the first step to compressing it. Here is a minimal Python 3.14 word-frequency counter — a very distant ancestor of a compression model:
+#gopython("Counting words in a text: a first step toward compression")[
+  Understanding a source's statistics is the first step to compressing it. Here is a minimal Python 3.14 word-frequency counter, a very distant ancestor of a compression model:
 
   ```python
   def word_frequencies(text: str) -> dict[str, int]:
@@ -387,9 +387,9 @@ The field has always been a dialogue between mathematics and engineering, betwee
 
 #takeaways((
   "Morse code (1844) anticipated Huffman coding by 108 years: shorter codes for more common symbols.",
-  "Shannon's 1948 paper defined entropy as the theoretical minimum bits per symbol and proved it is achievable — compression's speed-of-light limit.",
+  "Shannon's 1948 paper defined entropy as the theoretical minimum bits per symbol and proved it is achievable: compression's speed-of-light limit.",
   "Huffman (1952) gave the first provably optimal prefix code; arithmetic coding (1976–1987) escaped the integer-bits constraint to reach entropy exactly.",
-  "Ziv and Lempel (1977–1978) proved that dictionary methods are universally optimal — no prior knowledge of the source needed.",
+  "Ziv and Lempel (1977–1978) proved that dictionary methods are universally optimal: no prior knowledge of the source needed.",
   "DEFLATE (1991) combined LZ77 + Huffman into the most-deployed compression algorithm in history.",
   "The GIF/LZW patent war (1994) catalysed PNG; the MP3 patent war (1998+) catalysed Vorbis and Opus; the HEVC patent mess catalysed AV1. Patents repeatedly drove open-source innovation.",
   "ANS (Duda, 2007–2013) gave entropy coding arithmetic-coding ratio at Huffman speed, and is now inside zstd, JPEG XL, and AV1.",
@@ -403,14 +403,14 @@ The field has always been a dialogue between mathematics and engineering, betwee
   Morse code gives the letter E a single dot (·) and the letter Z four symbols (··--). Look up the frequency of E and Z in English. About how many times more common is E than Z? Does the code length difference match this frequency difference, as Huffman coding would predict?
 ]
 #solution("2.1")[
-  E appears about 13% of the time in English text; Z appears about 0.07%. The ratio is roughly 185:1. Huffman's optimal code length difference would be $log_2(185) approx 7.5$ bits. Morse gives E a length of 1 and Z a length of 4 — a difference of only 3, not 7.5. Morse is *frequency-sensitive* but not *optimally so*: it was designed intuitively, not by any algorithm. Huffman coding would achieve a much larger length difference and thus lower average code length.
+  E appears about 13% of the time in English text; Z appears about 0.07%. The ratio is roughly 185:1. Huffman's optimal code length difference would be $log_2(185) approx 7.5$ bits. Morse gives E a length of 1 and Z a length of 4, a difference of only 3, not 7.5. Morse is *frequency-sensitive* but not *optimally so*: it was designed intuitively, not by any algorithm. Huffman coding would achieve a much larger length difference and thus lower average code length.
 ]
 
 #exercise("2.2", 1)[
   Shannon proved that the average code length of any lossless code must be at least $H$ bits per symbol, where $H$ is the source entropy. A fair six-sided die (each face equally likely) has what entropy? What is the minimum average number of bits needed to encode a long sequence of die rolls?
 ]
 #solution("2.2")[
-  For a fair die, each of the 6 faces has probability $1\/6$. The entropy is $H = -6 times (1\/6) log_2(1\/6) = log_2 6 approx 2.585$ bits per roll. So any lossless code needs at least 2.585 bits per roll on average. A naive 3-bit binary code (000 through 101) uses 3 bits per roll — only 0.415 bits above the minimum. Arithmetic coding can approach 2.585 bits arbitrarily closely.
+  For a fair die, each of the 6 faces has probability $1\/6$. The entropy is $H = -6 times (1\/6) log_2(1\/6) = log_2 6 approx 2.585$ bits per roll. So any lossless code needs at least 2.585 bits per roll on average. A naive 3-bit binary code (000 through 101) uses 3 bits per roll, only 0.415 bits above the minimum. Arithmetic coding can approach 2.585 bits arbitrarily closely.
 ]
 
 #exercise("2.3", 2)[
@@ -431,7 +431,7 @@ The field has always been a dialogue between mathematics and engineering, betwee
   DeepMind's "Language Modeling Is Compression" (2023/2024) paper showed that a 70B LLM compressed LibriSpeech audio to 16.4% compared to FLAC's 30.3%. (a) Convert both figures to bits per byte. (b) What compression ratio (compressed:original) does each achieve? (c) Explain in 2–3 sentences *why* an LLM trained only on text can compress audio better than a specialized lossless audio codec.
 ]
 #solution("2.5")[
-  (a) FLAC: $30.3 / 100 times 8 = 2.424$ bits per byte. LLM: $16.4 / 100 times 8 = 1.312$ bits per byte. (b) FLAC compresses to 30.3% of original (ratio 1:3.3). LLM compresses to 16.4% of original (ratio 1:6.1). (c) The LLM achieves better compression because an LLM is, by construction, an extremely powerful predictor of the next token in its training domain — and, as Shannon showed, a better predictor always yields a better compressor when combined with an arithmetic coder. The audio was apparently represented as tokens (discretized) in a way the LLM could predict well, and the LLM's massive training had given it statistical models that captured structure the specialized FLAC compressor (which uses only linear prediction + Rice coding) could not. The LLM's breadth of training allows it to exploit statistical patterns across many scales simultaneously.
+  (a) FLAC: $30.3 / 100 times 8 = 2.424$ bits per byte. LLM: $16.4 / 100 times 8 = 1.312$ bits per byte. (b) FLAC compresses to 30.3% of original (ratio 1:3.3). LLM compresses to 16.4% of original (ratio 1:6.1). (c) The LLM achieves better compression because an LLM is, by construction, an extremely powerful predictor of the next token in its training domain. As Shannon showed, a better predictor always yields a better compressor when combined with an arithmetic coder. The audio was apparently represented as tokens (discretized) in a way the LLM could predict well, and the LLM's massive training had given it statistical models that captured structure the specialized FLAC compressor (which uses only linear prediction + Rice coding) could not. The LLM's breadth of training allows it to exploit statistical patterns across many scales simultaneously.
 ]
 
 == Further Reading
@@ -455,5 +455,5 @@ The field has always been a dialogue between mathematics and engineering, betwee
 - #link("http://prize.hutter1.net/")[Hutter Prize.] The ongoing compression-as-intelligence competition.
 
 #bridge[
-  We have now flown over the whole field at altitude. The next three chapters build the mathematical and computational foundation you will need to understand *why* each of these milestones works: Chapter 3 asks what "data" and "information" actually are; Chapters 4–13 develop the mathematics (number systems, logic, sets, logarithms, probability) from scratch; Chapters 15–17 teach Python. Then, in Chapter 18, we return to Shannon and derive entropy from first principles — armed with everything we need to truly understand it.
+  We have now flown over the whole field at altitude. The next three chapters build the mathematical and computational foundation you will need to understand *why* each of these milestones works: Chapter 3 asks what "data" and "information" actually are; Chapters 4–13 develop the mathematics (number systems, logic, sets, logarithms, probability) from scratch; Chapters 15–17 teach Python. Then, in Chapter 18, we return to Shannon and derive entropy from first principles, armed with everything we need to truly understand it.
 ]

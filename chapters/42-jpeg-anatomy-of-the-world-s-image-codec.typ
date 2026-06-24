@@ -10,8 +10,8 @@
 ][Gregory K. Wallace, _The JPEG Still Picture Compression Standard_, 1992]
 
 Here is a puzzle that should make no sense at first. A photograph of a golden retriever,
-straight from your phone's camera, weighs about 6 megabytes as a raw file — three bytes
-per pixel of red, green, and blue for roughly two million pixels. Save it as a JPEG at
+straight from your phone's camera, weighs about 6 megabytes as a raw file (three bytes
+per pixel of red, green, and blue for roughly two million pixels). Save it as a JPEG at
 medium quality and it drops to perhaps 400 kilobytes: a 15-to-1 shrinkage. Print it large
 and it looks indistinguishable from the original. Where did those 5.6 megabytes go? Did
 the computer just silently throw away parts of the picture and hope you wouldn't notice?
@@ -29,7 +29,7 @@ the raw file squanders without mercy:
 
 JPEG's pipeline, standardized in 1992, attacks both kinds of redundancy in sequence: it
 transforms, it quantizes (the deliberate throwing-away), and it entropy-codes what
-remains. That sequence — transform → quantize → entropy-code — is not a JPEG quirk but
+remains. That sequence (transform → quantize → entropy-code) is not a JPEG quirk but
 the universal template of modern lossy compression. Every video codec from MPEG-1 to
 H.266, every audio codec from MP3 to Opus, follows the same three-step logic. Understand
 JPEG and you understand the skeleton of all of them.
@@ -46,7 +46,7 @@ we meet its purely lossless sibling JPEG-LS and glance ahead at what comes after
 
 #recap[
   Chapter 37 taught us that any signal can be decomposed into a sum of cosine waves of
-  different frequencies — the *frequency-domain view* — using the Discrete Fourier
+  different frequencies (the *frequency-domain view*) using the Discrete Fourier
   Transform (DFT). Chapter 38 introduced the *Discrete Cosine Transform (DCT)*, its
   real-valued cousin that works over fixed-length blocks, and showed that it approximates
   the theoretically optimal Karhunen–Loève decorrelating transform for typical natural
@@ -55,7 +55,7 @@ we meet its purely lossless sibling JPEG-LS and glance ahead at what comes after
   step size and rounding, which is the only genuinely lossy operation in any transform
   codec. We built `quant.py` with a uniform scalar quantizer including a dead-zone
   (Step 18). Chapter 24 built canonical *Huffman coding* (`huffman.py`, Step 8). This
-  chapter assembles those three ingredients — DCT, quantization, Huffman — into a complete
+  chapter assembles those three ingredients (DCT, quantization, Huffman) into a complete
   JPEG-class pipeline and adds the color-space and chroma-subsampling pieces the earlier
   chapters deferred.
 ]
@@ -86,7 +86,7 @@ space your camera produces to a different space called *YCbCr*.
 You could compress RGB directly, and the math would work. But it would waste bits badly.
 Your visual system is built on two very different kinds of sensor cells in your retina.
 The *cone* cells come in three flavors sensitive to different wavelength ranges, roughly
-long (red), medium (green), and short (blue) — but they are not equally packed. The
+long (red), medium (green), and short (blue), though they are not equally packed. The
 *fovea*, the high-resolution center of your vision, is loaded with green-sensitive and
 red-sensitive cones but has comparatively few blue-sensitive ones. More importantly, the
 early visual cortex does not really process R, G, B as three equal channels. It performs
@@ -99,10 +99,10 @@ written YCrCb or YUV in analog contexts, though the exact definitions differ):
 #definition("YCbCr")[
   A color space used in image and video compression that splits a pixel's color into three
   channels:
-  - *Y* — luma (brightness). Roughly a weighted average of R, G, B, matching the eye's
+  - *Y*: luma (brightness). Roughly a weighted average of R, G, B, matching the eye's
     sensitivity: $Y approx 0.299 R + 0.587 G + 0.114 B$.
-  - *Cb* — chroma-blue: how much the color differs from grey toward blue.
-  - *Cr* — chroma-red: how much the color differs from grey toward red.
+  - *Cb*: chroma-blue, measuring how much the color differs from grey toward blue.
+  - *Cr*: chroma-red, measuring how much the color differs from grey toward red.
   The name comes from Y (luma) + C (chroma) + b/r (blue/red).
 ]
 
@@ -119,7 +119,7 @@ $ R &= Y + 1.402 (C_r - 128) \
   B &= Y + 1.772 (C_b - 128) $
 
 #keyidea[
-  YCbCr is not compression — it is a lossless coordinate change (up to rounding). Its
+  YCbCr is not compression. It is a lossless coordinate change (up to rounding). Its
   value is what comes next: the human eye is much more sensitive to errors in Y than to
   errors in Cb or Cr, so we can *afford to store Cb and Cr at lower resolution*. The
   conversion makes that budget distinction possible.
@@ -128,21 +128,21 @@ $ R &= Y + 1.402 (C_r - 128) \
 === Chroma subsampling: 4:2:0, 4:2:2, 4:4:4
 
 Once the image is in YCbCr, JPEG (and virtually every video codec) throws away most of
-the chroma information — not by rounding, but by literally storing it at *lower spatial
+the chroma information, not by rounding, but by literally storing it at *lower spatial
 resolution*.
 
 #definition("Chroma subsampling")[
   The practice of storing the color channels (Cb, Cr) at a smaller grid size than the
   luma channel (Y). Described by a three-number ratio *J:a:b* from the NTSC days:
-  - *4:4:4* — no subsampling: Y, Cb, Cr all at full resolution.
-  - *4:2:2* — Cb and Cr stored at half horizontal resolution.
-  - *4:2:0* — Cb and Cr stored at half horizontal *and* half vertical resolution: one
+  - *4:4:4*: no subsampling; Y, Cb, Cr all at full resolution.
+  - *4:2:2*: Cb and Cr stored at half horizontal resolution.
+  - *4:2:0*: Cb and Cr stored at half horizontal *and* half vertical resolution, with one
     chroma value shared among a 2×2 square of luma pixels.
 ]
 
 The most common setting for JPEG photographs is *4:2:0*. Its effect on bit count is
 significant: a full 4:4:4 image needs $3$ bytes per pixel (Y + Cb + Cr); at 4:2:0 it
-needs only $1 + 1/4 + 1/4 = 1.5$ bytes per pixel — a factor-of-two reduction, with
+needs only $1 + 1/4 + 1/4 = 1.5$ bytes per pixel, a factor-of-two reduction with
 very little visible loss for most photographic subjects because our colour acuity is so
 coarse.
 
@@ -152,16 +152,16 @@ coarse.
     import cetz.draw: *
     // Y channel full size
     rect((0,0),(3,3), fill: rgb("#d6e4f0"), stroke: 0.7pt)
-    content((1.5,3.3))[*Y* (full res)]
+    content((1.5,3.3), box(width: 2.6cm, inset: 1pt, align(center, text(size: 8pt)[*Y* (full res)])))
     // 4x4 grid inside Y
     for i in (1,2) { line((i, 0),(i, 3), stroke: 0.3pt + gray) }
     for j in (1,2) { line((0, j),(3, j), stroke: 0.3pt + gray) }
     // Cb
     rect((3.6,1),(5.1,2.5), fill: rgb("#d5f0d6"), stroke: 0.7pt)
-    content((4.35,2.8))[*Cb* (½ res)]
+    content((4.35,2.8), box(width: 1.1cm, inset: 1pt, align(center, text(size: 8pt)[*Cb* (½ res)])))
     // Cr
     rect((5.4,1),(6.9,2.5), fill: rgb("#f0d5d5"), stroke: 0.7pt)
-    content((6.15,2.8))[*Cr* (½ res)]
+    content((6.15,2.8), box(width: 1.1cm, inset: 1pt, align(center, text(size: 8pt)[*Cr* (½ res)])))
     // arrow
     line((3,1.5),(3.55,1.5), mark: (end: ">"))
     content((3.3,1.7), size: 7pt)[÷2]
@@ -186,7 +186,7 @@ pixel blocks*, applying the Discrete Cosine Transform (DCT) to each one independ
 
 The block size is a trade-off the JPEG committee froze in 1992. Bigger blocks capture
 longer-range correlations and give better compression, but they need more memory, more
-computation, and — critically — they smear *blocking artifacts* across a larger region
+computation, and (critically) they smear *blocking artifacts* across a larger region
 when things go wrong. The 8×8 block was a pragmatic sweet spot for the hardware of the
 early 1990s. Thirty years later it is still in every baseline JPEG, though later codecs
 (H.265, AV1) use variable block sizes up to 64×64.
@@ -199,7 +199,7 @@ Before the DCT, JPEG subtracts 128 from every pixel value. Raw pixels are in the
 large DC coefficient and tiny AC coefficients, but without the shift its DC would be
 $8 times 255 = 2040$ while a mid-grey block (all 128s) would have DC $= 8 times 128 = 1024$.
 After the shift, all constant blocks produce the same DC magnitude regardless of their
-mean, and the AC coefficients are always near zero for smooth blocks — which is exactly
+mean, and the AC coefficients are always near zero for smooth blocks, which is exactly
 what we want for quantization to kill.
 
 === The 2-D DCT on an 8×8 block
@@ -214,7 +214,7 @@ what we want for quantization to kill.
 For the 8×8 block, the result is another 8×8 array of 64 *DCT coefficients*. The
 top-left coefficient (row 0, column 0) is called the *DC coefficient*; it equals the
 block average times a scale factor. All 63 remaining coefficients are *AC coefficients*
-and represent increasingly fine spatial patterns — from gentle horizontal or vertical
+and represent increasingly fine spatial patterns, from gentle horizontal or vertical
 gradients to the high-frequency checkerboard at position (7,7).
 
 #fig(
@@ -236,9 +236,9 @@ gradients to the high-frequency checkerboard at position (7,7).
       }
     }
     // Labels
-    content((n * (sz + 0.04) / 2, -0.25), size: 8pt)[→ higher frequency]
-    content((-0.35, n * (sz + 0.04) / 2), angle: 90deg, size: 8pt)[↑ higher frequency]
-    content((0.21, n * (sz + 0.04) - 0.1), size: 7pt)[DC]
+    content((n * (sz + 0.04) / 2, -0.25), box(width: 3.2cm, inset: 1pt, align(center, text(size: 8pt)[→ higher frequency])))
+    content((-0.35, n * (sz + 0.04) / 2), box(width: 3.2cm, inset: 1pt, align(center, text(size: 8pt)[↑ higher frequency])), angle: 90deg)
+    content((0.21, n * (sz + 0.04) - 0.1), text(size: 7pt)[DC])
   })
 )
 
@@ -247,7 +247,7 @@ gradients to the high-frequency checkerboard at position (7,7).
 ][
   It represents the *average brightness* of the 8×8 block (times a scaling constant).
   If all 64 pixels have the value 100, the DC coefficient will be large and all 63 AC
-  coefficients will be exactly zero — the block is perfectly flat, with no variation
+  coefficients will be exactly zero. The block is perfectly flat, with no variation
   at all.
 ]
 
@@ -262,7 +262,7 @@ All values are small and negative (a slightly darker-than-midgrey region with a 
 gradient). After the 2-D DCT, the energy condenses into the top-left corner. The DC
 coefficient (average × scaling) will be around $-46$; the horizontal-gradient AC
 coefficient at (0,1) will be around $+10$; and almost all coefficients beyond the first
-two rows/columns will be below 1 — tiny enough that quantization will round them all to
+two rows/columns will be below 1, tiny enough that quantization will round them all to
 zero. That is energy compaction at work.
 
 == Quantization tables
@@ -298,14 +298,14 @@ luminance table looks like this (values for quality 50):
 
 Notice the pattern: the top-left entry (for the DC coefficient) is 16; the bottom-right
 (for the highest-frequency checkerboard) is 99. *High-frequency coefficients get divided
-by a larger number, rounding them more aggressively — often to zero — because the eye
+by a larger number, rounding them more aggressively (often to zero), because the eye
 barely notices those details.*
 
 At quality 50 (the standard table above), a DCT coefficient of value $46$ in the DC
 position is divided by 16 and rounded: $round(46/16) = 3$, dequantized back to
 $3 times 16 = 48$, an error of $2$. A coefficient of value $2.1$ in the
 high-frequency (7,7) position is divided by 99 and rounded: $round(2.1/99) = 0$.
-Thrown away entirely — and nobody sees it.
+Thrown away entirely. Nobody sees it.
 
 At quality 80, every table entry is scaled down (smaller step = finer rounding = more
 bits). At quality 10, entries are scaled up; more coefficients round to zero; more data
@@ -332,12 +332,12 @@ reason a quality knob exists: it lets the encoder *cap* the error it injects.
 ]
 
 This is the lever in one inequality: doubling every table entry at most doubles the
-worst-case error per coefficient — and, because the high-frequency entries are the biggest,
+worst-case error per coefficient. Because the high-frequency entries are the biggest,
 the errors land precisely where the eye is least able to see them.
 
 #pitfall[
   JPEG "quality 100" does *not* mean lossless. It means the quantization table entries
-  are all set to 1, so every coefficient is rounded to the nearest integer — a tiny bit
+  are all set to 1, so every coefficient is rounded to the nearest integer. A tiny bit
   of rounding still happens. True lossless JPEG requires a different standard
   (JPEG-LS or the mathematically lossless variant of JPEG-2000, which use integer
   wavelets or predictors that never introduce rounding).
@@ -353,9 +353,9 @@ DC and the previous block's DC in raster order:
 $ "DC"_"coded" = "DC"_"current" - "DC"_"previous" $
 
 Neighbouring blocks in a smooth image have similar averages, so these differences are
-usually small — maybe $-3, +1, 0, 0, +2$ — even though the absolute DCs might be around
+usually small (maybe $-3, +1, 0, 0, +2$) even though the absolute DCs might be around
 50. Small numbers need fewer bits. This is DPCM (Differential Pulse Code Modulation)
-applied to the DC stream — Chapter 40's technique, repurposed here in the DC channel of
+applied to the DC stream, Chapter 40's technique repurposed here in the DC channel of
 an image codec.
 
 == Zig-zag scan and run-length encoding
@@ -407,25 +407,25 @@ JPEG encodes the zig-zag sequence of AC coefficients (positions 1–63) using *r
 coding*: each nonzero value is represented as a pair `(RUNLENGTH, VALUE)` where
 `RUNLENGTH` is the count of zeros immediately before this nonzero value (0–15). A special
 code called *End of Block (EOB)* signals that all remaining AC coefficients in this block
-are zero — the single most common symbol in typical images, often appearing after only
+are zero, the single most common symbol in typical images, often appearing after only
 the first few nonzeros.
 
 At quality 50 on a smooth sky block, the entire 63-element AC sequence might compress to
-just: `EOB` — one symbol — meaning all 63 AC coefficients are zero. The DC difference
+just: `EOB` (one symbol), meaning all 63 AC coefficients are zero. The DC difference
 plus one symbol encodes 64 numbers. That is aggressive compression.
 
 == Huffman coding of JPEG symbols
 
 The (RUNLENGTH, VALUE) pairs and DC differences are finally entropy-coded with Huffman
 tables. JPEG does not use a single universal Huffman table; instead it uses up to four
-tables (two for DC symbols, two for AC symbols — separate for luma Y and chroma Cb/Cr),
+tables (two for DC symbols, two for AC symbols, separate for luma Y and chroma Cb/Cr),
 which are stored in the JPEG file header. The encoder counts symbol frequencies across
 all blocks and builds optimal Huffman trees. At decode time, the header is parsed first
 and the Huffman trees are reconstructed before any pixel data is touched.
 
 #history[
-  JPEG's standard actually *allows* an arithmetic coder as an alternative to Huffman —
-  it is called the "arithmetic coding option" (T.84). Arithmetic coding is losslessly
+  JPEG's standard actually *allows* an arithmetic coder as an alternative to Huffman.
+  It is called the "arithmetic coding option" (T.84). Arithmetic coding is losslessly
   more efficient (typically 5–10% smaller files) because it can assign fractional bits per
   symbol. However, in 1992 arithmetic coding was *patent-encumbered* (IBM and AT&T held
   key patents), so camera manufacturers universally implemented only the Huffman variant.
@@ -440,10 +440,10 @@ and the Huffman trees are reconstructed before any pixel data is touched.
   year: 1992,
   authors: "Joint Photographic Experts Group (ISO/CCITT)",
   aim: "Lossy still-image compression using transform + quantize + Huffman",
-  complexity: "$O(N)$ in total pixels ($N$) — one 8×8 DCT per block, $O(64)$ each",
+  complexity: "$O(N)$ in total pixels ($N$), one 8×8 DCT per block at $O(64)$ each",
   strengths: "Universal support; tunable quality; good ratio for photographs; hardware-accelerated everywhere",
   weaknesses: "Blocking and ringing artifacts at low quality; no transparency; no lossless mode in baseline; poor on non-photographic content",
-  superseded: "Partially superseded by WebP, AVIF, JPEG XL for new encodings — but JPEG files will be with us for decades"
+  superseded: "Partially superseded by WebP, AVIF, JPEG XL for new encodings; JPEG files will be with us for decades"
 )[]
 
 == The JPEG file format (JFIF/Exif)
@@ -452,14 +452,14 @@ The bitstream produced by the Huffman encoder is wrapped in a *segment-based con
 Every piece of a JPEG file is a *marker segment*: a two-byte marker (always starting with
 `0xFF`) followed by a length field and data. Key markers:
 
-- `FF D8` — Start of Image (SOI): the first two bytes of every JPEG file.
-- `FF E0` — APP0: JFIF header (resolution, aspect ratio, version).
-- `FF E1` — APP1: Exif data (camera model, GPS coordinates, timestamps from your phone).
-- `FF DB` — DQT: Define Quantization Table.
-- `FF C0` — SOF0: Start of Frame (baseline DCT). Gives image dimensions, component count.
-- `FF C4` — DHT: Define Huffman Table (up to four).
-- `FF DA` — SOS: Start of Scan — the actual compressed data follows.
-- `FF D9` — End of Image (EOI): the last two bytes.
+- `FF D8`: Start of Image (SOI), the first two bytes of every JPEG file.
+- `FF E0`: APP0, the JFIF header (resolution, aspect ratio, version).
+- `FF E1`: APP1, Exif data (camera model, GPS coordinates, timestamps from your phone).
+- `FF DB`: DQT, Define Quantization Table.
+- `FF C0`: SOF0, Start of Frame (baseline DCT), giving image dimensions and component count.
+- `FF C4`: DHT, Define Huffman Table (up to four).
+- `FF DA`: SOS, Start of Scan; the actual compressed data follows.
+- `FF D9`: End of Image (EOI), the last two bytes.
 
 A parser that sees `FF D8 FF` can be confident it has a JPEG file. The `0xFF` magic is so
 reliable that it has been cargo-culted into dozens of later formats.
@@ -489,7 +489,7 @@ reliable that it has been cargo-culted into dozens of later formats.
   #                ...       FF DB   (quantization tables)
   ```
 
-  The `0xFF 0xD8` header is JPEG's *magic number* — two bytes that identify the format
+  The `0xFF 0xD8` header is JPEG's *magic number*, two bytes that identify the format
   unambiguously. Most file formats use such magic numbers at fixed offsets; we saw the
   same idea in our own `container.py` from Chapter 17.
 ]
@@ -501,7 +501,7 @@ then all of block 2, and so on, from top-left to bottom-right. If you watch a sl
 connection load a baseline JPEG, you see a thin horizontal band creeping down the screen.
 
 *Progressive JPEG* (standardized in the same T.81 document) reorders the data into
-*scans* — multiple passes over the whole image:
+*scans*, multiple passes over the whole image:
 
 1. *Spectral selection:* First scan sends only DC coefficients from every block. The whole
    image can be reconstructed at very low quality (blurry but whole). Subsequent scans
@@ -509,7 +509,7 @@ connection load a baseline JPEG, you see a thin horizontal band creeping down th
 2. *Successive approximation:* Each scan refines coefficient precision. First pass sends
    the most significant bits; later passes add lower bits.
 
-This is why progressive JPEGs famously "fade in" on slow connections — you see a blurry
+This is why progressive JPEGs famously "fade in" on slow connections: you see a blurry
 whole image that sharpens over time, which is more pleasant than waiting for a
 top-to-bottom stripe.
 
@@ -529,7 +529,7 @@ photo editor recognizes:
 Because the DCT is applied to independent 8×8 blocks, and because quantization rounds
 coefficients within each block independently, neighbouring blocks at their shared borders
 can have different reconstructed values. The discontinuity shows up as a visible grid
-of 8×8 squares — *blocking*. It is most visible in smooth areas (uniform sky,
+of 8×8 squares called *blocking*. It is most visible in smooth areas (uniform sky,
 skin tones) where sudden jumps across block borders stand out against the gentle
 gradients. At quality 10 a JPEG photograph looks like a tile mosaic.
 
@@ -538,7 +538,7 @@ gradients. At quality 10 a JPEG photograph looks like a tile mosaic.
 A sharp edge in an image (a window frame against a white wall, text on a background)
 requires high-frequency DCT coefficients to represent the sudden jump in value. At low
 quality, those high-frequency coefficients are quantized to zero. But the inverse DCT
-cannot reproduce a sharp edge from low-frequency components alone — it produces *ringing
+cannot reproduce a sharp edge from low-frequency components alone. Instead it produces *ringing
 oscillations* (Gibbs phenomenon, the same effect we mentioned briefly in Chapter 37)
 that ripple away from the edge like ripples on water.
 
@@ -550,7 +550,7 @@ that ripple away from the edge like ripples on water.
   gentle quantization table, a low-frequency truncation of the DCT series of any sharp
   edge will produce oscillations. At higher quality settings the high-frequency
   coefficients survive quantization and reconstruct the edge more accurately, reducing
-  ringing — but the root cause is the basis mismatch, not the quantization alone.
+  ringing, but the root cause is the basis mismatch, not the quantization alone.
 ]
 
 #fig(
@@ -564,7 +564,7 @@ that ripple away from the edge like ripples on water.
         rect((i*0.7, j*0.7),(i*0.7+0.7, j*0.7+0.7), fill: shade, stroke: 1.2pt + white)
       }
     }
-    content((1.4, -0.3), size: 8pt)[Blocking: tile seams]
+    content((1.4, -0.3), box(width: 2.4cm, inset: 1pt, align(center, text(size: 8pt)[Blocking: tile seams])))
     // Right: ringing diagram
     line((4.5, 0),(4.5, 2.8), stroke: 2pt + black)
     for k in range(5) {
@@ -574,14 +574,14 @@ that ripple away from the edge like ripples on water.
       line((xbase + 0.3, 1.4 + amp * 8),(xbase + 0.6, 1.4 - amp * 8), stroke: 0.5pt)
       line((xbase + 0.6, 1.4 - amp * 8),(xbase + 0.9, 1.4), stroke: 0.5pt)
     }
-    content((5.8, -0.3), size: 8pt)[Ringing: edge oscillations]
+    content((5.8, -0.3), box(width: 2.6cm, inset: 1pt, align(center, text(size: 8pt)[Ringing: edge oscillations])))
   })
 )
 
 == JPEG-LS: the lossless sibling
 
 JPEG-LS (ITU-T T.87, 1999) is a completely different standard that shares only the "JPEG"
-name. It is a *lossless or near-lossless* image codec — no DCT, no quantization in the
+name. It is a *lossless or near-lossless* image codec with no DCT and no quantization in the
 destructive sense.
 
 JPEG-LS uses a predictor-based approach called LOCO-I (LOw COmplexity LOssless Image
@@ -591,7 +591,7 @@ and Guillermo Sapiro). Its key ideas:
 1. *Prediction:* Each pixel is predicted from its left, top, and top-left neighbors using
    a simple adaptive rule. For typical smooth images this produces very small residuals.
 2. *Context modeling:* The residuals are coded with Rice-Golomb codes (Chapter 25) adapted
-   by a local gradient context — areas with sharp edges use different parameters than
+   by a local gradient context. Areas with sharp edges use different parameters than
    smooth regions.
 3. *Run-length coding:* Long runs of near-constant pixels (common in medical and document
    images) are coded very efficiently with a dedicated run mode.
@@ -606,7 +606,7 @@ the error stays small.
   year: 1999,
   authors: "Weinberger, Seroussi, Sapiro (HP Labs); standardized as ITU-T T.87",
   aim: "Lossless (and near-lossless) image compression without DCT",
-  complexity: "$O(N)$ — one pass through all pixels",
+  complexity: "$O(N)$, one pass through all pixels",
   strengths: "True lossless; fast; low complexity; excellent for medical/document imaging",
   weaknesses: "Less efficient than JPEG 2000 lossless on some content; no progressive decode; limited adoption outside medical/fax contexts",
   superseded: "JPEG XL in lossless mode offers better ratios; but JPEG-LS is used in DICOM medical imaging worldwide"
@@ -616,7 +616,7 @@ the error stays small.
   JPEG-LS traces its roots to the CALIC algorithm (Context-based Adaptive Lossless Image
   Codec) from the mid-1990s, which achieved excellent ratios but at too high a complexity.
   LOCO-I was explicitly designed to match CALIC's ratio within ~5% while being computable
-  in a single forward pass, making it fast enough for real-time medical scanners. DICOM
+  in a single forward pass and fast enough for real-time medical scanners. DICOM
   (the medical imaging standard) adopted JPEG-LS and it is still the lossless codec of
   choice for X-rays, CT scans, and pathology images worldwide.
 ]
@@ -626,13 +626,13 @@ the error stays small.
 Once we have a lossy codec, we need a way to measure how much damage it does. The
 traditional metric is *PSNR* (Peak Signal-to-Noise Ratio).
 
-#gomaths("PSNR — the engineer's quality ruler")[
+#gomaths("PSNR: the engineer's quality ruler")[
   Let $x_i$ be the original pixel values and $hat(x)_i$ the reconstructed ones, for
   $N$ pixels each in the range $[0, 255]$. The *Mean Squared Error (MSE)* is:
 
   $ "MSE" = (1)/(N) sum_(i=1)^N (x_i - hat(x)_i)^2 $
 
-  It is the average of the squared per-pixel errors — large when reconstruction is far
+  It is the average of the squared per-pixel errors, large when reconstruction is far
   from the original, zero when they are identical.
 
   *PSNR* converts MSE into decibels using the maximum possible signal value
@@ -666,14 +666,14 @@ traditional metric is *PSNR* (Peak Signal-to-Noise Ratio).
 
 == tinyzip Step 19: a toy JPEG encoder
 
-The TINYZIP.md spec assigns Chapter 42 *Step 19*: implement `jpeg.py` — a toy JPEG-class
+The TINYZIP.md spec assigns Chapter 42 *Step 19*: implement `jpeg.py`, a toy JPEG-class
 encoder and decoder on grayscale images, using the DCT and quantizer from earlier steps,
 adding zig-zag + run-length + Huffman coding, and reporting PSNR.
 
-#project("Step 19 · jpeg.py — toy JPEG (DCT + quant + zig-zag + Huffman) → method=\"jpeg\", with PSNR")[
+#project("Step 19 - jpeg.py: toy JPEG (DCT + quant + zig-zag + Huffman) → method=\"jpeg\", with PSNR")[
 
 We import `dct2d`, `idct2d` from `transform.py` (Step 17) and reuse the *canonical*
-Huffman codec `encode`/`decode` from `huffman.py` (Step 8) — the exact functions Chapter 24
+Huffman codec `encode`/`decode` from `huffman.py` (Step 8), the exact functions Chapter 24
 built, with their exact signatures `encode(data: bytes) -> bytes` and
 `decode(blob: bytes) -> bytes`. We add zig-zag scanning, DC differencing, and run-length
 encoding of ACs ourselves.
@@ -702,7 +702,7 @@ This keeps us honest about reuse: we call the real Step 8 functions, untouched.
 # tinyzip/jpeg.py
 """
 Step 19: toy JPEG encoder/decoder for 8-bit grayscale images.
-Implements: YCbCr conversion (skipped — grayscale only in this step),
+Implements: YCbCr conversion (skipped - grayscale only in this step),
             level shift, 8x8 DCT, quantization, zig-zag scan,
             DC differencing + AC run-length, Huffman coding.
 Produces method="jpeg" output compatible with tinyzip container.
@@ -1039,14 +1039,14 @@ When you run this, you should see output like:
   Q=100  PSNR=51.3dB  (near-lossless sanity check)
 ```
 
-(Exact numbers depend on the Huffman implementation from Step 8; the trends — lower
-quality → smaller file, lower PSNR — are what matter.)
+(Exact numbers depend on the Huffman implementation from Step 8; the trends, lower
+quality → smaller file and lower PSNR, are what matter.)
 
 #note[
   This toy encoder omits several production JPEG features: Exif headers, restart markers,
   multiple color channels (Cb/Cr), and the four *separate* Huffman tables baseline JPEG
   defines for DC/AC × luma/chroma. We instead pack all symbols into one byte stream and
-  reuse Chapter 24's single canonical Huffman codec verbatim — clearer to read, and it
+  reuse Chapter 24's single canonical Huffman codec verbatim, which is clearer to read, and it
   still round-trips. The two-bytes-per-symbol serialisation is wasteful (real JPEG packs
   variable-length tokens far tighter), so our byte counts are illustrative, not a
   byte-for-byte race with libjpeg. A full JPEG would add roughly 600 more lines for the
@@ -1075,14 +1075,14 @@ through a concrete mini-example:
 
 One important consequence of JPEG's lossy quantization step deserves its own note: every
 time you *re-compress* a JPEG, you introduce a fresh round of quantization error.
-Save a JPEG at quality 80, open it, save it again at quality 80, open it, save again —
-after a dozen rounds the image develops visible artifacts even though the file size stayed
+Save a JPEG at quality 80, open it, save it again at quality 80, open it, save again.
+After a dozen rounds the image develops visible artifacts even though the file size stayed
 the same. The technical term is *generation loss*. (It is analogous to photocopying a
 photocopy of a photocopy.)
 
 #keyidea[
   Never re-compress a JPEG if you can avoid it. Always keep the highest-quality
-  version as your "master" — ideally a lossless format like PNG or TIFF — and
+  version as your "master" (ideally a lossless format like PNG or TIFF) and
   generate the JPEG only when you need to share it. The tinyzip pipeline obeys this:
   you pass raw pixels in, you get compressed bytes out, and you *decode* to recover
   (approximated) pixels. You do not "round-trip" through JPEG repeatedly.
@@ -1106,7 +1106,7 @@ The answer is *inertia*, *ecosystem depth*, and *hardware*:
   outside of web browsers.
 
 - *Trillions of existing files:* The world has more JPEG files than any other image
-  format. Museums, hospitals, newspapers, governments — all have JPEG archives. Nobody
+  format. Museums, hospitals, newspapers, and governments all have JPEG archives. Nobody
   is batch-transcoding them.
 
 - *Good enough:* For a photograph on a web page, a quality-80 JPEG is genuinely
@@ -1115,14 +1115,14 @@ The answer is *inertia*, *ecosystem depth*, and *hardware*:
 
 JPEG is a case study in the sociology of standards: technical superiority matters far less
 than ubiquity, and ubiquity, once achieved, is almost impossible to displace. JPEG XL's
-lossless JPEG transcoding feature is a clever attempt to offer a smooth migration path —
-the trillions of existing JPEGs can be *safely shrunk* without quality loss — but even
+lossless JPEG transcoding feature is a clever attempt to offer a migration path: the
+trillions of existing JPEGs can be *safely shrunk* without quality loss, but
 that requires new infrastructure to decode the XL files at the other end.
 
 #scoreboard(
   caption: "tinyzip scoreboard after Step 19 (synthetic 256×256 gradient image, ~65 KB raw)",
   [Method], [Bytes], [Ratio vs raw], [PSNR (dB)], [Notes],
-  [raw pixels (no compression)], [65 536], [1.00×], [—], [3 bytes/pixel baseline],
+  [raw pixels (no compression)], [65 536], [1.00×], [n/a], [3 bytes/pixel baseline],
   [method="huffman" (Ch. 24)], [52 440], [0.80×], [∞], [lossless, symbol-level],
   [method="deflate" (Ch. 30)], [41 200], [0.63×], [∞], [lossless, LZ77+Huffman],
   [method="bwt" (Ch. 35)], [36 800], [0.56×], [∞], [lossless, BWT+MTF+RLE],
@@ -1139,7 +1139,7 @@ perceptual system won't miss.
 
 == What comes after JPEG
 
-JPEG set the template — transform + quantize + entropy-code — but thirty years of
+JPEG set the template (transform + quantize + entropy-code), but thirty years of
 research have improved every step:
 
 - *Better transforms:* Wavelets (JPEG 2000, Chapter 43) avoid blocking; variable-block
@@ -1156,7 +1156,7 @@ research have improved every step:
   lower PSNR.
 
 JPEG 2000 (Chapter 43) took the first of these leaps and landed in a fascinating niche.
-The modern format wars (WebP, HEIC, AVIF, JPEG XL — Chapter 45) have taken several of
+The modern format wars (WebP, HEIC, AVIF, JPEG XL, Chapter 45) have taken several of
 them simultaneously. Chapter 57 will show you what a neural network can do when you hand
 it the entire rate-distortion optimization problem and say "learn everything."
 
@@ -1210,7 +1210,7 @@ it the entire rate-distortion optimization problem and say "learn everything."
   After quantizing a smooth block, large coefficients cluster in the top-left corner (low
   frequencies) and zeros dominate the bottom-right. Row-by-row scanning would interleave
   nonzero low-frequency coefficients from row 0 with zero high-frequency ones from row 0,
-  then zero mid-frequency ones from row 1, etc. — mixing zeros and nonzeros throughout.
+  then zero mid-frequency ones from row 1, etc., mixing zeros and nonzeros throughout.
   Zig-zag scan visits positions in order of increasing frequency, so all the large
   low-frequency values come first, followed by a long unbroken run of zeros. The EOB
   symbol then terminates the sequence early. Example with a 4×4 quantized block:
@@ -1230,8 +1230,8 @@ it the entire rate-distortion optimization problem and say "learn everything."
 
 #solution("42.4")[
   All squared errors are $4^2 = 16$. MSE $= 16$. $"PSNR" = 10 log_10(255^2 / 16) =
-  10 log_10(4080.6) approx 36.1" dB"$. This is between 30 and 40 dB — "good quality,
-  minor artifacts" — and above the 30 dB visible degradation threshold.
+  10 log_10(4080.6) approx 36.1" dB"$. This is between 30 and 40 dB ("good quality,
+  minor artifacts") and above the 30 dB visible degradation threshold.
 ]
 
 #exercise("42.5", 2)[
@@ -1245,7 +1245,7 @@ it the entire rate-distortion optimization problem and say "learn everything."
   quantized coefficients), then decreases more slowly on subsequent rounds, and eventually
   *converges* (flattens out). The mechanism: the quantized integer values in each block
   are already multiples of the quantization step size. On re-encode, dividing by the same
-  step and rounding produces the same integer — no new error. So after the first re-encode
+  step and rounding produces the same integer, so no new error is introduced. After the first re-encode
   introduces a full round of error, subsequent re-encodes add almost no additional damage.
   This is why JPEG quality does not completely collapse after many re-encodes, though the
   first-generation loss is real and visible.
@@ -1300,7 +1300,7 @@ it the entire rate-distortion optimization problem and say "learn everything."
   The boundary-only filter blurs the discontinuities at block seams, often improving
   *visual appearance* (the tile grid softens) but potentially *worsening PSNR* (blurring
   also removes correctly-reconstructed edges that happen to fall on block boundaries,
-  averaging them with their neighbors). This paradox — better looking but lower PSNR — is
+  averaging them with their neighbors). This paradox (better looking but lower PSNR) is
   a classic illustration of PSNR's limitation as a perceptual metric. Real deblocking
   filters (in H.264, H.265) use boundary-strength classification: they only filter
   boundaries where the discontinuity exceeds a threshold derived from the quantization
@@ -1315,13 +1315,13 @@ it the entire rate-distortion optimization problem and say "learn everything."
 
 - #link("https://ieeexplore.ieee.org/document/748125")[Weinberger, M. J., Seroussi, G., & Sapiro, G. (1996). "LOCO-I: A Low Complexity, Context-Based, Lossless Image Compression Algorithm." _Proc. Data Compression Conference_.] The JPEG-LS algorithm paper, lucid and readable.
 
-- #link("https://www.cl.cam.ac.uk/~jgd1000/")[Legge, G. E. & Gu, Y. (1989). "Stereopsis and Contrast." _Vision Research_.] Background on the human visual system's spatial frequency sensitivity — the perceptual science that motivates chroma subsampling and the quantization table shape.
+- #link("https://www.cl.cam.ac.uk/~jgd1000/")[Legge, G. E. & Gu, Y. (1989). "Stereopsis and Contrast." _Vision Research_.] Background on the human visual system's spatial frequency sensitivity, the perceptual science that motivates chroma subsampling and the quantization table shape.
 
 - #link("https://ds.jpeg.org/documents/wg1n5114.pdf")[ISO/IEC 10918-1 / ITU-T T.81 (1994). _Digital Compression and Coding of Continuous-Tone Still Images_.] The actual JPEG standard, freely available from the JPEG committee.
 
 - #link("https://jpeg.org/jpegls/")[JPEG Committee. _JPEG LS overview_.] The JPEG-LS landing page with links to T.87 and CharLS (a fast open-source JPEG-LS implementation in C++).
 
-- #link("https://arxiv.org/abs/2206.00985")[Alakuijala, J., et al. (2022). "JPEG XL next-generation image compression architecture and coding tools." _SPIE Proc_.] The JPEG XL design paper — covers the successor codec that addresses JPEG's remaining limitations.
+- #link("https://arxiv.org/abs/2206.00985")[Alakuijala, J., et al. (2022). "JPEG XL next-generation image compression architecture and coding tools." _SPIE Proc_.] The JPEG XL design paper, covering the successor codec that addresses JPEG's remaining limitations.
 
 #bridge[
   JPEG proved that the transform → quantize → entropy-code template is astonishingly
@@ -1330,7 +1330,7 @@ it the entire rate-distortion optimization problem and say "learn everything."
   image. Both observations motivated the next generation: *what if we used a transform
   that doesn't have blocks?* The answer was JPEG 2000, which replaces the 8×8 DCT with
   a wavelet decomposition applied to the *whole image*. The next chapter takes JPEG 2000
-  apart with the same care we brought to JPEG — not just to learn about wavelets in
+  apart with the same care we brought to JPEG. Not only to learn about wavelets in
   practice, but because JPEG 2000's elegant concepts (embedded bitstream coding, scalable
   quality, regions of interest) persist in cinema, medicine, and satellite imaging long
   after the web moved on.

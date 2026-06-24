@@ -10,13 +10,13 @@
 Here is a puzzle to open this chapter.
 
 Imagine a salesman knocks on your door and says he has invented a machine that
-can take _any_ file on your hard drive and make it smaller — guaranteed, every
+can take _any_ file on your hard drive and make it smaller, guaranteed, every
 single time. Compress a text file: smaller. Compress a music file: smaller.
 Compress a random scramble of noise: smaller. And then compress the already-
 compressed output: smaller still. Run it enough times and you could store your
 entire photo library in a file the size of a single letter of the alphabet.
 
-You should feel a little thrill of "wait, that's too good" — because it is
+You should feel a little thrill of "wait, that's too good." Because it is
 impossible. Not just hard. Not just "nobody has managed it yet." Mathematically,
 provably, forever impossible. In Chapter 19 we saw the source coding theorem;
 here we will sharpen that into the counting argument that kills infinite-
@@ -28,9 +28,9 @@ ingenious inventions. It is also littered with cautionary markers: ideas that
 seemed brilliant but hit an invisible wall, formats that were technically
 superior but still lost to the market, and attacks on the infrastructure we all
 rely on that came from directions nobody expected. Every story here teaches
-something different — about the gap between theory and practice, about the
-politics of ecosystems, about the unexpected fragility of software, and about
-what happens when someone claims to break the laws of mathematics.
+something different: the gap between theory and practice, the politics of
+ecosystems, the unexpected fragility of software, and what happens when someone
+claims to break the laws of mathematics.
 
 These lessons are not mere history trivia. Engineers who do not know them will
 reinvent the same mistakes. As you read compression benchmarks, vendor
@@ -38,8 +38,8 @@ whitepapers, and breathless news headlines, these patterns will save you hours.
 
 #recap[
   In *Chapter 18* we met Shannon's entropy, and in *Chapter 19* the source
-  coding theorem made it precise — the theoretical floor below which no lossless
-  compressor can go. In *Chapter 22*
+  coding theorem made it precise (the theoretical floor below which no lossless
+  compressor can go). In *Chapter 22*
   we studied Kolmogorov complexity and the impossibility of a universal
   compressor that beats the entropy of every input. In *Chapter 43* we followed
   the technical story of JPEG 2000 and wavelets in depth; here we examine _why_
@@ -73,21 +73,21 @@ _any_ input by at least one bit. Let us call that claim *Claim C.*
   Here is a counting idea so simple it almost feels like cheating.
 
   Imagine you have ten pigeons and only nine boxes. You must put every pigeon
-  into some box. Can every box contain at most one pigeon? No — there are not
+  into some box. Can every box contain at most one pigeon? No, there are not
   enough boxes. At least one box must hold two or more pigeons.
 
   More generally: if you have *N* objects and only *M* boxes, and $N > M$, then
   at least one box holds more than one object.
 
-  This principle — _more objects than containers forces a collision_ — is all we
+  This principle (_more objects than containers forces a collision_) is all we
   need to kill infinite-compression claims.
 ]
 
 Now apply it to files. Think of all possible files that are exactly $n$ bits
-long. There are exactly $2^n$ of them — because each bit can be 0 or 1, and
+long. There are exactly $2^n$ of them, because each bit can be 0 or 1, and
 there are $n$ bits. For example:
 
-- Files of length 3 bits: 000, 001, 010, 011, 100, 101, 110, 111 — that is
+- Files of length 3 bits: 000, 001, 010, 011, 100, 101, 110, 111, that is
   $2^3 = 8$ files.
 
 If Claim C is true, our compressor turns every $n$-bit file into a file of at
@@ -104,8 +104,8 @@ $
 So: we have $2^n$ different input files, and only $2^n - 1$ possible output
 files. We are trying to park $2^n$ pigeons in $2^n - 1$ boxes. At least two
 different inputs must produce the _same_ compressed output. But then the
-decompressor, given that output, does not know which input to restore —
-_lossless_ decompression is broken.
+decompressor, given that output, does not know which input to restore.
+_Lossless_ decompression is broken.
 
 #theorem("No Universal Lossless Compressor")[
   No lossless compression algorithm can compress every possible input file.
@@ -125,7 +125,7 @@ end of time.
   natural language, source code, or sensor measurements has far lower entropy
   than a random file of the same length. Compressors exploit that structure.
   Present them with truly random data (like an already-encrypted file) and they
-  will not compress it — they will often make it slightly larger.
+  will not compress it; they will often make it slightly larger.
 ]
 
 === Worked Example: Running the Numbers
@@ -134,13 +134,13 @@ Let us make this very concrete. Consider all 8-bit files (one byte). There are
 $2^8 = 256$ of them. A compressor that always outputs something shorter than
 the input must output files of at most 7 bits. There are only $2^7 - 1 = 127$
 such outputs. Our compressor must map 256 distinct inputs into at most 127
-distinct outputs — at minimum, two inputs per output bucket on average. It is
+distinct outputs, so at minimum two inputs per output bucket on average. It is
 literally impossible to do this without collisions.
 
 Now scale up. Consider all files of up to one megabyte ($8{,}388{,}608$ bits).
 There are $2^(8{,}388{,}608)$ such files. A compressor that makes every one
 shorter by even one bit must produce files of at most $8{,}388{,}607$ bits,
-giving $2^(8{,}388{,}607)$ possible outputs — exactly half the number of inputs.
+giving $2^(8{,}388{,}607)$ possible outputs, exactly half the number of inputs.
 Half of all files must collide. Half of all lossless compressed files are, by
 mathematical necessity, longer than their input when passed through any
 "compress everything" algorithm.
@@ -158,14 +158,14 @@ mathematical necessity, longer than their input when passed through any
 
 The counting argument is not merely academic. It has been needed, repeatedly,
 in real disputes. Here is a brief gallery of cases where someone claimed to
-break it — and the argument showed them the door.
+break it, and the argument showed them the door.
 
 #history[
   *WEB Technologies, 1992.* A company in Smyrna, Georgia, claimed its program
   `DataFiles/16` could compress "almost any amount of data to less than 1,024
   bytes." BYTE magazine investigated in its June 1992 issue. Independent
   testing showed the program produced output files that were _larger_ than their
-  inputs — or simply corrupt. The program exploited the novelty of the claim to
+  inputs, or simply corrupt. The program exploited the novelty of the claim to
   extract money from hopeful buyers; the counting argument would have dismissed
   it in seconds.
 
@@ -180,10 +180,10 @@ break it — and the argument showed them the door.
   Romke Jan Bernhard Sloot, a Dutch electronics technician, claimed in 1999 to
   have compressed a full feature-length film into a file of just 8 kilobytes.
   (Shannon's source coding theorem tells us a movie contains far more than $8
-  times 8 = 64{,}000$ bits of information — the claim required something
+  times 8 = 64{,}000$ bits of information, so the claim required something
   genuinely impossible.) Investors were enthusiastic. Sloot gave a live
-  demonstration. Then, on July 11, 1999 — two days before he was to hand over
-  the source code to a notary — he died suddenly of a heart attack. The source
+  demonstration. Then, on July 11, 1999, two days before he was to hand over
+  the source code to a notary, he died suddenly of a heart attack. The source
   code was never found. Whether Sloot was a genuine eccentric who built
   something nobody understood, or a fraud who was staging an exit, is a mystery.
   The mathematics, however, leaves no room for the system to work as described.
@@ -236,8 +236,8 @@ break it — and the argument showed them the door.
 === The Promise
 
 In the 1980s, mathematician Michael Barnsley was doing extraordinary things with
-fractals. He had shown that many complicated, beautiful shapes — fern leaves,
-coastlines, mountain silhouettes — could be described by very short lists of
+fractals. He had shown that many complicated, beautiful shapes (fern leaves,
+coastlines, mountain silhouettes) could be described by very short lists of
 simple geometric rules. His book _Fractals Everywhere_ (1988) captured the
 imagination of a generation of computer scientists, and with good reason: if a
 picture of a fern could be stored as five rules instead of a million pixels,
@@ -264,7 +264,7 @@ these relationships.
 
 #definition("Iterated Function System (IFS)")[
   An *iterated function system* is a finite collection of _contractive
-  transformations_ — functions that shrink and move regions of an image. When
+  transformations_: functions that shrink and move regions of an image. When
   applied repeatedly, an IFS converges to a unique fixed point called the
   *attractor*. For images, the attractor is the compressed image itself.
 ]
@@ -272,7 +272,7 @@ these relationships.
 #gomaths("Contractions and fixed points")[
   A transformation is *contractive* if it always pulls any two points closer
   together. Concretely, if applying the map $f$ to two inputs $x$ and $y$ shrinks
-  the gap between them — say it at most halves it every time — then $f$ is a
+  the gap between them (say, it at most halves it every time), then $f$ is a
   contraction.
 
   Here is the magic. Pick _any_ starting point and apply $f$ over and over:
@@ -281,15 +281,15 @@ these relationships.
   $f(p) = p$. That unmoving point is the *fixed point*. A simple numeric example:
   let $f(x) = x\/2 + 3$. Starting from $x = 0$ we get $0, 3, 4.5, 5.25, dots$,
   marching toward $p = 6$ (and indeed $6\/2 + 3 = 6$). Start from $x = 100$
-  instead and you get $100, 53, 29.5, dots$ — still heading to the very same $6$.
+  instead and you get $100, 53, 29.5, dots$, still heading to the very same $6$.
 
   This is the whole trick of fractal _decoding_: the encoder picks transformations
   whose joint fixed point _is the original image_. The decoder can then begin
   from a blank canvas (or any image at all) and simply iterate until the picture
-  stops changing — the contraction guarantees it always lands on the same
-  attractor. (Mathematicians call this guarantee the _Banach fixed-point
+  stops changing, because the contraction guarantees it always lands on the same
+  attractor. Mathematicians call this guarantee the _Banach fixed-point
   theorem_; we need only the intuition that shrinking maps have one inevitable
-  destination.)
+  destination.
 ]
 
 The compression process works in three stages:
@@ -306,12 +306,12 @@ The compression process works in three stages:
 + *Store the transformation, not the pixels.* Instead of saving the pixel values
   of the range block, save the compact description: "range block at position
   $(x, y)$ ≈ domain block at position $(p, q)$, scaled and transformed by
-  parameters $s, theta, b$" — where $s$ scales the contrast, $theta$ is the
-  rotation angle, and $b$ is the brightness offset.
+  parameters $s, theta, b$" (where $s$ scales the contrast, $theta$ is the
+  rotation angle, and $b$ is the brightness offset).
 
 At decompression time, you start with any arbitrary image (even a blank
 canvas), apply all the stored transformations repeatedly, and the image converges
-to the original — because the transformations were chosen to make the original
+to the original, because the transformations were chosen to make the original
 the unique fixed point of the IFS.
 
 #fig(
@@ -334,11 +334,11 @@ the unique fixed point of the IFS.
     content((3.0, 1.2), text(size: 7.5pt, fill: eastern)[Contract + adjust])
     // Right side: stored data
     rect((5.0, 0.5),(8.5, 2.5), stroke: 0.6pt, fill: luma(96%))
-    content((6.75, 2.8), text(size: 8pt)[Stored: transformation list])
-    content((6.75, 2.15), text(size: 7.5pt)[(p=12, q=34,])
-    content((6.75, 1.75), text(size: 7.5pt)[ s=0.75, θ=90°,])
-    content((6.75, 1.35), text(size: 7.5pt)[ brightness=+5)])
-    content((6.75, 0.85), text(size: 7pt, fill: gray)[← one entry per range block])
+    content((6.75, 2.8), box(width: 3.1cm, align(center, text(size: 8pt)[Stored: transformation list])))
+    content((6.75, 2.15), box(width: 3.1cm, align(center, text(size: 7.5pt)[(p=12, q=34,])))
+    content((6.75, 1.75), box(width: 3.1cm, align(center, text(size: 7.5pt)[s=0.75, θ=90°,])))
+    content((6.75, 1.35), box(width: 3.1cm, align(center, text(size: 7.5pt)[brightness=+5])))
+    content((6.75, 0.85), box(width: 3.1cm, inset: 2pt, align(center, text(size: 7pt, fill: gray)[one entry per range block])))
   })
 )
 
@@ -358,15 +358,15 @@ same image in a second.
 
 *The quality ceiling.* The self-similarity assumption is only approximately
 true. When the encoder cannot find a good domain match, it settles for a
-mediocre one and the reconstructed image shows blurry "fractal artifacts" —
+mediocre one and the reconstructed image shows blurry "fractal artifacts":
 pattern repetitions that look nothing like natural image degradation.
 
 *Patents and secrecy.* Iterated Systems Inc. held numerous patents and was
 slow to license. This chilled academic and commercial adoption precisely when
 JPEG was being standardised openly and freely.
 
-Decoding was fast — just apply the transformations a handful of times and the
-image converges — and fractal images showed the attractive property of
+Decoding was fast (apply the transformations a handful of times and the image
+converges), and fractal images showed the attractive property of
 _resolution independence_: you could zoom in and the attractor would fill in
 detail rather than showing pixels. Barnsley's company sold a product called
 *Genuine Fractals* as a photographic zoom tool, and Microsoft used a fractal-
@@ -396,7 +396,7 @@ occasional niche applications, but the mainstream passed it by.
   Research into faster search strategies (genetic algorithms, hierarchical
   matching, neural approximation) never closed the gap with JPEG sufficiently
   to matter commercially. Fractal compression is a cautionary example of
-  "theoretically beautiful, practically inconvenient" — a pattern that recurs
+  "theoretically beautiful, practically inconvenient," a pattern that recurs
   throughout the field.
 ]
 
@@ -408,7 +408,7 @@ occasional niche applications, but the mainstream passed it by.
   image's true mathematical structure. At scales smaller than the range block
   size, the decompressor _invents_ detail by extrapolation from the stored
   self-similarity patterns. This invented detail is plausible-looking but not
-  real — it is not what the original camera captured. "Resolution independence"
+  real. It is not what the original camera captured. "Resolution independence"
   is a form of interpolation, not information recovery.
 ]
 
@@ -418,14 +418,14 @@ Fractal compression itself failed, but the ideas it introduced did not disappear
 The notion of exploiting _self-similarity at multiple scales_ reappeared in:
 
 - *Intra-prediction in video codecs.* H.264, HEVC, and AV1 all predict each
-  block from neighbouring blocks already encoded in the same frame — a
+  block from neighbouring blocks already encoded in the same frame, a
   descendant of the "find a match elsewhere in the image" idea, made fast and
   practical.
 - *Wavelet transforms.* The multi-scale decomposition in JPEG 2000 and modern
   learned codecs captures the same scale-dependent structure that Barnsley was
   after, but with a fixed mathematical basis rather than a data-driven search.
 - *Learned image compression.* Modern autoencoders (Chapter 57) implicitly
-  learn to model scale-dependent correlations in images — a data-driven IFS, if
+  learn to model scale-dependent correlations in images, a data-driven IFS, if
   you squint.
 
 Bad ideas often fertilise good ones. The lesson is not to dismiss fractal
@@ -435,9 +435,9 @@ compression entirely, but to understand exactly where it broke down and why.
 
 === A Clean-Sheet Redesign
 
-In the late 1990s, the JPEG committee looked at the problems with JPEG —
-blocking artifacts, no lossless mode worth using, no progressive quality
-scalability — and set out to build a successor from scratch. The result, *ISO/IEC
+In the late 1990s, the JPEG committee looked at the problems with JPEG
+(blocking artifacts, no lossless mode worth using, no progressive quality
+scalability) and set out to build a successor from scratch. The result, *ISO/IEC
 15444-1*, was finalised between 2000 and 2001. Technically, it was a stunning
 achievement, and Chapter 43 covers the engineering in full. Here we focus on
 _why it lost despite being better_.
@@ -485,9 +485,9 @@ image format.) Without browser support, web developers could not use it.
 Without web developers using it, the ecosystem of encoders, image editing tools,
 and CDN support never developed.
 
-*Network effects and inertia.* The installed base of JPEG — in cameras,
+*Network effects and inertia.* The installed base of JPEG (cameras,
 editing software, content management systems, email clients, social media
-platforms — was vast. JPEG 2000 would have needed to be _dramatically_ better,
+platforms) was vast. JPEG 2000 would have needed to be _dramatically_ better,
 cheaper to decode, and universally supported to overcome that inertia. It was
 better. But not dramatically so at the quality levels typical users cared about.
 
@@ -505,8 +505,8 @@ Losing the web did not mean losing everywhere. In niches where its technical
 advantages mattered more than decode speed on mobile browsers, JPEG 2000 found
 durable homes:
 
-*Digital cinema.* In 2005, the *Digital Cinema Initiatives (DCI)* consortium —
-the Hollywood studios — selected JPEG 2000 as the mandatory compression
+*Digital cinema.* In 2005, the *Digital Cinema Initiatives (DCI)* consortium
+(the Hollywood studios) selected JPEG 2000 as the mandatory compression
 standard for Digital Cinema Packages (DCPs). Every movie you have watched in a
 digital cinema was stored and distributed as JPEG 2000. The reasons were
 exactly the ones the web could not pay for: high bit depth, lossless options,
@@ -526,7 +526,7 @@ documents, precisely because its lossless mode preserves every pixel.
 The lesson is precise and counterintuitive: *the same technical properties that
 made JPEG 2000 unattractive for consumer web use made it ideal for
 professional, archival, and mission-critical uses*. The format found its true
-market — it just was not the market its creators had hoped for.
+market. It just was not the market its creators had hoped for.
 
 #keyidea[
   Technical superiority does not guarantee market success. Adoption is determined
@@ -539,14 +539,14 @@ market — it just was not the market its creators had hoped for.
 
 === The Slow Vindication
 
-JPEG 2000 has been partly vindicated — not by conquering the web, but by
+JPEG 2000 has been partly vindicated, not by conquering the web, but by
 demonstrating that its _ideas_ were right. The JPEG XL standard (Chapter 45),
 finalized 2021–2022 and back in Chrome as of February 2026, was co-developed
 by Jon Sneyers, one of the key minds behind FLIF, and borrows several
 architectural ideas from JPEG 2000: progressive decoding, high bit depth,
 lossless and lossy in one format, and a careful attention to professional
-workflows. JPEG XL is not a wavelet codec — it uses a variable-block-size DCT
-and the Modular mode for lossless — but the _design philosophy_ that failed
+workflows. JPEG XL is not a wavelet codec; it uses a variable-block-size DCT
+and the Modular mode for lossless. But the _design philosophy_ that failed
 commercially in 2001 has quietly shaped the designs that came after.
 
 == The xz Backdoor: When the Attack Came From Inside the Project
@@ -556,10 +556,10 @@ commercially in 2001 has quietly shaped the designs that came after.
 On a weekday morning in late March 2024, *Andres Freund*, a software engineer
 at Microsoft and a contributor to the PostgreSQL database project, was running
 performance tests on a Linux system. SSH logins were taking about 500
-milliseconds — roughly five times longer than expected. Most engineers would
+milliseconds, roughly five times longer than expected. Most engineers would
 have moved on. Freund did not. He profiled the connection and found that the
 `sshd` process was consuming an unexpectedly large amount of CPU cycles inside
-a library called `liblzma` — the library at the core of *XZ Utils*, one of the
+a library called `liblzma`, the library at the core of *XZ Utils*, one of the
 most widely used compression tools on Linux.
 
 That anomaly set off a ten-day investigation that ended with one of the most
@@ -572,7 +572,7 @@ XZ Utils is a small, unglamorous package. It implements the LZMA2 compression
 algorithm (the engine of the `.xz` format) and provides the `xz` command-line
 tool. It is not famous. Most users have never heard of it. But it is a
 _dependency_ of thousands of other packages. On many Linux distributions,
-`liblzma` is linked into `systemd`, and `systemd` is linked into `sshd` — the
+`liblzma` is linked into `systemd`, and `systemd` is linked into `sshd`, the
 daemon that handles all remote logins. This chain meant that a vulnerability in
 `liblzma` was, in effect, a vulnerability in SSH itself on affected systems.
 
@@ -581,7 +581,7 @@ daemon that handles all remote logins. This chain meant that a vulnerability in
 The attacker operated under the GitHub username *Jia Tan* (handle: `JiaT75`).
 The account was created in 2021, and for over two years the person behind it
 did nothing but make legitimate, high-quality contributions to various
-open-source projects — including XZ Utils. The contributions were technically
+open-source projects, including XZ Utils. The contributions were technically
 correct, the code was clean, and the patches were helpful.
 
 During the same period, a series of other accounts (widely believed to be
@@ -590,21 +590,21 @@ XZ Utils mailing list, arguing that the project's maintainer, *Lasse Collin*,
 was too slow to review and merge contributions. The pressure was persistent and
 targeted. By late 2022, Jia Tan had been granted co-maintainer status and,
 by 2023, had replaced Collin as the primary contact for Google's `oss-fuzz`
-fuzzing service — a key quality-assurance relationship.
+fuzzing service, a key quality-assurance relationship.
 
 The timeline of the actual backdoor:
 
 - *January 22, 2024*: First backdoor-related commit.
 - *February 23, 2024*: The obfuscated backdoor payload committed to the
   repository.
-- *February 24, 2024*: XZ Utils *5.6.0* released — the first version containing
+- *February 24, 2024*: XZ Utils *5.6.0* released, the first version containing
   the backdoor.
 - *March 9, 2024*: XZ Utils *5.6.1* released, with minor "fixes" that in fact
   refined the backdoor.
 - *March 28, 2024*: Andres Freund posts to the Openwall security mailing list.
   Within 24 hours, Linux distributions including Red Hat, Debian, and SUSE
   reverted to the previous clean version. CVE-2024-3094 was assigned, with a
-  CVSS score of *10.0* — the highest possible.
+  CVSS score of *10.0*, the highest possible.
 
 #fig(
   [The xz backdoor timeline: trust-building spanning years, then a narrow
@@ -632,17 +632,17 @@ The timeline of the actual backdoor:
     }
     // Shaded "trust building" zone
     rect((0, 1.5), (5.5, 1.8), fill: green.lighten(70%), stroke: none)
-    content((2.75, 2.0), text(size: 7pt, fill: eastern)[Trust-building phase (2+ years)])
+    content((2.75, 2.0), box(width: 5.1cm, align(center, text(size: 7pt, fill: eastern)[Trust-building phase (2+ years)])))
     // Shaded "backdoor live" zone
     rect((7.0, 1.5), (10.0, 1.8), fill: red.lighten(70%), stroke: none)
-    content((8.5, 2.0), text(size: 7pt, fill: red)[Backdoor live (33 days)])
+    content((8.5, 2.0), box(width: 2.6cm, align(center, text(size: 7pt, fill: red)[Backdoor live (33 days)])))
   })
 )
 
 === How the Backdoor Worked
 
 The attack was technically remarkable for its sophistication. The malicious code
-was not stored in the GitHub repository in plain sight — it was hidden inside
+was not stored in the GitHub repository in plain sight. It was hidden inside
 *binary test files*, nominally "test data" for compression library testing. A
 build script extracted and injected the payload only when building release
 tarballs, not when compiling from source via git. This means:
@@ -655,7 +655,7 @@ tarballs, not when compiling from source via git. This means:
 The payload itself modified the `liblzma` library to hook into the RSA key
 verification code in `sshd`. The hook allowed someone with a specific private
 key (presumably Jia Tan's) to authenticate to any affected system _without
-knowing the correct password_ — a universal remote login backdoor.
+knowing the correct password_: a universal remote login backdoor.
 
 #aside[
   CVE-2024-3094 affected only versions 5.6.0 and 5.6.1 of XZ Utils, and only
@@ -669,8 +669,8 @@ knowing the correct password_ — a universal remote login backdoor.
 
 === What the xz Backdoor Teaches
 
-The xz incident is not, strictly speaking, a compression failure — the LZMA
-algorithm is correct. It is a *trust failure* at the intersection of
+The xz incident is not, strictly speaking, a compression failure (the LZMA
+algorithm is correct). It is a *trust failure* at the intersection of
 compression software and open-source maintenance practices. The lessons it
 crystallised have been discussed in security communities for years since
 discovery:
@@ -699,7 +699,7 @@ of June 2026, the true identity of "Jia Tan" has not been publicly confirmed.
   Do not conclude that open source is uniquely vulnerable. Closed-source
   software can conceal backdoors just as well (or better), with fewer people
   positioned to notice. The xz case is notable because the open-source process
-  _allowed_ Freund to find it — the SSH latency anomaly led him to public source
+  _allowed_ Freund to find it: the SSH latency anomaly led him to public source
   code he could actually read. A closed-source library would have offered no
   such pathway.
 ]
@@ -710,31 +710,31 @@ The discovery triggered a broad conversation about open-source security practice
 
 - *OpenSSF (Open Source Security Foundation)* and various Linux distributions
   increased funding for security audits of critical infrastructure libraries.
-- *Reproducible builds* — the practice of ensuring that the same source code
-  produces byte-identical binaries — gained urgent attention as a mitigation
+- *Reproducible builds* (the practice of ensuring that the same source code
+  produces byte-identical binaries) gained urgent attention as a mitigation
   for the "binary test file" hiding technique.
-- The concept of *software bills of materials (SBOMs)* — inventories of every
-  dependency a piece of software relies on — accelerated in adoption, pushed by
+- The concept of *software bills of materials (SBOMs)*, inventories of every
+  dependency a piece of software relies on, accelerated in adoption, pushed by
   both the US federal government and the European Union's Cyber Resilience Act.
 
 None of this makes the underlying problem go away. Compression libraries, codec
 implementations, and low-level file-format parsers are exactly the kind of code
 that sits deep in dependency trees, receives minimal security scrutiny, and
 processes untrusted data. The xz backdoor was a compression story that turned
-into a security story — a reminder that the tools we build for data efficiency
+into a security story, a reminder that the tools we build for data efficiency
 can become attack vectors.
 
 == Engineering Epistemics: What Failure Teaches
 
 === The Pattern of Cautionary Tales
 
-Looking across the four stories in this chapter — the counting argument, fractal
-compression, JPEG 2000's market failure, and the xz backdoor — a few patterns
+Looking across the four stories in this chapter (the counting argument, fractal
+compression, JPEG 2000's market failure, and the xz backdoor), a few patterns
 emerge that are worth naming explicitly.
 
 *Impossibility claims deserve a mathematical gun, not a wait-and-see.* The
 counting argument is absolute. When someone claims lossless universal
-compression, do not ask to see benchmarks — ask them to explain how they evade
+compression, do not ask to see benchmarks. Ask them to explain how they evade
 the pigeonhole principle. They cannot. Save everyone's time.
 
 *Theory and practice diverge in both directions.* Fractal compression was
@@ -749,7 +749,7 @@ switching cost was invisible but enormous. Any technology that requires the
 whole world to upgrade in lockstep faces this problem.
 
 *Security vulnerabilities hide in boring, trusted code.* The xz backdoor did
-not hide in an exciting, security-critical library — it hid in an unremarkable
+not hide in an exciting, security-critical library. It hid in an unremarkable
 compression utility that happened to sit in a critical dependency chain.
 "Low-profile" and "low-risk" are not the same thing.
 
@@ -777,7 +777,7 @@ what we know, and how should we update when we are wrong?
 ]
 
 The bias toward success stories in textbooks and conference papers is not
-malicious — nobody wants to write a paper about the algorithm that did not work.
+malicious; nobody wants to write a paper about the algorithm that did not work.
 But it produces a distorted map of the territory. This chapter is an attempt at
 correction. The things that did not work, the claims that were wrong, and the
 attacks that almost succeeded are as important to understand as the breakthroughs.
@@ -829,19 +829,19 @@ whether from an academic paper, a vendor whitepaper, or a comment on a forum:
 
 #link("https://matt.might.net/articles/why-infinite-or-guaranteed-file-compression-is-impossible/")[Matt Might, _Why Guaranteed File Compression is Impossible_ (2012).] A clear, short web essay deriving the counting argument with minimal prerequisites.
 
-#link("https://en.wikipedia.org/wiki/Fractal_compression")[Wikipedia — Fractal Compression.] A good starting reference with pointers into the primary literature.
+#link("https://en.wikipedia.org/wiki/Fractal_compression")[Wikipedia: Fractal Compression.] A good starting reference with pointers into the primary literature.
 
-#link("https://blog.ansi.org/ansi/why-jpeg-2000-never-used-standard-iso-iec/")[ANSI Blog — Why JPEG 2000 Never Took Off.] A readable overview of the adoption barriers.
+#link("https://blog.ansi.org/ansi/why-jpeg-2000-never-used-standard-iso-iec/")[ANSI Blog: Why JPEG 2000 Never Took Off.] A readable overview of the adoption barriers.
 
-#link("https://cloudinary.com/blog/the_great_jpeg_2000_debate_analyzing_the_pros_and_cons_to_widespread_adoption")[Cloudinary — The Great JPEG 2000 Debate.] Industry perspective on the pros and cons.
+#link("https://cloudinary.com/blog/the_great_jpeg_2000_debate_analyzing_the_pros_and_cons_to_widespread_adoption")[Cloudinary: The Great JPEG 2000 Debate.] Industry perspective on the pros and cons.
 
-#link("https://securitylabs.datadoghq.com/articles/xz-backdoor-cve-2024-3094/")[Datadog Security Labs — The XZ Backdoor: Everything You Need to Know.] Detailed technical analysis of CVE-2024-3094.
+#link("https://securitylabs.datadoghq.com/articles/xz-backdoor-cve-2024-3094/")[Datadog Security Labs: The XZ Backdoor, Everything You Need to Know.] Detailed technical analysis of CVE-2024-3094.
 
-#link("https://en.wikipedia.org/wiki/XZ_Utils_backdoor")[Wikipedia — XZ Utils Backdoor.] A well-maintained summary of the attack, discovery, and aftermath.
+#link("https://en.wikipedia.org/wiki/XZ_Utils_backdoor")[Wikipedia: XZ Utils Backdoor.] A well-maintained summary of the attack, discovery, and aftermath.
 
 #link("https://compressionscams.blogspot.com/")[Compression Scams blog.] An informal but useful archive of impossible-compression claims over the decades.
 
-#link("https://malicious.life/episode/jan_sloots_data_compression_system/")[Malicious Life Podcast — Jan Sloot's Data Compression System.] An entertaining and informative account of the Sloot affair.
+#link("https://malicious.life/episode/jan_sloots_data_compression_system/")[Malicious Life Podcast: Jan Sloot's Data Compression System.] An entertaining and informative account of the Sloot affair.
 
 == Exercises
 
@@ -854,7 +854,7 @@ whether from an academic paper, a vendor whitepaper, or a comment on a forum:
 #solution("78.1")[
   There are $2^8 = 256$ distinct 1-byte files (all bit patterns from 00000000 to
   11111111). There is exactly $2^0 = 1$ file of 0 bytes (the empty file). A
-  lossless compressor cannot map 256 distinct inputs to 1 output — the
+  lossless compressor cannot map 256 distinct inputs to 1 output; the
   decompressor cannot know which of the 256 original inputs to restore. The
   claim is impossible.
 ]
@@ -869,8 +869,8 @@ whether from an academic paper, a vendor whitepaper, or a comment on a forum:
 
 #solution("78.2")[
   (a) The counting argument says no compressor can compress every input. In
-  particular, there must exist some inputs — and the set of already-compressed
-  files is a good candidate — that the compressor cannot shrink. (b) A `.zip`
+  particular, there must exist some inputs that the compressor cannot shrink,
+  and the set of already-compressed files is a natural candidate. (b) A `.zip`
   file has had its redundancy removed: the symbol frequencies are close to
   uniform, so the entropy is near the maximum (≈ 8 bits/byte). Huffman and LZ77
   cannot exploit structure that does not exist. The overhead of gzip's header
@@ -888,7 +888,7 @@ whether from an academic paper, a vendor whitepaper, or a comment on a forum:
   A model memo: "The vendor is claiming something mathematically impossible.
   Here is why. If you gave this tool every possible 1 MB file, there are more
   possible 1 MB files than possible 100 KB files. That means some 1 MB files
-  would have to produce the same 100 KB output — so the tool could not losslessly
+  would have to produce the same 100 KB output, so the tool could not losslessly
   tell them apart when decompressing. This is not a hard engineering problem
   waiting for the right breakthrough; it is a fundamental counting argument. No
   algorithm, no matter how clever, can evade it. We should not pay for something
@@ -947,7 +947,7 @@ whether from an academic paper, a vendor whitepaper, or a comment on a forum:
   "JPEG 2000 was technically superior to JPEG in almost every measurable dimension but lost the web due to higher decoder cost, format complexity, patent uncertainty, and ecosystem inertia; it won in digital cinema, medical imaging, and archival.",
   "Technical superiority does not guarantee market success: ecosystem inertia, decoder cost, and patent clarity often matter more than compression ratio.",
   "The xz backdoor (CVE-2024-3094, March 2024) was a sophisticated supply-chain attack that planted a universal SSH backdoor via a compression library, concealed in binary test files, by a contributor who spent over two years building trust.",
-  "The xz attack exploited maintainer burnout, social engineering via sock-puppet accounts, and the architectural invisibility of low-level library dependencies — attack surfaces unique to open-source infrastructure.",
+  "The xz attack exploited maintainer burnout, social engineering via sock-puppet accounts, and the architectural invisibility of low-level library dependencies, all attack surfaces that are characteristic of open-source infrastructure.",
   "Honest engineering epistemics requires studying failures as carefully as successes: the pattern of what breaks and why is the most reliable guide to what will work next.",
 ))
 

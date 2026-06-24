@@ -17,13 +17,14 @@ chapters = out["chapters"]
 volumes = out["volumes"]
 by_num = {c["number"]: c for c in chapters}
 nums = sorted(by_num)
-vol_short = {v: v.split(" — ")[0] for v in volumes}
-vol_title = {v: v.split(" — ", 1)[1] if " — " in v else v for v in volumes}
+vol_short = {v: v.split(" - ")[0] for v in volumes}
+vol_title = {v: v.split(" - ", 1)[1] if " - " in v else v for v in volumes}
 
 def compile_raw(c):
     n = c["number"]; tmp = f"{ROOT}/chapters/_web{n:02d}.typ"
     src = open(f"{ROOT}/{c['file']}").read().split("\n")
     src[0] = src[0].replace("../lib.typ", "../web.typ")
+    src.insert(0, "#set smartquote(enabled: false)")  # plain straight quotes on the web too
     open(tmp, "w").write("\n".join(src))
     r = subprocess.run([TYPST, "compile", "--features", "html", "--root", ROOT,
                         tmp, f"{RAW}/ch{n:02d}.html"], capture_output=True, text=True)
@@ -46,7 +47,7 @@ def sidebar(cur):
     for v in volumes:
         cs = [c for c in chapters if c["volume"] == v]
         op = " open" if v == cur_vol else ""
-        parts.append(f'<details{op}><summary>{html.escape(vol_short[v])} — {html.escape(vol_title[v])}</summary><ol>')
+        parts.append(f'<details{op}><summary>{html.escape(vol_short[v])} - {html.escape(vol_title[v])}</summary><ol>')
         for c in cs:
             cls = ' class="cur"' if c["number"] == cur else ""
             parts.append(f'<li><a{cls} href="ch{c["number"]:02d}.html">{c["number"]}. {html.escape(c["title"])}</a></li>')
@@ -79,7 +80,7 @@ volnum = {volumes[i]: i+1 for i in range(len(volumes))}
 
 def assemble(c):
     n = c["number"]; raw = open(f"{RAW}/ch{n:02d}.html").read()
-    title = f'{n}. {c["title"]} — The Compression Book'
+    title = f'{n}. {c["title"]} - The Compression Book'
     topbar = TOPBAR.format(vol=html.escape(vol_short[c["volume"]]), volfile=volfile[c["volume"]])
     raw = raw.replace("</head>", f'<title>{html.escape(title)}</title>'
                       f'<link rel="stylesheet" href="book.css"></head>', 1)
@@ -118,14 +119,16 @@ index = f'''<!doctype html><html lang="en"><head><meta charset="utf-8">
 <div class="topbar"><a class="brand" href="index.html">The Compression Book</a></div>
 <div class="hero">
 <h1>The Compression Book</h1>
-<p class="sub">A Complete History and Technical Treatise on Data Compression — June 2026</p>
-<p>From zero to expert, assuming only 9th-grade mathematics. Five volumes, 81 chapters, ~768,000 words —
+<p class="sub">A Complete History and Technical Treatise on Data Compression, June 2026</p>
+<p>From zero to expert, assuming only 9th-grade mathematics. Five volumes, 81 chapters, ~768,000 words,
 with a from-scratch Python&nbsp;3.14 primer, the <code>tinyzip</code> build-along compressor, exercises with
 solutions, and diagrams throughout. Read it in your browser, or download each volume as a PDF.</p>
 <div class="volgrid">{''.join(cards)}</div>
-<p class="dl"><b>Start reading:</b> <a href="ch01.html">Chapter 1 — What Is Compression?</a>
-&nbsp;·&nbsp; {total_pp} pages total &nbsp;·&nbsp;
-<a href="{PDF_BASE}/TheCompressionBook-Vol1.pdf">download PDFs</a></p>
+<p class="dl"><b>Start reading:</b> <a href="ch01.html">Chapter 1: What Is Compression?</a>
+&nbsp;·&nbsp; {total_pp} pages total</p>
+<p class="dl"><b>Download:</b>
+<a href="{PDF_BASE}/TheCompressionBook-Complete.pdf">Complete book, single PDF (~4,000 pp)</a>
+&nbsp;·&nbsp; per-volume PDFs via each volume card or the in-chapter menu</p>
 </div></body></html>'''
 open(f"{SITE}/index.html", "w").write(index)
 

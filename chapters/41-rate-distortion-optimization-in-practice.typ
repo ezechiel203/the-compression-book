@@ -8,12 +8,12 @@
 ][Anonymous video-codec engineer, circa 2003]
 
 Picture an encoder that must squeeze a two-hour film into exactly 4 gigabytes for a Blu-ray disc.
-Every scene is different — a dialogue in a dimly lit café barely moves; a car chase strobes with
+Every scene is different: a dialogue in a dimly lit café barely moves; a car chase strobes with
 fast-flying blur. If the encoder hands every frame the same number of bits, the café looks
 gorgeous while the chase turns to mush, or vice versa. What the encoder needs is a *budget
 officer*: a policy that decides, second by second, shot by shot, coefficient by coefficient, where
-each bit buys the most quality. That budget officer is *rate–distortion optimization in practice*
-— the topic of this chapter.
+each bit buys the most quality. That budget officer is *rate–distortion optimization in practice*,
+the topic of this chapter.
 
 In Chapter 21 we learned Shannon's R(D) curve: a theorem that tells us the minimum bits needed
 to hit a target distortion, but gives no algorithm. In Chapter 39 we saw how quantization is the
@@ -22,13 +22,13 @@ a few large coefficients. Now we weld all three ideas into the decision engine e
 runs thousands of times per second, from JPEG to AV1, from H.264 to the neural codecs of Chapter 57.
 
 #recap[
-  Chapter 21 established the rate–distortion function R(D) as a theoretical floor — the minimum
+  Chapter 21 established the rate–distortion function R(D) as a theoretical floor: the minimum
   bits for a given average distortion. Chapter 38 showed the transform (DCT, wavelet, MDCT) that
   decorrelates source data so coefficients can be quantized independently. Chapter 39 built the
   scalar quantizer and showed how the step size q trades distortion for fewer entropy-codeable
   levels. Chapter 40 introduced differential coding (DPCM) as a way to exploit prediction and
   reduce the range of values before quantization. Here we connect the theory to the practice:
-  how encoders actually *choose* quantization levels, allocate bits across frames, and navigate
+  how encoders actually *choose* quantization levels, allocate bits across frames, and balance
   the speed/quality/bitrate triangle.
 ]
 
@@ -47,7 +47,7 @@ An image or video encoder faces a constrained optimization problem every time it
 pixels. It has many decisions to make: which transform to use, how coarsely to quantize each
 frequency coefficient, which prediction mode to pick, how long a motion vector to signal. Each
 choice produces a different number of bits (a *rate* R) and a different reconstruction error
-(a *distortion* D). The encoder wants low R and low D simultaneously — but they pull in opposite
+(a *distortion* D). The encoder wants low R and low D simultaneously, but they pull in opposite
 directions. Spending fewer bits means coarser quantization, which means more distortion.
 
 The elegant solution, used in every modern codec, is to combine the two goals into a single number
@@ -63,14 +63,14 @@ distortion units. The encoder picks whichever coding decision gives the smallest
   *Distortion and MSE* (Chapter 21). A _distortion measure_ $d(x, hat(x))$ is a rule that scores
   how bad it is to reconstruct a true value $x$ as $hat(x)$, with $d(x,x)=0$. The workhorse is
   _squared error_ $(x - hat(x))^2$; its average over a block or frame is the _mean squared error_
-  (MSE). We proved in Chapter 21 that the choice of $d$ "is the whole game" — MSE is mathematically
+  (MSE). We proved in Chapter 21 that the choice of $d$ "is the whole game." MSE is mathematically
   convenient but only a crude model of what the eye sees, which is exactly why this chapter later
   reaches for perceptual measures.
 ]
 
 #gomaths("Lagrangian optimization")[
   A *Lagrangian* (named after 18th-century mathematician Joseph-Louis Lagrange) is a way to turn
-  a constrained optimization problem — "minimize distortion, subject to rate ≤ budget" — into an
+  a constrained optimization problem ("minimize distortion, subject to rate ≤ budget") into an
   unconstrained one: "minimize D + λR with no constraint." We met the same multiplier λ in
   Chapter 21, where it traced out the theoretical R(D) curve; here we put it to work *inside* a
   real encoder, one mode decision at a time. The trick is that for the right choice
@@ -88,7 +88,7 @@ distortion units. The encoder picks whichever coding decision gives the smallest
   A higher λ "taxes" the extra 20 bits more heavily, so the cheaper mode wins.
 ]
 
-This decision rule — pick the coding mode with smallest J = D + λR — is called
+This decision rule (pick the coding mode with smallest J = D + λR) is called
 *Lagrangian rate–distortion optimization* (Lagrangian RDO). It was first formalized for video
 coding by Gary Sullivan and Thomas Wiegand in 1998 and became mandatory machinery in H.264/AVC
 (2003) and every standard since. It is not one algorithm but a *framework* that sits inside every
@@ -135,7 +135,7 @@ cetz.canvas({
 
 The shape of the curve reveals a lot. At low bitrates the curve is steep: one extra bit buys a
 big quality jump. At high bitrates the curve flattens: you pay a lot for small improvements.
-This is why "good enough" is usually far more efficient than "perfect" — the last few dB of
+This is why "good enough" is usually far more efficient than "perfect": the last few dB of
 quality cost exponentially more bits.
 
 #keyidea[
@@ -152,13 +152,13 @@ should skip it. The set of non-dominated points traces the *convex hull* of the 
 
 To make "dominated" concrete, imagine you tried five encodes and measured these (bitrate, VMAF)
 points: (500, 70), (900, 78), (1100, 77), (1600, 86), (3000, 92). The fourth-listed point
-(900, 78) beats (1100, 77) outright — it uses *fewer* bits for *more* quality — so (1100, 77) is
+(900, 78) beats (1100, 77) outright: it uses *fewer* bits for *more* quality, so (1100, 77) is
 dominated and we discard it. The survivors, sorted, are (500, 70), (900, 78), (1600, 86),
 (3000, 92): each step up the ladder costs more bits *and* buys more quality, and no other encode
 beats them. Those four are the *convex hull*, the only operating points a sane bitrate ladder
 would ever offer.
 
-For a single image this is academic — you just pick the operating point that fits your target.
+For a single image this is academic; you just pick the operating point that fits your target.
 But for adaptive bitrate streaming (ABR), where a service offers a *ladder* of quality levels,
 the ladder rungs should lie on the convex hull. Points inside the hull mean you could have gotten
 the same quality more cheaply. Netflix's "per-title encoding" (discussed in detail below) is
@@ -174,8 +174,8 @@ In H.264 and H.265, the canonical formula is:
 $ lambda = 0.85 times 2^((Q P - 12) / 3) $
 
 where QP ranges from 0 (lossless-ish) to 51 (very coarse). Because QP steps are in a
-*doubling* exponential scale — each step of 6 in QP doubles the quantization step size, halving
-visual quality — the formula correctly ensures that a doubling of quantization cost corresponds
+*doubling* exponential scale (each step of 6 in QP doubles the quantization step size, halving
+visual quality), the formula correctly ensures that a doubling of quantization cost corresponds
 to a doubling of λ. For AV1 the encoder uses a different QP table but the Lagrangian idea is
 identical.
 
@@ -184,8 +184,8 @@ identical.
 
   $ Q_"step"(Q P) = 2^((Q P - 4) / 6) $
 
-  This means QP = 0 gives $Q_"step" approx 0.625$ and QP = 51 gives $Q_"step" approx 224$ — a
-  range of about 360× from finest to coarsest. The logarithmic scale is intentional: the human
+  This means QP = 0 gives $Q_"step" approx 0.625$ and QP = 51 gives $Q_"step" approx 224$,
+  a range of about 360× from finest to coarsest. The logarithmic scale is intentional: the human
   visual system perceives quality logarithmically (like loudness in decibels), so uniform steps
   in QP correspond to roughly uniform perceptual steps.
 
@@ -193,21 +193,21 @@ identical.
 
   $ "PSNR" = 10 log_10 (255^2 / "MSE") $
 
-  so a linear change in QP maps approximately to a linear change in PSNR — a useful property
+  so a linear change in QP maps approximately to a linear change in PSNR, a useful property
   for rate control.
 ]
 
 The takeaway: adjusting one parameter (QP, CRF) slides the encoder along the R–D curve
 smoothly, because both rate and distortion respond exponentially to the quantization step, and
-the ratio — the λ — stays roughly constant.
+the ratio (λ) stays roughly constant.
 
 == Bit Allocation: Spending the Budget Where It Matters
 
-A film is not a single image — it is 24, 30, or 60 frames per second, and not every frame is
+A film is not a single image. It runs at 24, 30, or 60 frames per second, and not every frame is
 equally hard to compress or equally important. The encoder has a global bit budget (say, 4 Mbps)
 and must decide how many bits each frame gets. This is *bit allocation*.
 
-The naive approach — give every frame the same number of bits — fails badly. A still scene wastes
+The naive approach of giving every frame the same number of bits fails badly. A still scene wastes
 bits; a fast-moving action scene gets too few and turns blocky. A good bit allocation strategy
 directs the budget toward frames that need it.
 
@@ -215,11 +215,11 @@ directs the budget toward frames that need it.
 
 The simplest complexity measure is *inter-frame residual energy*: after motion compensation
 (subtracting what the codec predicted from the previous frame), how much energy is left? High
-residual energy means the content changed in ways prediction could not capture — this frame needs
+residual energy means the content changed in ways prediction could not capture, so this frame needs
 more bits. Low residual means most information came for free from the previous frame.
 
-Encoders compute a per-frame "complexity" estimate — sometimes as simple as the variance of the
-pixel block, sometimes as the mean absolute difference (MAD) after motion compensation — and
+Encoders compute a per-frame "complexity" estimate (sometimes as simple as the variance of the
+pixel block, sometimes as the mean absolute difference (MAD) after motion compensation) and
 scale each frame's QP up or down relative to this estimate. Harder frames get a lower QP (more
 bits); easier frames get a higher QP (fewer bits).
 
@@ -241,7 +241,7 @@ Video codecs distinguish several frame types (see Chapter 51):
   cheapest, often 0.5–0.8× the size of a P-frame.
 
 A well-designed bit allocator gives each frame type a different *weight* in the budget. Spending
-extra bits on I-frames pays dividends because P and B frames reference them — errors in an
+extra bits on I-frames pays dividends because P and B frames reference them. Errors in an
 I-frame propagate and corrupt many subsequent frames.
 
 #fig([I/P/B frame structure in a GOP (Group of Pictures) and example bit allocation. I-frames
@@ -296,7 +296,7 @@ on the output stream. Three major regimes dominate practical deployments.
 === Constant Bitrate (CBR)
 
 In CBR mode, the encoder must produce a stream where the average bitrate over some window (often
-1 second) stays within a fixed target — say, 5 Mbps. The classic CBR mechanism is the *video
+1 second) stays within a fixed target, say 5 Mbps. The classic CBR mechanism is the *video
 buffering verifier* (VBV), a hypothetical decoder buffer of fixed size $B_"vbv"$ bits that drains
 at exactly the target bitrate. The encoder must keep the buffer within bounds: it can temporarily
 spike (a complex scene can use more bits than average) as long as it pays them back later with
@@ -304,12 +304,12 @@ quieter frames, and it can never let the buffer underflow (the decoder would sta
 (bits would have to be dropped).
 
 CBR is essential for *broadcast* (fixed-bandwidth channels), *live streaming* (no lookahead),
-and *hardware decoders* with small memory. The price is reduced quality on hard scenes — when
+and *hardware decoders* with small memory. The price is reduced quality on hard scenes: when
 complexity exceeds budget, QP must rise sharply, causing visible blocking.
 
 #gopython("Functions with default arguments")[
   Functions in Python can have *default argument values*, which are used when the caller does not
-  provide that argument. The syntax is `def f(x, y=10):` — here y defaults to 10.
+  provide that argument. The syntax is `def f(x, y=10):`, where y defaults to 10.
 
   ```python
   def clamp(value: float, lo: float, hi: float) -> float:
@@ -319,7 +319,7 @@ complexity exceeds budget, QP must rise sharply, causing visible blocking.
   # called with all three arguments:
   print(clamp(1.5, 0.0, 1.0))   # → 1.0
 
-  # called with two — lo defaults to 0.0 if we had set that:
+  # called with two args; lo defaults to 0.0 if we had set that:
   print(clamp(-3.0, 0.0, 10.0)) # → 0.0
   ```
 
@@ -343,7 +343,7 @@ end must be within budget, not the instantaneous rate.
    frame get to equalize perceptual quality?
 
 The second pass then encodes each frame at the QP derived from this allocation. The result is a
-file where hard scenes and easy scenes both look equally good — the hallmark of professional encoding.
+file where hard scenes and easy scenes both look equally good. That is the hallmark of professional encoding.
 
 #keyidea[
   Two-pass VBR is the difference between an encoder that reacts to difficulty and one that
@@ -354,8 +354,8 @@ file where hard scenes and easy scenes both look equally good — the hallmark o
 === Constant Rate Factor (CRF)
 
 CRF is the mode of choice for modern single-pass offline encoding (x264, x265, libaom-AV1,
-SVT-AV1, VVenC). Instead of targeting a bitrate, the user specifies a quality target — the CRF
-value — and the encoder produces whatever bitrate achieves that quality for this content.
+SVT-AV1, VVenC). Instead of targeting a bitrate, the user specifies a quality target (the CRF
+value), and the encoder produces whatever bitrate achieves that quality for this content.
 
 Internally, CRF works by computing a *base QP* from the CRF value and then applying
 *per-frame QP offsets* based on frame type (I/P/B) and scene complexity. The encoder uses
@@ -364,7 +364,7 @@ drives QP changes. At qcomp = 0 all frames get the same QP (CBR-like within scen
 at qcomp = 1 every frame gets its optimal individual QP (true constant-quality, potentially
 huge bitrate swings).
 
-*Capped CRF* (or *CRF with VBV*) combines CRF with a VBV buffer constraint — the encoder aims
+*Capped CRF* (or *CRF with VBV*) combines CRF with a VBV buffer constraint: the encoder aims
 for the quality target but won't burst above a maximum bitrate. This is the dominant production
 mode for video-on-demand (VOD): it gives near-CRF quality while bounding the peak bitrate that
 CDN caches must handle.
@@ -404,19 +404,19 @@ gets *higher* QP (fewer bits where texture hides noise).
 #mathrecall[
   *Variance* (Chapter 10) measures _spread_: how far a block's pixel values scatter around their
   own average. A flat patch of sky has near-zero variance; a patch of gravel has high variance.
-  AQ uses variance as a cheap stand-in for "how well this region hides quantization error" — high
+  AQ uses variance as a cheap stand-in for "how well this region hides quantization error." High
   variance means the eye is busy and forgives coarse coding.
 ]
 
 #misconception[Adaptive quantization reduces image quality to save bitrate.][
-  AQ does not reduce average quality — it *redistributes* bits from perceptually unimportant
+  AQ does not reduce average quality. It *redistributes* bits from perceptually unimportant
   regions to perceptually important ones. Total distortion (MSE) may slightly increase, but
   perceived quality (measured by SSIM or VMAF) improves because errors are now hidden in texture.
   The key insight: all distortion measures are not equal.
 ]
 
 #note[
-  *SSIM* (Structural Similarity) and *VMAF* are _perceptual_ quality measures — they try to score
+  *SSIM* (Structural Similarity) and *VMAF* are _perceptual_ quality measures. They try to score
   an image the way a human would, where plain MSE fails. SSIM returns a number between 0 and 1
   (1 = identical); VMAF returns a 0–100 score. We sketch VMAF below and dissect all of these
   metrics properly in Chapter 75, "Measuring Compression." For now, just read them as "closer to
@@ -427,8 +427,8 @@ gets *higher* QP (fewer bits where texture hides noise).
 
 VMAF (Video Multi-method Assessment Fusion), developed by Netflix in 2016 and open-sourced the
 same year, is a machine-learning-based video quality metric trained on human viewing scores.
-It combines multiple "elementary metrics" (VIF at multiple scales, ADM — additive detail
-measurement — and motion features) through a support-vector-machine regressor to predict a
+It combines multiple "elementary metrics" (VIF at multiple scales, ADM - additive detail
+measurement - and motion features) through a support-vector-machine regressor to predict a
 human MOS (mean opinion score) in a [0, 100] range.
 
 VMAF correlates far better with human judgment than PSNR on compressed content. Netflix
@@ -453,9 +453,9 @@ metric closer to being a true just-noticeable-difference (JND) predictor.
   weaknesses: "Computationally expensive (must evaluate many modes); λ must be tuned to the QP; MSE as distortion measure is perceptually suboptimal; local decisions ignore global interactions.",
   superseded: "Still the dominant framework; extended to perceptual D (VMAF-RDO) and learned transforms in neural codecs.",
 )[
-  Lagrangian RDO underpins every significant codec since H.263 (1995). The encoder iterates over
-  all candidate coding decisions — intra prediction modes, inter motion vectors, block sizes,
-  transform coefficients, entropy coding choices — and for each computes D (the error in the
+  Lagrangian RDO sits inside every significant codec since H.263 (1995). The encoder iterates over
+  all candidate coding decisions (intra prediction modes, inter motion vectors, block sizes,
+  transform coefficients, entropy coding choices) and for each computes D (the error in the
   reconstructed block vs. original) and R (the bit cost to transmit the choice). It picks the
   option with smallest J = D + λR. In H.264 this is applied at the level of each macroblock,
   each partition, each motion vector, and each transform coefficient. In VVC (H.266) the tree
@@ -503,7 +503,7 @@ proceeds at the derived per-frame QPs.
 Suppose a 5-second clip at 24 fps (120 frames) has three scenes:
 
 #table(
-  columns: (auto, auto, auto, auto, auto),
+  columns: (auto, 1fr, auto, auto, auto),
   stroke: 0.5pt,
   [*Frames*], [*Content*], [*Complexity $C$*], [*Budget share*], [*Resulting QP*],
   [1–30 (1s)],  [Still talking head], [Low (100)],    [12%],  [28],
@@ -521,7 +521,7 @@ better, with no perceptible change to the other scenes.
   necessarily look twice as good?
 ][
   No! Rate and quality are related logarithmically (roughly), not linearly. Twice the bits might
-  buy only 3–4 dB of extra PSNR. And perceptual quality is even harder to predict — the talking
+  buy only 3–4 dB of extra PSNR. And perceptual quality is even harder to predict: the talking
   head might be more sensitive to any distortion because faces are what viewers scrutinize.
 ]
 
@@ -542,10 +542,10 @@ optimized for its content.
 The results were striking: per-title encoding reduced average bitrate by 20–30% at equal visual
 quality compared to the fixed ladder, or equivalently, gave significantly higher quality at the
 same bitrate. For simple animation ("BoJack Horseman") the savings were 70%; for complex live
-sports, near zero — but the average across a diverse catalog was enormous.
+sports near zero. The average across a diverse catalog, though, was enormous.
 
-*Per-shot encoding* takes this further: segments of a video that differ dramatically in complexity
-— a slow establishing shot versus an action sequence — get independently optimized ladders. By
+*Per-shot encoding* takes this further: segments that differ dramatically in complexity (a slow
+establishing shot versus an action sequence) get independently optimized ladders. By
 2023 Netflix was running per-shot optimization as standard practice. Chapter 55 covers the
 production engineering of this scale-out (per-title, per-shot, content-adaptive encoding); we keep
 our focus here on the underlying R–D principle it rests on.
@@ -553,7 +553,7 @@ our focus here on the underlying R–D principle it rests on.
 === The Bitrate Ladder as an Optimization Problem
 
 A streaming bitrate ladder must satisfy several constraints:
-- Consecutive rungs must be *perceptually distinct* — close enough for a smooth transition, far
+- Consecutive rungs must be *perceptually distinct*: close enough for a smooth transition, far
   enough that the lower rung is clearly worse (to trigger an adaptive switch). Ideally, the
   visual difference between adjacent rungs is approximately one JND (just noticeable difference).
 - The lowest rung must work on the slowest connection; the top rung matches the best-connected
@@ -611,7 +611,7 @@ essential. The threshold where zeroing wins is approximately:
 
 $ abs(c_k) < sqrt(lambda dot R_k) $
 
-This is the theoretical basis for *trellis quantization* (used in H.264 and H.265) — a more
+This is the theoretical basis for *trellis quantization* (used in H.264 and H.265), a more
 sophisticated version that optimizes an entire block of coefficients simultaneously via dynamic
 programming on a trellis graph (see Chapter 14 for dynamic programming).
 
@@ -648,7 +648,7 @@ Improving any one of these typically worsens at least one of the others. Rate-co
 are the tools for navigating this space. Consider some characteristic operating points:
 
 #table(
-  columns: (auto, auto, auto, auto, auto),
+  columns: (1fr, auto, auto, auto, 1fr),
   stroke: 0.5pt,
   [*Use case*], [*Mode*], [*Quality*], [*Speed*], [*Bitrate control*],
   [Video call (Zoom)], [CBR], [Medium], [Realtime], [Strict, 100–800 kbps],
@@ -668,7 +668,7 @@ hyperparameter of training, not just a run-time knob, and the result is a *famil
 While Chapters 42 and 43 go deeper, it's instructive to see how RDO applies in JPEG right now,
 given what we know.
 
-JPEG does not perform Lagrangian RDO in the encoder — it was designed in the early 1990s for
+JPEG does not perform Lagrangian RDO in the encoder. It was designed in the early 1990s for
 simplicity and speed. Each DCT block is quantized by dividing by entries in a fixed *quantization
 matrix* and rounding. There is no λ, no mode decision, no adaptive allocation.
 
@@ -684,8 +684,8 @@ would allocate differently per block.
 JPEG 2000 (Chapter 43) addressed this via its rate-allocation layer (PCRD-opt: Post-Compression
 Rate–Distortion optimization), which takes already-coded wavelet packets, sorts them by distortion-
 reduction-per-bit (D-rate), and greedily adds them to the output until the bitrate budget is
-exhausted — a near-optimal greedy algorithm for convex R–D curves. JPEG XL (Chapter 45) takes
-this further with explicit per-group adaptive quantization and a sophisticated RDO search.
+exhausted. This is a near-optimal greedy algorithm for convex R–D curves. JPEG XL (Chapter 45)
+takes this further with explicit per-group adaptive quantization and a sophisticated RDO search.
 
 #algo(
   name: "PCRD-opt (Post-Compression R–D Optimization)",
@@ -701,7 +701,7 @@ this further with explicit per-group adaptive quantization and a sophisticated R
   quality (generating all possible code-block layers), then optimally select which layers to
   include. It is a greedy knapsack: sort all available "packets" by D/ΔR and include them until
   the budget is full. The proof of optimality relies on the R–D curve of each code block being
-  convex — a property JPEG 2000's bit-plane coding guarantees.
+  convex, a property JPEG 2000's bit-plane coding guarantees.
 ]
 
 == Worked Example: Choosing Lambda
@@ -732,13 +732,13 @@ $ J_1 = 80 + 5 times 256 = 80 + 1280 = 1360 $
 $ J_2 = 20 + 5 times 512 = 20 + 2560 = 2580 $
 $ J_3 = 150 + 5 times 8 = 150 + 40 = 190 $
 
-Mode 3 still wins — but notice that at λ = 0.1:
+Mode 3 still wins. But notice what happens at λ = 0.1:
 
 $ J_1 = 80 + 0.1 times 256 = 80 + 25.6 = 105.6 $
 $ J_2 = 20 + 0.1 times 512 = 20 + 51.2 = 71.2 $
 $ J_3 = 150 + 0.1 times 8 = 150 + 0.8 = 150.8 $
 
-Mode 2 wins — at very low λ (bits are cheap), the encoder invests heavily in fidelity.
+Mode 2 wins. At very low λ, bits are cheap, so the encoder invests heavily in fidelity.
 
 This tiny three-way choice, multiplied across thousands of blocks per frame and hundreds of frames
 per second, is the heartbeat of every modern video encoder.
@@ -783,8 +783,8 @@ mode) and `-aq-strength` parameters for perceptual optimization.
 ][
   Option A: raise CRF (e.g., to 27 or 29). Each CRF step of ~6 approximately halves bitrate.
   Option B: switch to 2-pass VBR with target 1 GB and let the encoder allocate optimally.
-  Option C: lower resolution (e.g., 1080p → 720p) — the codec's task becomes intrinsically easier.
-  Option D: choose a more efficient codec (e.g., H.265 or AV1 instead of H.264) — for the same
+  Option C: lower resolution (e.g., 1080p → 720p); the codec's task becomes intrinsically easier.
+  Option D: choose a more efficient codec (e.g., H.265 or AV1 instead of H.264). For the same
   quality, they produce 30–50% fewer bits, often enabling 1 GB at equal visual quality.
 ]
 
@@ -795,12 +795,12 @@ best. Neural codecs (Chapter 57) take a radically different approach: *learn* th
 as a function that directly minimizes the Lagrangian.
 
 #note[
-  This section is a *preview* — it uses two ideas the book builds from scratch later. _Gradient
+  This section is a *preview* that uses two ideas the book builds from scratch later. _Gradient
   descent_ (nudging a function's tunable numbers downhill to reduce an error, using the slope/
   derivative from the gentle calculus of Chapter 11) and _backpropagation_ (the bookkeeping that
   computes those slopes through a whole neural network) are taught in the machine-learning primer
-  of Chapter 56. Read the formulas below for their *shape* — "the network is trained to minimize
-  D + λR directly" — and trust Chapters 56–57 to fill in the machinery.
+  of Chapter 56. Read the formulas below for their *shape* ("the network is trained to minimize
+  D + λR directly") and trust Chapters 56–57 to fill in the machinery.
 ]
 
 The training loss is:
@@ -819,8 +819,8 @@ additive uniform noise during training:
 $ hat(z) = z + cal(U)(-1/2, 1/2) $
 
 where $cal(U)(-1/2, 1/2)$ means "a random nudge drawn uniformly between $-1/2$ and $+1/2$" (every
-value in that range equally likely — the probability built in Chapter 9),
-whose expectation matches rounding and whose derivative is 1 — so gradients flow through. At
+value in that range equally likely, built in Chapter 9),
+whose expectation matches rounding and whose derivative is 1, so gradients flow through. At
 test time, actual rounding is used. This training trick enables the whole pipeline to be trained
 end-to-end to minimize the Lagrangian, producing a learned codec whose R–D curve (on natural
 images) beats hand-designed codecs.
@@ -828,8 +828,8 @@ images) beats hand-designed codecs.
 The λ value during training determines which point on the R–D curve the model will operate at.
 To cover the whole curve, practitioners train a separate model for each λ in {0.0018, 0.0035,
 0.0067, 0.013, 0.025, 0.048, 0.095, 0.18} (or similar logarithmic grid). Each model is a
-complete encoder/decoder pair, typically 20–100 MB of weights. This is expensive storage — a
-problem active learned-codec research is addressing with *variable-rate* models.
+complete encoder/decoder pair, typically 20–100 MB of weights. The storage cost is substantial,
+and active learned-codec research is addressing it with *variable-rate* models.
 
 == What Rate–Distortion Optimization Cannot Do
 
@@ -849,7 +849,7 @@ RDO is powerful but has real limits. Four things it cannot fix:
 
 4. *Complexity beyond the encoder's mode set*. If the "right" coding mode (e.g., a large skip
    region covering 128×128 pixels) is not in the encoder's mode search, RDO cannot find it.
-   Expanding mode sets is how standards committees improve codecs — H.266/VVC's massive mode set
+   Expanding mode sets is how standards committees improve codecs. H.266/VVC's massive mode set
    (CTU sizes from 4×4 to 128×128, numerous intra/inter/palette/IBC modes) explains why it
    achieves 40% fewer bits than H.264 for equal quality, at the cost of 10–1000× encoder
    complexity.
@@ -865,7 +865,7 @@ RDO is powerful but has real limits. Four things it cannot fix:
   "λ (lambda) converts bits into distortion units; changing λ slides the encoder along the R–D curve.",
   "The operational R–D curve is the set of real (rate, quality) points achievable by a codec on specific content. Its convex hull defines the efficient operating frontier.",
   "CBR fixes bitrate (needed for streaming/live); VBR targets average bitrate (best for VOD quality); CRF fixes perceptual quality level (simplest for archival).",
-  "Two-pass encoding scouts complexity in a first pass, then allocates bits optimally in the second pass — the gold standard for fixed-size targets.",
+  "Two-pass encoding scouts complexity in a first pass, then allocates bits optimally in the second pass. This is the gold standard for fixed-size targets.",
   "Adaptive quantization (AQ) redistributes bits within a frame based on perceptual sensitivity, improving SSIM/VMAF without changing average bitrate.",
   "Per-title encoding builds a custom bitrate ladder from each title's own operational R–D cloud, saving 20–30% bitrate on average for a streaming library.",
   "Neural codecs train directly to minimize the Lagrangian, with the uniform-noise trick enabling gradient-based optimization through the quantization step.",
@@ -890,7 +890,7 @@ RDO is powerful but has real limits. Four things it cannot fix:
   (b) λ = 3: $J_A = 200 + 96 = 296$; $J_B = 40 + 240 = 280$. Mode B wins (lower J).
 
   (c) λ = 0.5: $J_A = 200 + 16 = 216$; $J_B = 40 + 40 = 80$. Mode B still wins decisively.
-  (At very low λ, bits are cheap, so Mode B — higher quality at higher rate — wins easily.)
+  (At very low λ, bits are cheap, so Mode B - higher quality at higher rate - wins easily.)
 ]
 
 #exercise("41.2", 1)[
@@ -902,7 +902,7 @@ RDO is powerful but has real limits. Four things it cannot fix:
   CRF increases correspond to a larger base QP for each frame. A larger QP means a larger quantization
   step size, so transform coefficients are rounded more aggressively to coarser values. Fewer distinct
   values produce lower entropy, which the entropy coder compresses into fewer bits. Quality drops
-  because information is permanently discarded in the coarser rounding — reconstruction errors are
+  because information is permanently discarded in the coarser rounding; reconstruction errors are
   larger. In Lagrangian terms, a higher CRF raises λ, making each bit more "expensive" and pushing
   the encoder toward higher-distortion, lower-rate choices for every block.
 ]
@@ -911,7 +911,7 @@ RDO is powerful but has real limits. Four things it cannot fix:
   A 10-minute clip has five scenes with the following first-pass measured bits at QP = 22:
 
   | Scene | Length | Bits at QP=22 |
-  |-------|--------|---------------|
+  |--|--|--|
   | A     | 2 min  | 600 MB        |
   | B     | 3 min  | 180 MB        |
   | C     | 1 min  | 400 MB        |
@@ -932,7 +932,7 @@ RDO is powerful but has real limits. Four things it cannot fix:
 
   Scene C suffers most under naive allocation: it is a complex 1-minute scene that needs 400 MB at
   high quality but gets only 75 MB naively (vs. 200 MB proportionally). Scene B (3 minutes, easy
-  content needing only 180 MB) gets over-allocated naively (225 MB) — wasted bits on easy content.
+  content needing only 180 MB) gets over-allocated naively (225 MB), which wastes bits on easy content.
   The proportional scheme correctly redirects bits from easy scenes (B, D) to complex ones (A, C).
 ]
 
@@ -944,7 +944,7 @@ RDO is powerful but has real limits. Four things it cannot fix:
 #solution("41.4")[
   Animation has very low spatial complexity: flat colors, simple backgrounds, limited motion. Its
   operational R–D curve is steep and reaches "good enough" quality at very low bitrates. Sports has
-  high complexity: fine grass texture, fast motion, camera pans — its R–D curve is shallower and
+  high complexity: fine grass texture, fast motion, camera pans. Its R–D curve is shallower and
   needs significantly more bits to achieve the same VMAF score. A fixed bitrate ladder allocates
   many bits to animation that it does not need (the quality curve has already plateaued) and may
   under-allocate to sports. Per-title encoding moves animation to a much lower rung (saving 50–70%
@@ -965,7 +965,7 @@ RDO is powerful but has real limits. Four things it cannot fix:
   The total cost includes both the quantization error *and* the entropy-coding cost of the
   chosen sequence (since adjacent non-zero coefficients affect the run-length coding cost).
 
-  The optimal path through the trellis — minimizing total J over all coefficients — is found
+  The optimal path through the trellis, minimizing total J over all coefficients, is found
   by the *Viterbi algorithm* (dynamic programming on the trellis), which runs in O(N × L) time
   where N is the number of coefficients and L is the quantization alphabet size. This globally
   considers which coefficients to zero out vs. keep, weighing the bit savings against the
@@ -1053,7 +1053,7 @@ RDO is powerful but has real limits. Four things it cannot fix:
 
 - #link("https://netflixtechblog.com/per-title-encode-optimization-7e99442b62a2")[Netflix Technology Blog (2015). Per-Title Encode Optimization.] The original blog post explaining the per-title encoding approach.
 
-- #link("https://netflixtechblog.com/dynamic-optimizer-a-perceptual-video-encoding-optimization-framework-e19f1e3a277f")[Netflix Technology Blog (2018). Dynamic Optimizer — a Perceptual Video Encoding Optimization Framework.] VMAF-driven RDO in production.
+- #link("https://netflixtechblog.com/dynamic-optimizer-a-perceptual-video-encoding-optimization-framework-e19f1e3a277f")[Netflix Technology Blog (2018). Dynamic Optimizer: a Perceptual Video Encoding Optimization Framework.] VMAF-driven RDO in production.
 
 - #link("https://medium.com/netflix-techblog/vmaf-v1-good-is-not-good-enough-60d7e4244ea8")[Netflix Technology Blog (2026). VMAF v1: Good Is Not Good Enough.] The June 2026 update to the VMAF perceptual model.
 
@@ -1066,9 +1066,9 @@ RDO is powerful but has real limits. Four things it cannot fix:
 #bridge[
   We have seen how encoders decide where to spend bits and how much quality each decision buys.
   The next chapter, Chapter 42, puts all of this into action inside the world's most successful
-  image codec: JPEG. We will trace the complete pipeline — YCbCr color space, chroma subsampling,
+  image codec: JPEG. We will trace the complete pipeline: YCbCr color space, chroma subsampling,
   the 8×8 DCT, the quantization tables (now you know exactly what those tables represent
-  in Lagrangian terms!), the zig-zag scan, run-length coding, and Huffman entropy coding — and we
+  in Lagrangian terms!), the zig-zag scan, run-length coding, and Huffman entropy coding. Then we
   will build a toy JPEG encoder in tinyzip (Step 19). Everything in Chapter 42 will be grounded
   in the RDO framework you now understand.
 ]

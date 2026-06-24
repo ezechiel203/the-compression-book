@@ -4,26 +4,26 @@
 = The Hybrid Video Codec: Motion, Prediction, Transform
 
 #epigraph[
-  "If an image is worth a thousand words, a video is worth a thousand images — and a
+  "If an image is worth a thousand words, a video is worth a thousand images, and a
   thousand times the engineering headache."
 ][Anonymous compression engineer]
 
 Here is a number that should stop you cold: in 2024, video traffic accounted for
 roughly 65 percent of all bytes flowing across the global internet. Not text. Not
 downloads. Not web pages. _Video._ Streaming movies, video calls, uploaded phone clips,
-live sport, surveillance feeds, medical imaging, video games streaming from the cloud —
-all of it represented by nothing but zeroes and ones being fired down cables and through
+live sport, surveillance feeds, medical imaging, video games streaming from the cloud.
+All of it is represented by nothing but zeroes and ones being fired down cables and through
 the air at mind-bending speed, compressed to a fraction of their original size.
 
 Now consider what "uncompressed video" actually means. A single second of 1920×1080
 color video at 30 frames per second, with three bytes of color per pixel, needs:
-$1920 times 1080 times 3 times 30 = 186,624,000$ bytes — about 178 megabytes _per second._
+$1920 times 1080 times 3 times 30 = 186,624,000$ bytes, about 178 megabytes _per second._
 A two-hour movie at that resolution would consume more than 1.2 terabytes of raw data.
 The average internet connection would take days to download it. Instead, a Blu-ray
 disc holds the entire film in about 25–50 gigabytes. Netflix streams it to your
 television in real time at a few megabytes per second.
 
-How? The answer is the _hybrid video codec_ — a design pattern so successful that every
+How? The answer is the _hybrid video codec_, a design pattern so successful that every
 major video standard from 1988 to today uses a version of the same three-part idea:
 predict using previously seen frames, transform the prediction error, and entropy-code
 the coefficients. This chapter tears that idea open, shows you exactly how each piece
@@ -32,13 +32,13 @@ works, and at the end you will build a working inter-frame prediction demo in Py
 #recap[
   Chapter 37 introduced the frequency domain and the Discrete Fourier Transform. Chapter
   38 built the Discrete Cosine Transform (DCT) and showed why it concentrates energy
-  into a few coefficients — we implemented `dct2d`/`idct2d` in `tinyzip/transform.py`
-  (Step 17). Chapter 39 covered quantization: dividing DCT coefficients by a step size
-  and rounding, trading quality for bits — we built `quant.py` (Step 18). Chapter 42
+  into a few coefficients (we implemented `dct2d`/`idct2d` in `tinyzip/transform.py`,
+  Step 17). Chapter 39 covered quantization: dividing DCT coefficients by a step size
+  and rounding, trading quality for bits; we built `quant.py` (Step 18). Chapter 42
   assembled those tools into a JPEG pipeline and built `jpeg.py` (Step 19). Chapters
   48–50 applied the same transform-quantize-entropy template to audio. This chapter
   adds the ingredient that turns a sequence of JPEG-like images into a _video_ codec:
-  _temporal prediction_ — exploiting the fact that frame $t+1$ almost always looks a
+  _temporal prediction_: exploiting the fact that frame $t+1$ almost always looks a
   lot like frame $t$.
 ]
 
@@ -74,7 +74,7 @@ This is _temporal redundancy_: neighboring frames in time are nearly the same im
 It is far larger than the spatial redundancy JPEG already removes. In typical talking-head
 video at 30 fps, consecutive frames often agree on 90 % of their pixels to within a few
 shades of grey. Naively entropy-coding the difference between consecutive frames would
-already compress dramatically — but only for the static parts. Where the camera pans,
+already compress dramatically, but only for the static parts. Where the camera pans,
 where objects move, the difference is large. The trick video codecs add on top of simple
 differencing is _motion compensation_: before you subtract, shift the previous frame to
 _match_ the current one as closely as possible.
@@ -100,17 +100,17 @@ We call the frame we are currently encoding the _current frame_, and the frame (
 frames) we already have reconstructed (on both the encoder and decoder sides) the
 _reference frame(s)_.
 
-The current frame is divided into rectangular blocks — historically 16×16 pixels, called
-_macroblocks_. For each block, the encoder searches the reference frame for the
+The current frame is divided into rectangular blocks (historically 16×16 pixels, called
+_macroblocks_). For each block, the encoder searches the reference frame for the
 block-shaped region that looks most like the current block. It records the displacement
 between where the best-match block sits in the reference frame and where the current block
-sits in the current frame. That displacement is the _motion vector_ — a pair of numbers
+sits in the current frame. That displacement is the _motion vector_, a pair of numbers
 $(Delta x, Delta y)$.
 
 The decoder, receiving the motion vector, copies the identified block from its own copy
 of the reference frame to the appropriate position in the current frame. That copy is the
 _prediction_. The encoder subtracts the prediction from the actual current block to get the
-_prediction residual_ — the error that the motion vector could not explain. It transforms
+_prediction residual_ (the error that the motion vector could not explain). It transforms
 (DCT), quantizes, and entropy-codes the residual, exactly as JPEG does with image blocks.
 
 #definition("Motion vector")[
@@ -142,7 +142,7 @@ Suppose a 4×4 block in the current frame contains these luma values (each 0–2
 ]
 
 The encoder searches the reference frame and finds the best match at displacement
-$(Delta x, Delta y) = (+3, -1)$ — three pixels to the right, one pixel up. That
+$(Delta x, Delta y) = (+3, -1)$, three pixels to the right and one pixel up. That
 reference block contains:
 
 #align(center)[
@@ -165,9 +165,9 @@ The residual (current minus prediction) is:
   )
 ]
 
-These residuals are small — most within $plus.minus 3$. When we run the DCT on them,
+These residuals are small, most within $plus.minus 3$. When we run the DCT on them,
 the energy concentrates into a few low-frequency coefficients, most of which quantize
-to zero. The encoder transmits the motion vector $(+3, -1)$ — just two small numbers —
+to zero. The encoder transmits the motion vector $(+3, -1)$ (just two small numbers)
 and the handful of non-zero quantized DCT coefficients. The decoder reconstructs by
 copying the reference block and adding back the residual. If motion compensation is good
 enough, the residuals all become zero after quantization and we transmit literally nothing
@@ -177,7 +177,7 @@ except the motion vector.
   If a 16×16 macroblock's prediction is perfect (every residual pixel is exactly zero),
   what is transmitted for that block?
 ][
-  Only the motion vector — two small numbers indicating where in the reference frame the
+  Only the motion vector: two small numbers indicating where in the reference frame the
   block came from. No DCT coefficients at all. The decoder copies the reference block
   unchanged. This is why motion compensation can compress video so aggressively: most
   blocks in a smooth scene transmit just a vector.
@@ -185,8 +185,8 @@ except the motion vector.
 
 === Why search can never lose to plain differencing
 
-Naive frame differencing — subtracting the reference block sitting at the _same_
-position as the current block — is just motion compensation with the single fixed vector
+Naive frame differencing (subtracting the reference block sitting at the _same_
+position as the current block) is just motion compensation with the single fixed vector
 $(0, 0)$. A small but reassuring fact follows.
 
 #theorem("Motion search never increases residual error")[
@@ -202,14 +202,14 @@ $(0, 0)$. A small but reassuring fact follows.
   the candidate with the least error. Because the minimum over a set is never larger than
   any single member of that set, and $(0,0) in S$, we have
   $E(Delta x^*, Delta y^*) <= E(0, 0)$. But $E(0,0)$ is exactly the error of naive
-  differencing. Hence motion search can only match or beat plain differencing — never do
+  differencing. Hence motion search can only match or beat plain differencing, never do
   worse. (The full-search loop in our Step 20 code below includes $(0,0)$ in its
   $plus.minus 16$ window, so it inherits this guarantee.)
 ]
 
 This is why a static background costs almost nothing even when the encoder bothers to
 search: for those blocks the winning vector simply _is_ $(0,0)$, and the residual is the
-same near-zero difference plain subtraction would have given — but the moving foreground
+same near-zero difference plain subtraction would have given, but the moving foreground
 blocks, where search actually pays off, get a much better prediction than differencing
 could ever offer.
 
@@ -229,7 +229,7 @@ sitting halfway between two stored samples, so the codec _invents_ one by averag
 simplest half-pixel sample between two neighbours of value 100 and 140 is their mean,
 $(100 + 140)\/2 = 120$; real codecs use a longer weighted filter (H.264's luma
 half-pixel filter taps six neighbours as $(1, -5, 20, 20, -5, 1)\/32$) for a sharper
-result, but the idea is the same — synthesize an in-between grid so the search can land
+result, but the idea is the same: synthesize an in-between grid so the search can land
 the block on a fractional position. Crucially, encoder and decoder must use the _exact
 same_ interpolation formula, or their predictions would diverge and the picture would
 drift apart over a GOP.
@@ -242,7 +242,7 @@ the decoder can resync periodically without needing to see every earlier frame. 
 standards define three frame types.
 
 #definition("I-frame (intra-coded frame)")[
-  A frame that is coded without reference to any other frame — purely using spatial
+  A frame that is coded without reference to any other frame, using only spatial
   prediction within the frame itself (intra prediction, covered below). I-frames are
   large (they cost the most bits) but self-contained. They are the random-access points.
   Also called _key frames_ in some contexts.
@@ -251,13 +251,13 @@ standards define three frame types.
 #definition("P-frame (predictive frame)")[
   A frame predicted from one earlier I-frame or P-frame using motion compensation.
   The encoder transmits motion vectors and residuals. P-frames are much smaller than
-  I-frames — typically 3–10× fewer bits at the same quality.
+  I-frames, typically 3–10× fewer bits at the same quality.
 ]
 
 #definition("B-frame (bi-directionally predicted frame)")[
   A frame predicted from _both_ a past _and_ a future reference frame. Each macroblock
   can be predicted from the past frame, the future frame, or both (interpolated).
-  B-frames are usually the most compressed — 30–50% smaller than P-frames — because
+  B-frames are usually the most compressed (30–50% smaller than P-frames), because
   the average of "where it came from" and "where it's going" is a surprisingly accurate
   predictor of where something is right now, especially for objects moving at nearly
   constant velocity.
@@ -287,7 +287,7 @@ The first frame of each GOP is an I-frame. P-frames (every third frame here) act
 _reference anchors_ for the B-frames between them. The B-frames reference both the
 preceding P (or I) frame and the following P (or I) frame.
 
-GOP length — the number of frames between I-frames — is a fundamental trade-off:
+GOP length (the number of frames between I-frames) is a fundamental trade-off:
 
 - *Long GOP* (e.g., 250 frames, ~8 seconds at 30 fps): fewer expensive I-frames, higher
   compression. But seeking to an arbitrary point requires decoding from the last I-frame,
@@ -345,22 +345,22 @@ B-frame reference.
 == The Complete Encoder Pipeline
 
 With motion compensation in hand, let's trace one P-frame through the full encoder
-pipeline from raw pixels to compressed bits. This is the "hybrid" in hybrid video codec
-— it hybridizes spatial (transform) coding with temporal (predictive) coding.
+pipeline from raw pixels to compressed bits. The "hybrid" in hybrid video codec refers
+to its combination of spatial (transform) coding with temporal (predictive) coding.
 
-=== Step 1 — Partition into macroblocks
+=== Step 1: Partition into macroblocks
 
 The frame is divided into 16×16 luma macroblocks (MBs). Each 16×16 luma MB comes with
 two 8×8 chroma blocks (one Cb, one Cr), because chroma is subsampled 4:2:0 (the same
 idea as JPEG, Chapter 42). So a 1920×1080 frame has $120 times 68 = 8160$ macroblocks
 (with padding at the edges).
 
-Modern codecs allow variable-size partitions — H.264 lets macroblocks be split into 8×8,
+Modern codecs allow variable-size partitions: H.264 lets macroblocks be split into 8×8,
 8×4, 4×8, or 4×4 sub-partitions. HEVC uses Coding Tree Units (CTUs) up to 64×64, split
 recursively into smaller Coding Units (CUs) by a quadtree structure. This flexibility
 means flat areas use large blocks (cheap) and detailed areas use small blocks (accurate).
 
-=== Step 2 — Motion estimation and mode decision
+=== Step 2: Motion estimation and mode decision
 
 For each block, the encoder tries every available prediction mode:
 - *Inter prediction:* search the reference frame(s) for the best-matching block and
@@ -373,11 +373,11 @@ For each block, the encoder tries every available prediction mode:
 This is the most computationally expensive step. A naïve full search of every possible
 motion vector in a $plus.minus 128$ pixel range at quarter-pixel accuracy would require
 testing $(1024)^2 = 1048576$ candidate positions per block. Real encoders use fast
-heuristic search algorithms — hexagonal search, diamond search, early termination — that
+heuristic search algorithms (hexagonal search, diamond search, early termination) that
 test perhaps 20–200 positions and find a near-optimal result. Even so, motion estimation
 can take 80–95 percent of total encoding time.
 
-=== Step 3 — Rate-distortion optimization (RDO)
+=== Step 3: Rate-distortion optimization (RDO)
 
 The encoder does not just pick the prediction with the smallest residual. It picks the
 one that minimizes a cost function called the _Lagrangian rate-distortion cost_:
@@ -403,28 +403,28 @@ To see the knob in action, suppose intra prediction for a block would cost 300 b
 give distortion 80, while inter prediction (motion compensation) costs 25 bits and gives
 distortion 120. At $lambda = 0.5$ the costs are
 $J_"intra" = 80 + 0.5 dot.c 300 = 230$ and $J_"inter" = 120 + 0.5 dot.c 25 = 132.5$, so
-the encoder picks inter — bits are expensive enough that the 275-bit saving outweighs the
-extra distortion. At $lambda = 0.1$ they flip:
+the encoder picks inter (bits are expensive enough that the 275-bit saving outweighs the
+extra distortion). At $lambda = 0.1$ they flip:
 $J_"intra" = 80 + 0.1 dot.c 300 = 110$ versus $J_"inter" = 120 + 0.1 dot.c 25 = 122.5$,
-and now intra wins — bits are cheap enough that the better quality is worth it.
+and now intra wins, because bits are cheap enough that the better quality is worth it.
 
 This is why two encoders that produce identical, fully compliant bitstreams can still
 differ enormously in quality. The _standard_ only defines the bitstream format and the
-_decoder_ — how a compliant decoder reconstructs a frame. The encoder is completely
+_decoder_ (how a compliant decoder reconstructs a frame). The encoder is completely
 unconstrained. A brilliant encoder that searches more motion vector candidates, uses
 smarter RDO heuristics, and spends more computation can produce files that are 20–30 %
 smaller at the same quality, while still being decoded by any compliant decoder.
 
 #keyidea[
   *Encoder/decoder asymmetry* is a deliberate design choice. Decode must be fast,
-  cheap, and deterministic — billions of devices decode video every second. Encode can
+  cheap, and deterministic: billions of devices decode video every second. Encode can
   be slow and expensive because you encode once and decode many times. This asymmetry
   is why streaming services spend enormous amounts of computing on their encoders
   (sometimes re-encoding old content for years), while your phone decodes in real time
   with negligible power draw.
 ]
 
-=== Step 4 — Transform and quantization
+=== Step 4: Transform and quantization
 
 Once a prediction mode is chosen, the residual block goes through the same pipeline as
 JPEG (Chapter 42):
@@ -451,12 +451,12 @@ agree _bit-for-bit_ on reconstructed values without any floating-point rounding
 disagreement. (Recall from Chapter 38 that floating-point DCT implementations can drift
 by a bit here or there; standards require exact integer transforms for this reason.)
 
-=== Step 5 — Reconstruction (the encoder reconstructs too)
+=== Step 5: Reconstruction (the encoder reconstructs too)
 
 Here is something that surprises many beginners: the _encoder_ maintains its own running
 copy of the decoded frame. Why? Because the decoder does _not_ have access to the
 original, uncompressed frame. When the encoder encodes block B and uses it as a reference
-for block C, the decoder will use its own reconstructed version of B — which may differ
+for block C, the decoder will use its own reconstructed version of B, which may differ
 slightly from the original because of quantization error. If the encoder used the
 original B as its reference and the decoder used the reconstructed B, they would diverge.
 
@@ -467,45 +467,57 @@ called the _closed-loop encoder_ or the _in-loop encoder_. It is what makes the
 encoder/decoder mismatch problem disappear.
 
 #fig(
-  [The hybrid encoder loop. The shaded path at the bottom — dequantize, IDCT, add to
-   prediction, store — is the encoder's internal decoder. Both encoder and decoder maintain
+  [The hybrid encoder loop. The shaded path at the bottom (dequantize, IDCT, add to
+   prediction, store) is the encoder's internal decoder. Both encoder and decoder maintain
    an identical reconstructed frame buffer.],
   cetz.canvas({
     import cetz.draw: *
     let bx = (w, h, txt, col) => (w, h, txt, col)
 
     // Boxes
-    let boxes = (
-      (0.0, 2.0, "Current\nframe", rgb("#e8f0fe")),
-      (1.8, 2.0, "Partition\nMBs", rgb("#e8f0fe")),
-      (3.7, 2.0, "Motion\nEst.", rgb("#fce8e6")),
-      (5.6, 2.0, "Subtract\nResidual", rgb("#fce8e6")),
-      (7.5, 2.0, "DCT +\nQuant.", rgb("#fce8e6")),
-      (9.4, 2.0, "Entropy\nCode", rgb("#e6f4ea")),
+    let box_defs = (
+      (0.0, 2.0, rgb("#e8f0fe")),
+      (1.8, 2.0, rgb("#e8f0fe")),
+      (3.7, 2.0, rgb("#fce8e6")),
+      (5.6, 2.0, rgb("#fce8e6")),
+      (7.5, 2.0, rgb("#fce8e6")),
+      (9.4, 2.0, rgb("#e6f4ea")),
+    )
+    let box_labels = (
+      [Current\ frame],
+      [Partition\ MBs],
+      [Motion\ Est.],
+      [Subtract\ Residual],
+      [DCT +\ Quant.],
+      [Entropy\ Code],
     )
 
-    for b in boxes {
+    for (i, b) in box_defs.enumerate() {
       rect((b.at(0), b.at(1) - 0.35), (b.at(0) + 1.5, b.at(1) + 0.35),
-           fill: b.at(3), stroke: c-rule)
-      content((b.at(0) + 0.75, b.at(1)), text(size: 7.5pt)[#b.at(2)])
+           fill: b.at(2), stroke: c-rule)
+      content((b.at(0) + 0.75, b.at(1)),
+        box(width: 1.1cm, align(center, text(size: 7pt)[#box_labels.at(i)])))
     }
 
     // Arrows between boxes
     for i in range(5) {
-      let x1 = boxes.at(i).at(0) + 1.5
-      let x2 = boxes.at(i + 1).at(0)
+      let x1 = box_defs.at(i).at(0) + 1.5
+      let x2 = box_defs.at(i + 1).at(0)
       line((x1, 2.0), (x2, 2.0), mark: (end: ">", size: 0.15))
     }
 
     // Decoder loop at bottom
     rect((5.6, 0.4), (7.1, 0.8), fill: rgb("#fff9e6"), stroke: c-accent2)
-    content((6.35, 0.6), text(size: 7pt)[IQuant + IDCT])
+    content((6.35, 0.6),
+      box(width: 1.1cm, align(center, text(size: 7pt)[IQuant +\ IDCT])))
 
     rect((3.7, 0.4), (5.1, 0.8), fill: rgb("#fff9e6"), stroke: c-accent2)
-    content((4.4, 0.6), text(size: 7pt)[Add pred.])
+    content((4.4, 0.6),
+      box(width: 1.0cm, align(center, text(size: 7pt)[Add pred.])))
 
     rect((1.8, 0.4), (3.2, 0.8), fill: rgb("#fff9e6"), stroke: c-accent2)
-    content((2.5, 0.6), text(size: 7pt)[Ref. frame\nbuffer])
+    content((2.5, 0.6),
+      box(width: 1.0cm, align(center, text(size: 7pt)[Ref. frame\ buffer])))
 
     // Connect decoder loop
     line((7.5 + 0.75, 2.0 - 0.35), (7.5 + 0.75, 0.6), (7.1, 0.6),
@@ -528,7 +540,7 @@ encoder/decoder mismatch problem disappear.
 Even inside a P-frame or B-frame, not every block can be sensibly predicted from a
 reference frame. Scene cuts, new objects entering the frame, or regions that changed
 radically give terrible inter-prediction quality. For those blocks, the encoder falls
-back to _intra prediction_ — predicting from already-encoded neighboring blocks _in the
+back to _intra prediction_, which predicts from already-encoded neighboring blocks _in the
 same frame._
 
 === How intra prediction works
@@ -539,10 +551,10 @@ encoder and decoder. The encoder uses those boundary pixels to extrapolate the i
 of the current block.
 
 H.264 defines nine 4×4 intra-prediction modes:
-- *Mode 0 — Vertical:* copy the top-row pixels straight down.
-- *Mode 1 — Horizontal:* copy the left-column pixels straight right.
-- *Mode 2 — DC:* fill the block with the average of all top and left boundary pixels.
-- *Modes 3–8 — Diagonal:* interpolate along one of six specific angles.
+- *Mode 0 (Vertical):* copy the top-row pixels straight down.
+- *Mode 1 (Horizontal):* copy the left-column pixels straight right.
+- *Mode 2 (DC):* fill the block with the average of all top and left boundary pixels.
+- *Modes 3–8 (Diagonal):* interpolate along one of six specific angles.
 
 #fig(
   [Nine H.264 4×4 intra-prediction modes. Arrows show the direction of pixel
@@ -550,23 +562,23 @@ H.264 defines nine 4×4 intra-prediction modes:
    (light interior). DC mode fills with the mean.],
   cetz.canvas({
     import cetz.draw: *
-    let sz = 0.6
-    let modes = ("Vert", "Horiz", "DC", "Diag\nDL", "Diag\nDR", "Vert-R", "Horiz-D", "Vert-L", "Horiz-U")
-    let arr_dirs = (
-      (0, -1), (-1, 0), (0, 0), (-1, -1), (1, -1), (1, -1),
-      (-1, 1), (-1, -1), (-1, 1),
+    let sz = 0.75
+    let modes = (
+      [Vert], [Horiz], [DC],
+      [Diag\ DL], [Diag\ DR], [Vert-R],
+      [Horiz-D], [Vert-L], [Horiz-U],
     )
     for (i, mode) in modes.enumerate() {
       let col = calc.floor(i / 3)
       let row = calc.rem(i, 3)
-      let ox = col * (sz + 0.5)
-      let oy = row * (sz + 0.5)
+      let ox = col * (sz + 0.4)
+      let oy = row * (sz + 0.35)
       rect((ox, oy), (ox + sz, oy + sz),
            fill: c-soft, stroke: 0.5pt + c-rule)
       content((ox + sz / 2, oy + sz / 2),
-              text(size: 6pt)[#mode])
+        box(width: 0.65cm, align(center, text(size: 6pt)[#mode])))
     }
-    content((4.2, 0.9), text(size: 7pt, fill: c-accent)[× 9 modes])
+    content((4.0, 0.9), text(size: 7pt, fill: c-accent)[× 9 modes])
   })
 )
 
@@ -577,8 +589,8 @@ new tools for palette coding (for screen content with flat regions of color) and
 cross-component prediction (where the luma channel predicts the chroma channels).
 
 #aside[
-  The reason intra prediction needs so many angular modes is not mathematical elegance —
-  it's the physics of the world. Scenes are full of edges: roof edges, window edges, hair
+  The reason intra prediction needs so many angular modes is not mathematical elegance.
+  It is the physics of the world. Scenes are full of edges: roof edges, window edges, hair
   edges, text edges. Those edges have a specific direction. If the intra prediction mode
   matches the direction of the nearest edge, the prediction lines up beautifully and the
   residual is tiny. Choosing the wrong mode produces a large residual that costs many bits.
@@ -602,7 +614,7 @@ Quantization causes two notorious visual artifacts in block-based codecs:
   inside a block, caused by quantizing the high-frequency DCT coefficients to zero.
 
 Both H.264 and HEVC attack blocking with a _deblocking filter_ (DBF) applied _inside_
-the coding loop — that is, the reconstructed frame stored in the reference buffer is
+the coding loop; that is, the reconstructed frame stored in the reference buffer is
 the _filtered_ frame, not the raw reconstructed frame. This matters: if the encoder's
 internal reconstructed reference frame matches what the decoder will use, the filter
 helps future frames too, not just the current one.
@@ -649,18 +661,18 @@ bits on complex scenes and fewer on simple ones.
 
 This step adds an inter-frame prediction demonstration to `tinyzip`. We implement a
 `tinyzip/motioncomp.py` module that takes two greyscale frame arrays, encodes the
-second using block motion compensation from the first, and decodes it back — a
+second using block motion compensation from the first, and decodes it back: a
 round-trip that shows how much the residuals shrink compared to frame-differencing.
 
 We reuse `tinyzip/transform.py` (Step 17) for the 2D DCT (`dct2d`/`idct2d`) and
 `tinyzip/quant.py` (Step 18) for quantization, calling its canonical `q_index` (forward
 map: coefficient → integer bin) and `q_value` (inverse map: bin → coefficient) primitives
-— exactly the functions Chapter 39 built — rather than re-inventing the quantizer here.
+(exactly the functions Chapter 39 built), rather than re-inventing the quantizer here.
 
 ```python
 # tinyzip/motioncomp.py
 """
-Step 20 — Block motion-compensation demo (inter-frame prediction).
+Step 20 - Block motion-compensation demo (inter-frame prediction).
 
 API
 ---
@@ -674,7 +686,7 @@ decode_frame(ref: bytes, payload: bytes, width: int, height: int,
 
 Both functions work on raw greyscale bytes (one byte per pixel, row-major).
 Round-trip guarantee: decode_frame(ref, encode_frame(ref, cur, ...), ...) == cur
-  (modulo quantization loss — see LOSSLESS flag below).
+  (modulo quantization loss - see LOSSLESS flag below).
 """
 
 from __future__ import annotations
@@ -922,10 +934,10 @@ When you run this self-test (`python tinyzip/motioncomp.py`), it builds two 64×
 greyscale frames where frame 2 is frame 1 shifted 3 pixels right, encodes frame 2 using
 frame 1 as a reference, decodes, and reports:
 
-- *Payload size* — much smaller than 64×64 = 4096 raw bytes, because the motion
+- *Payload size:* much smaller than 64×64 = 4096 raw bytes, because the motion
   vectors explain most of the content.
-- *Raw diff energy* — the energy of the naive difference (no motion compensation); large.
-- *PSNR after MC+quant* — at QP=4 (near-lossless), well above 35 dB.
+- *Raw diff energy:* the energy of the naive difference (no motion compensation); large.
+- *PSNR after MC+quant:* at QP=4 (near-lossless), well above 35 dB.
 
 At QP=4 the quantization step is tiny (1 pixel) so PSNR is high. Raise QP to 28 to see
 how quality drops as the quantization step grows.
@@ -956,11 +968,11 @@ how quality drops as the quantization step grows.
 == A Brief History: From H.261 to Today
 
 #history[
-  *1974 — DCT proposed.* Nasir Ahmed, T. Natarajan, and K. R. Rao publish the Discrete
+  *1974: DCT proposed.* Nasir Ahmed, T. Natarajan, and K. R. Rao publish the Discrete
   Cosine Transform in 1974 (IEEE Transactions on Computers). Nobody knows yet that this
   mathematics will compress the entire internet.
 
-  *1988 — H.261.* The ITU-T ratifies H.261 in November 1988, the first digital video
+  *1988: H.261.* The ITU-T ratifies H.261 in November 1988, the first digital video
   standard to see real deployment. It targets ISDN videoconferencing at 64 kbit/s
   multiples (p×64 kbit/s, hence the internal name "p×64"). H.261 uses 16×16 macroblocks
   with half-integer DCT, CIF (352×288) or QCIF (176×144) resolution. It
@@ -968,36 +980,36 @@ how quality drops as the quantization step grows.
   The motion search range is small (±15 pixels) and there are no B-frames or sub-pixel
   motion, but the architecture is unmistakably the ancestor of every modern codec.
 
-  *1992 — MPEG-1.* ISO/IEC finalizes MPEG-1, designed for CD-ROM at 1.5 Mbit/s. It
+  *1992: MPEG-1.* ISO/IEC finalizes MPEG-1, designed for CD-ROM at 1.5 Mbit/s. It
   introduces B-frames and the GOP structure. Video quality: roughly VHS. The audio
   layer becomes the famous MP3.
 
-  *1994/1995 — MPEG-2 / H.262.* The joint ITU-T/ISO standard that powers DVD (up to
+  *1994/1995: MPEG-2 / H.262.* The joint ITU-T/ISO standard that powers DVD (up to
   720×480), broadcast digital TV (SDTV and HDTV), and Blu-ray (via H.264). MPEG-2 is
   still actively deployed in broadcast infrastructure worldwide as of 2026.
 
-  *2003 — H.264 / AVC.* Finalized by the Joint Video Team (JVT) in May 2003. Key
+  *2003: H.264 / AVC.* Finalized by the Joint Video Team (JVT) in May 2003. Key
   advances: variable block sizes (down to 4×4), multiple reference frames, quarter-pixel
   motion, 9 intra-prediction modes for 4×4 and 4 modes for 16×16, in-loop deblocking
   filter, and CABAC. Approximately doubles MPEG-2 compression at the same quality. Still
   the most universally supported codec on Earth in 2026.
 
-  *2013 — H.265 / HEVC.* Ratified January 2013. Introduces CTUs up to 64×64, flexible
+  *2013: H.265 / HEVC.* Ratified January 2013. Introduces CTUs up to 64×64, flexible
   quadtree partitioning, 35 intra modes, and the SAO in-loop filter. Roughly halves
   H.264 file sizes at the same quality. Its patent licensing fragmentation (multiple
   competing pools, unclear royalty terms) significantly slowed adoption and motivated the
   royalty-free movement.
 
-  *2018 — AV1.* Released by the Alliance for Open Media (AOMedia), founded 2015 with
+  *2018: AV1.* Released by the Alliance for Open Media (AOMedia), founded 2015 with
   Google, Mozilla, Cisco, Microsoft, Intel, Netflix, Amazon. Royalty-free. Roughly 30 %
   better than HEVC. Variable-size superblocks up to 128×128, 56 intra modes, compound
   prediction, film grain synthesis, and a suite of other tools. YouTube deployed AV1 in
   2018; Netflix in 2020.
 
-  *2020 — H.266 / VVC.* Finalized July 2020. Another ~50 % bitrate reduction over HEVC,
+  *2020: H.266 / VVC.* Finalized July 2020. Another ~50 % bitrate reduction over HEVC,
   with tools for 4K/8K, 360° video, and screen content. Licensing again fragmented.
 
-  *2025–2026 — AV2.* The AOMedia Alliance announced AV2 targeting ~30 % over AV1,
+  *2025–2026: AV2.* The AOMedia Alliance announced AV2 targeting ~30 % over AV1,
   with new tools for augmented/virtual reality, multi-program split-screen, and screen
   content. The bitstream finalized into 2026, with wide hardware decode support not
   expected until 2027–2028.
@@ -1008,7 +1020,7 @@ how quality drops as the quantization step grows.
   year: "1981 (theoretical); 1988 (H.261, first standard)",
   authors: "Hans Georg Musmann (H.261 contributions); multiple MPEG/ITU-T contributors",
   aim: "Predict a video frame from a reference frame by finding, for each block, the displaced reference block that minimizes prediction error.",
-  complexity: "Encoding: O(W·H·S²) per frame for full search (W,H = frame size, S = search range); decoding: O(W·H) — linear.",
+  complexity: "Encoding: O(W·H·S²) per frame for full search (W,H = frame size, S = search range); decoding: O(W·H), linear.",
   strengths: "Massive redundancy reduction for smooth motion; asymmetric: encode expensive, decode cheap; composable with any transform + entropy coder.",
   weaknesses: "Poorly suited to complex non-translational motion (rotation, scaling, occlusion); large residuals at motion boundaries; search is the dominant encoding cost.",
   superseded: "B-frames and multi-reference frames extend it; newer codecs add sub-pixel, affine, and optical-flow-based motion models.",
@@ -1037,8 +1049,8 @@ how quality drops as the quantization step grows.
 Larger blocks are cheaper (fewer motion vectors to transmit) but miss fine-grained
 motion. A 64×64 block moving as a whole gives one motion vector for 4096 pixels; but if
 half of those pixels belong to a foreground object and half to the background, neither
-half is well-predicted. Flexible partitioning — the quadtree structure of HEVC/VVC, or
-the superblock + partition tree of AV1 — solves this by using large blocks where the
+half is well-predicted. Flexible partitioning (the quadtree structure of HEVC/VVC or
+the superblock + partition tree of AV1) solves this by using large blocks where the
 frame is smooth and splitting down to 4×4 where it is complex.
 
 === Reference frames
@@ -1071,7 +1083,7 @@ and VVC mandate CABAC only. AV1 uses its own variant of a binary arithmetic code
 similar efficiency.
 
 #pitfall[
-  CABAC has long been assumed to be a "free lunch" — just plug in the arithmetic coder
+  CABAC has long been assumed to be a "free lunch": just plug in the arithmetic coder
   from Chapter 26 and save 10–15 % bits. But CABAC's speed is the hidden cost. Binary
   arithmetic coders are inherently serial (each symbol updates the state that the next
   symbol needs), so they cannot be parallelized. H.264 CABAC can be 2–5× slower to
@@ -1088,7 +1100,7 @@ The same computer decodes at 300–600 fps using optimized SIMD decode (or 1000+
 hardware assist). The ratio is about 10:1 in decode's favor.
 
 For HEVC, the reference encoder (HM) at its best-quality setting runs at approximately
-0.05–0.5 fps on the same hardware — more than 1000× slower than real-time. The
+0.05–0.5 fps on the same hardware, more than 1000× slower than real-time. The
 production encoder x265 runs at 10–50 fps depending on preset. For AV1, the reference
 encoder libaom can take hours per second of video at its highest quality. Even the
 optimized SVT-AV1 runs at roughly 10–30 fps at medium settings.
@@ -1101,7 +1113,7 @@ Why? Every macroblock or CU (coding unit) in a modern codec requires:
 5. Keeping an internal reconstruction loop that runs a forward transform for _every
    candidate tested_, not just the winner.
 
-Decoding requires none of this search — the decisions have already been made and encoded
+Decoding requires none of this search. The decisions have already been made and encoded
 in the bitstream. Decode is: read motion vector, copy block, read coefficients,
 dequantize, inverse-transform, add. Fast and parallelizable.
 
@@ -1201,7 +1213,7 @@ silicon inside a phone chip.
   A very short GOP, perhaps 2–5 frames (one I-frame, then 1–4 P-frames and no B-frames).
   This ensures that the decoder can resync at most 2–5 frames after a dropped packet,
   within one frame of display time at 30 fps. Trade-offs vs. a 60-frame GOP:
-  (1) Bitrate is significantly higher — more I-frames cost many more bits.
+  (1) Bitrate is significantly higher, because more I-frames cost many more bits.
   (2) No B-frames means no look-ahead buffering, which is essential for real-time surgery
   video where delay must be minimal (a future reference frame would require buffering that
   adds latency).
@@ -1224,13 +1236,13 @@ silicon inside a phone chip.
   (a) $lambda = 0.4$:
   $J_"intra" = 50 + 0.4 times 400 = 50 + 160 = 210$.
   $J_"inter" = 200 + 0.4 times 20 = 200 + 8 = 208$.
-  Inter prediction wins (barely) — bits are expensive so the 380-bit savings outweighs
+  Inter prediction wins (barely), because bits are expensive and the 380-bit savings outweighs
   the 150-unit distortion increase.
 
   (b) $lambda = 0.05$:
   $J_"intra" = 50 + 0.05 times 400 = 50 + 20 = 70$.
   $J_"inter" = 200 + 0.05 times 20 = 200 + 1 = 201$.
-  Intra prediction wins decisively — bits are cheap so the lower distortion wins.
+  Intra prediction wins decisively: bits are cheap, so the lower distortion wins.
 
   (c) $lambda$ grows with QP (more aggressive quantization = bits are scarce). At high
   QP (high $lambda$), the encoder aggressively saves bits even at quality cost, preferring
@@ -1257,7 +1269,7 @@ silicon inside a phone chip.
 
   (b) Without the bounds check, `ref_g[cy + dy][cx + dx]` would access a negative row
   index in Python. Python lists allow negative indexing (`list[-1]` returns the last
-  element), so `ref_g[-1]` would silently return the _last row_ of the grid — a
+  element), so `ref_g[-1]` would silently return the _last row_ of the grid:
   completely wrong prediction from the bottom of the frame. The residual would be large
   and wrong, PSNR would drop sharply, and the bug would be silent (no exception). This
   is a classic off-by-one error that corrupts corner macroblocks without crashing.
@@ -1273,7 +1285,7 @@ silicon inside a phone chip.
 #solution("51.6")[
   PSNR would decrease for the rotation test. Block motion compensation models only
   translational motion: it shifts a rectangular block by (Δx, Δy). Rotation is a
-  non-translational transformation — after rotating 5 degrees, most blocks no longer
+  non-translational transformation. After rotating 5 degrees, most blocks no longer
   look like any shifted copy of the same block in the reference frame. Pixels at the
   corners of each block now belong to a rotated neighborhood that no axis-aligned copy
   can match well. The residuals would be large even with the best motion vector, and
@@ -1305,16 +1317,16 @@ silicon inside a phone chip.
   q_smooth   = abs(q2 - q0)        # interior smoothness, q-side
 
   if edge_delta >= 4 * threshold_A:
-      # True edge in the image — do not filter (preserve the edge)
+      # True edge in the image - do not filter (preserve the edge)
       apply NO FILTER
   elif edge_delta < threshold_A and p_smooth < threshold_B and q_smooth < threshold_B:
-      # Smooth region with a blocking artifact — strong smoothing
+      # Smooth region with a blocking artifact - strong smoothing
       # 5-tap: filter p0, p1 on one side and q0, q1 on the other
       apply 5-TAP FILTER:
           p0' = (p2 + 2*p1 + 2*p0 + 2*q0 + q1 + 4) / 8
           q0' = (p1 + 2*p0 + 2*q0 + 2*q1 + q2 + 4) / 8
   else:
-      # Moderate artifact — gentle smoothing at boundary only
+      # Moderate artifact - gentle smoothing at boundary only
       # 3-tap: adjust p0 and q0 only
       apply 3-TAP FILTER:
           delta = (q0 - p0 + 4) / 8   # clipped to [-threshold_A, threshold_A]
@@ -1331,7 +1343,7 @@ silicon inside a phone chip.
   Extend `tinyzip/motioncomp.py` to report the *average motion vector magnitude* and the
   *fraction of blocks with zero-magnitude motion vectors* across all blocks in the encoded
   payload. Add these statistics to the `__main__` self-test output. (You do not need to
-  run the code — describe the Python changes needed and write the key new lines.)
+  run the code; describe the Python changes needed and write the key new lines.)
 ]
 
 #solution("51.8")[
@@ -1359,21 +1371,21 @@ silicon inside a phone chip.
 
 == Further Reading
 
-- #link("https://ieeexplore.ieee.org/document/1218189")[Wiegand, T. et al. (2003). _Overview of the H.264/AVC Video Coding Standard._ IEEE TCSVT 13(7).] — The definitive overview paper for the codec that still dominates the internet.
+- #link("https://ieeexplore.ieee.org/document/1218189")[Wiegand, T. et al. (2003). _Overview of the H.264/AVC Video Coding Standard._ IEEE TCSVT 13(7).] The definitive overview paper for the codec that still dominates the internet.
 
-- #link("https://ieeexplore.ieee.org/document/6316136")[Sullivan, G. J. et al. (2012). _Overview of the High Efficiency Video Coding (HEVC) Standard._ IEEE TCSVT 22(12).] — Comprehensive treatment of HEVC's CTU quadtree, 35 intra modes, and SAO filter.
+- #link("https://ieeexplore.ieee.org/document/6316136")[Sullivan, G. J. et al. (2012). _Overview of the High Efficiency Video Coding (HEVC) Standard._ IEEE TCSVT 22(12).] Comprehensive treatment of HEVC's CTU quadtree, 35 intra modes, and SAO filter.
 
-- #link("https://arxiv.org/abs/2008.06091")[Chen, Y. et al. (2020). _An Overview of Core Coding Tools in the AV1 Video Codec._ arXiv:2008.06091.] — AV1's design decisions from the engineers who built it: superblocks, compound prediction, film grain.
+- #link("https://arxiv.org/abs/2008.06091")[Chen, Y. et al. (2020). _An Overview of Core Coding Tools in the AV1 Video Codec._ arXiv:2008.06091.] AV1's design decisions from the engineers who built it: superblocks, compound prediction, film grain.
 
-- #link("https://www.fastvdo.com/spie04/spie04-h264OverviewPaper.pdf")[Richardson, I. (2004). _The H.264/AVC Advanced Video Coding Standard: Overview and Introduction._] — Accessible entry point before diving into the ITU-T spec itself.
+- #link("https://www.fastvdo.com/spie04/spie04-h264OverviewPaper.pdf")[Richardson, I. (2004). _The H.264/AVC Advanced Video Coding Standard: Overview and Introduction._] An accessible entry point before diving into the ITU-T spec itself.
 
-- #link("https://arxiv.org/abs/1812.00101")[Lu, G. et al. (2019). _DVC: An End-to-End Deep Video Compression Framework._ CVPR 2019 / arXiv:1812.00101.] — The first learned video codec to seriously challenge the hybrid codec on rate-distortion grounds.
+- #link("https://arxiv.org/abs/1812.00101")[Lu, G. et al. (2019). _DVC: An End-to-End Deep Video Compression Framework._ CVPR 2019 / arXiv:1812.00101.] The first learned video codec to seriously challenge the hybrid codec on rate-distortion grounds.
 
 #bridge[
   We now know the _template_ of the hybrid video codec: predict temporally with motion
   compensation, predict spatially with intra prediction, transform and quantize the
   residuals, entropy-code the result. In Chapter 52 we will follow this template through
-  history — H.261, MPEG-1, MPEG-2 (the codec of DVD and broadcast TV), H.263, and then
+  history: H.261, MPEG-1, MPEG-2 (the codec of DVD and broadcast TV), H.263, and then
   H.264/AVC in serious depth: its variable block sizes, multi-reference frames, CABAC
   in detail, and the profiles that made it the universal default. Understanding AVC's
   specific choices explains why it outperformed every earlier codec by such a wide margin

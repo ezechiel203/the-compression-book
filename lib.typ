@@ -47,7 +47,7 @@
 )[
   #grid(columns: (1fr, auto), align: (left + horizon, right + horizon),
     text(weight: "bold", fill: c-math, size: 9.5pt, tracking: 0.5pt)[
-      #box(baseline: 1pt, text(size: 11pt)[∑]) GO FURTHER · THE MATHS#if topic != "" [ — #topic]
+      #box(baseline: 1pt, text(size: 11pt)[∑]) GO FURTHER · THE MATHS#if topic != "" [: #topic]
     ],
     text(size: 7.8pt, style: "italic", fill: c-math.lighten(10%))[skip if familiar],
   )
@@ -74,7 +74,7 @@
     [#box(fill: c-py, inset: (x: 4pt, y: 1pt), radius: 2pt,
         text(fill: white, weight: "bold", size: 8pt)[PY])
      #h(4pt) #text(weight: "bold", fill: c-py, size: 9.5pt, tracking: 0.5pt)[
-       GO FURTHER · PYTHON#if topic != "" [ — #topic]]],
+       GO FURTHER · PYTHON#if topic != "" [: #topic]]],
     text(size: 7.8pt, style: "italic", fill: c-py.lighten(8%))[skip if fluent],
   )
   #v(3pt)
@@ -128,7 +128,7 @@
 #let definition(term, body) = block(width: 100%, breakable: true,
   inset: (x: 10pt, y: 8pt), radius: 4pt, fill: rgb("#fbf7ef"),
   stroke: (left: 3pt + c-accent2), above: 9pt, below: 9pt)[
-  #text(weight: "bold")[Definition — #term.] #h(3pt) #body
+  #text(weight: "bold")[Definition (#term).] #h(3pt) #body
 ]
 
 #let theorem(name, body) = block(width: 100%, breakable: true,
@@ -148,7 +148,7 @@
   #quote
   #v(2pt)
   #set text(style: "normal", size: 9pt)
-  #text(fill: c-accent2)[— #who]
+  #text(fill: c-accent2)[#who]
 ]) + v(6pt)
 
 // ---- chapter takeaways list ------------------------------------------------
@@ -202,7 +202,7 @@
 #let scoreboard(caption: "", ..rows) = block(width: 100%, breakable: true,
   above: 12pt, below: 12pt)[
   #text(weight: "bold", fill: c-accent2, size: 9.5pt)[
-    SCOREBOARD#if caption != "" [ — #caption]]
+    SCOREBOARD#if caption != "" [: #caption]]
   #v(3pt)
   #table(columns: (auto, auto, auto, 1fr), inset: 6pt,
     align: (left, right, right, left),
@@ -264,8 +264,8 @@
 // ===========================================================================
 // Book document template — used by main.typ only.
 // ===========================================================================
-#let book(title: "", subtitle: "", author: "", date: "", volume: "", body) = {
-  set document(title: if volume != "" { title + " — " + volume } else { title }, author: author)
+#let book(title: "", subtitle: "", author: "", date: "", volume: "", tocdepth: 2, body) = {
+  set document(title: if volume != "" { title + ": " + volume } else { title }, author: author)
   set page(
     width: 176mm, height: 250mm,
     margin: (inside: 24mm, outside: 18mm, top: 22mm, bottom: 22mm),
@@ -273,12 +273,22 @@
     number-align: center,
   )
   set text(font: ("Libertinus Serif", "New Computer Modern", "DejaVu Serif"),
-           size: 10.5pt, lang: "en", fill: c-ink)
+           size: 10.5pt, lang: "en", fill: c-ink, hyphenate: true)
+  set smartquote(enabled: false)   // plain straight quotes
+  // justified body with hyphenation -> even spacing, no overflow
   set par(justify: true, leading: 0.62em, first-line-indent: 1.1em)
-  show heading: set block(above: 1.2em, below: 0.7em)
+  // headings stick to the following content (no subsection orphaned at page bottom)
+  // and never break a word across lines
+  show heading: set block(above: 1.2em, below: 0.7em, sticky: true)
+  show heading: set text(hyphenate: false)
   set heading(numbering: "1.1")
   set figure(numbering: "1")
+  show figure: set block(breakable: false)   // a figure + caption never split across pages
   show figure.caption: set text(size: 9pt, fill: c-ink.lighten(20%))
+  // tables: compact rows, smaller text that wraps, never clipping the page
+  set table(inset: (x: 6pt, y: 3.5pt), stroke: 0.5pt + c-rule)
+  show table: set text(size: 9pt, hyphenate: true)
+  show table.cell: set par(justify: false, leading: 0.5em)
 
   // raw / code styling
   show raw.where(block: true): it => block(width: 100%, fill: rgb("#f6f8fa"),
@@ -328,7 +338,7 @@
   // ---- table of contents ----
   set page(numbering: "i")
   counter(page).update(1)
-  outline(title: [Contents], depth: 2, indent: auto)
+  outline(title: [Contents], depth: tocdepth, indent: auto)
   pagebreak()
 
   // ---- body ----
