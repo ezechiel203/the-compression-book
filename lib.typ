@@ -51,7 +51,7 @@
 )[
   #grid(columns: (1fr, auto), align: (left + horizon, right + horizon),
     text(weight: "bold", fill: c-math, size: 9.5pt, tracking: 0.5pt)[
-      #box(baseline: 1pt, text(size: 11pt)[∑]) GO FURTHER · THE MATHS#if topic != "" [: #topic]
+      #box(baseline: 1pt, text(size: 11pt)[∑]) GO FURTHER · THE MATHS#if topic != "" [: #_mk(topic)]
     ],
     text(size: 7.8pt, style: "italic", fill: c-math.lighten(10%))[skip if familiar],
   )
@@ -78,7 +78,7 @@
     [#box(fill: c-py, inset: (x: 4pt, y: 1pt), radius: 2pt,
         text(fill: white, weight: "bold", size: 8pt)[PY])
      #h(4pt) #text(weight: "bold", fill: c-py, size: 9.5pt, tracking: 0.5pt)[
-       GO FURTHER · PYTHON#if topic != "" [: #topic]]],
+       GO FURTHER · PYTHON#if topic != "" [: #_mk(topic)]]],
     text(size: 7.8pt, style: "italic", fill: c-py.lighten(8%))[skip if fluent],
   )
   #v(3pt)
@@ -162,7 +162,7 @@
   #text(weight: "bold", fill: c-key)[Chapter takeaways]
   #v(3pt)
   #set text(size: 10pt)
-  #for it in items [- #it\ ]
+  #for it in items [- #_mk(it)\ ]
 ]
 
 // ---- learning objectives / chapter connectors ------------------------------
@@ -172,7 +172,7 @@
   #text(weight: "bold", fill: c-accent)[By the end of this chapter you will be able to:]
   #v(2pt)
   #set text(size: 10pt)
-  #for it in items [- #it\ ]
+  #for it in items [- #_mk(it)\ ]
 ]
 #let recap(body)  = _admon("Where we are", c-accent, body)   // wires to earlier chapters
 #let bridge(body) = _admon("Coming up next", c-accent2, body) // wires to the next chapter
@@ -206,7 +206,7 @@
 #let scoreboard(caption: "", ..rows) = block(width: 100%, breakable: true,
   above: 12pt, below: 12pt)[
   #text(weight: "bold", fill: c-accent2, size: 9.5pt)[
-    SCOREBOARD#if caption != "" [: #caption]]
+    SCOREBOARD#if caption != "" [: #_mk(caption)]]
   #v(3pt)
   #table(columns: (auto, auto, auto, 1fr), inset: 6pt,
     align: (left, right, right, left),

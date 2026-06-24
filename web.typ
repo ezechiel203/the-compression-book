@@ -30,11 +30,11 @@
 
 // ---- Go Further boxes (skippable primers) ----------------------------------
 #let gomaths(topic, body) = _e("aside", attrs: (class: "gobox gomaths"))[
-  #_e("div", attrs: (class: "gf-head"))[∑ Go Further · The Maths#if topic != "" [: #topic]#_e("span", attrs: (class: "gf-skip"))[skip if familiar]]
+  #_e("div", attrs: (class: "gf-head"))[∑ Go Further · The Maths#if topic != "" [: #_mk(topic)]#_e("span", attrs: (class: "gf-skip"))[skip if familiar]]
   #body
 ]
 #let gopython(topic, body) = _e("aside", attrs: (class: "gobox gopython"))[
-  #_e("div", attrs: (class: "gf-head"))[#_e("span", attrs: (class: "py-badge"))[PY] Go Further · Python#if topic != "" [: #topic]#_e("span", attrs: (class: "gf-skip"))[skip if fluent]]
+  #_e("div", attrs: (class: "gf-head"))[#_e("span", attrs: (class: "py-badge"))[PY] Go Further · Python#if topic != "" [: #_mk(topic)]#_e("span", attrs: (class: "gf-skip"))[skip if fluent]]
   #body
 ]
 #let mathrecall(body) = _e("span", attrs: (class: "recall mathrecall"))[*Recall.* #body]
@@ -72,11 +72,11 @@
 #let epigraph(quote, who) = _e("blockquote", attrs: (class: "epigraph"))[#quote #_e("footer")[#who]]
 #let objectives(items) = _e("div", attrs: (class: "objectives"))[
   #_e("h4")[By the end of this chapter you will be able to:]
-  #_e("ul")[#for it in items { _e("li")[#it] }]
+  #_e("ul")[#for it in items { _e("li")[#_mk(it)] }]
 ]
 #let takeaways(items) = _e("div", attrs: (class: "takeaways"))[
   #_e("h4")[Chapter takeaways]
-  #_e("ul")[#for it in items { _e("li")[#it] }]
+  #_e("ul")[#for it in items { _e("li")[#_mk(it)] }]
 ]
 
 // ---- tinyzip project + scoreboard ------------------------------------------
@@ -87,7 +87,7 @@
 #let scoreboard(caption: "", ..rows) = {
   let cells = rows.pos()
   _e("div", attrs: (class: "scoreboard"))[
-    #_e("h4")[Scoreboard#if caption != "" [: #caption]]
+    #_e("h4")[Scoreboard#if caption != "" [: #_mk(caption)]]
     #_e("table")[
       #_e("thead")[#_e("tr")[#_e("th")[Technique]#_e("th")[Bytes]#_e("th")[Ratio]#_e("th")[Notes]]]
       #_e("tbody")[#{
