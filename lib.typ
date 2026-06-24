@@ -251,11 +251,12 @@
   set page(numbering: none)
   v(1fr)
   align(center)[
-    #text(size: 13pt, fill: c-accent, weight: "bold", tracking: 3pt)[PART #numeral]
+    #set text(hyphenate: false)
+    #text(size: 13pt, fill: c-accent, weight: "bold", tracking: 3pt)[VOLUME #numeral]
     #v(10pt)
     #line(length: 30%, stroke: 1.2pt + c-accent)
     #v(14pt)
-    #text(size: 26pt, weight: "bold")[#title]
+    #block(width: 80%)[#text(size: 26pt, weight: "bold")[#title]]
   ]
   v(2fr)
   pagebreak(weak: true)
@@ -268,19 +269,20 @@
   set document(title: if volume != "" { title + ": " + volume } else { title }, author: author)
   set page(
     width: 176mm, height: 250mm,
-    margin: (inside: 24mm, outside: 18mm, top: 22mm, bottom: 22mm),
+    margin: (inside: 26mm, outside: 20mm, top: 25mm, bottom: 25mm),
     numbering: "1",
     number-align: center,
   )
   set text(font: ("Libertinus Serif", "New Computer Modern", "DejaVu Serif"),
-           size: 10.5pt, lang: "en", fill: c-ink, hyphenate: true)
+           size: 11pt, lang: "en", fill: c-ink, hyphenate: true)
   set smartquote(enabled: false)   // plain straight quotes
-  // justified body with hyphenation -> even spacing, no overflow
-  set par(justify: true, leading: 0.62em, first-line-indent: 1.1em)
+  // roomier line spacing and a little air between paragraphs (less dense)
+  set par(justify: true, leading: 0.82em, spacing: 1.05em, first-line-indent: 1.1em)
   // headings stick to the following content (no subsection orphaned at page bottom)
   // and never break a word across lines
-  show heading: set block(above: 1.2em, below: 0.7em, sticky: true)
+  show heading: set block(above: 1.5em, below: 0.85em, sticky: true)
   show heading: set text(hyphenate: false)
+  show outline.entry: set text(hyphenate: false)   // no mid-word breaks in the contents
   set heading(numbering: "1.1")
   set figure(numbering: "1")
   show figure: set block(breakable: false)   // a figure + caption never split across pages
@@ -321,10 +323,11 @@
   set page(numbering: none)
   v(1fr)
   align(center)[
-    #if volume != "" [#text(size: 16pt, fill: c-accent2, weight: "bold", tracking: 2pt)[#upper(volume)] #v(14pt)]
+    #set text(hyphenate: false)
+    #if volume != "" [#text(size: 13pt, fill: c-accent2, weight: "bold", tracking: 1pt)[#upper(volume)] #v(14pt)]
     #text(size: 34pt, weight: "bold")[#title]
-    #v(6pt)
-    #text(size: 15pt, fill: c-accent)[#subtitle]
+    #v(8pt)
+    #block(width: 86%)[#text(size: 15pt, fill: c-accent)[#subtitle]]
     #v(20pt)
     #line(length: 45%, stroke: 1pt + c-rule)
     #v(20pt)
