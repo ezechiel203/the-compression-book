@@ -269,18 +269,17 @@
   set document(title: if volume != "" { title + ": " + volume } else { title }, author: author)
   set page(
     width: 176mm, height: 250mm,
-    margin: (inside: 26mm, outside: 20mm, top: 25mm, bottom: 25mm),
+    margin: (inside: 24mm, outside: 18mm, top: 22mm, bottom: 22mm),
     numbering: "1",
     number-align: center,
   )
   set text(font: ("Libertinus Serif", "New Computer Modern", "DejaVu Serif"),
-           size: 11pt, lang: "en", fill: c-ink, hyphenate: true)
+           size: 10.5pt, lang: "en", fill: c-ink, hyphenate: true)
   set smartquote(enabled: false)   // plain straight quotes
-  // roomier line spacing and a little air between paragraphs (less dense)
-  set par(justify: true, leading: 0.82em, spacing: 1.05em, first-line-indent: 1.1em)
+  set par(justify: true, leading: 0.62em, first-line-indent: 1.1em)
   // headings stick to the following content (no subsection orphaned at page bottom)
   // and never break a word across lines
-  show heading: set block(above: 1.5em, below: 0.85em, sticky: true)
+  show heading: set block(above: 1.2em, below: 0.7em, sticky: true)
   show heading: set text(hyphenate: false)
   show outline.entry: set text(hyphenate: false)   // no mid-word breaks in the contents
   set heading(numbering: "1.1")
