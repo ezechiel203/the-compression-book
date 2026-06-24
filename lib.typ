@@ -16,6 +16,10 @@
 #let c-soft   = rgb("#f4f6f8")
 #let c-rule   = rgb("#d0d7de")
 
+// Render a field that may be a string: if it contains math ($...$), parse it as
+// markup so the math (and any markup) renders instead of showing literal $ signs.
+#let _mk(v) = if type(v) == str and "$" in v { eval(v, mode: "markup") } else { v }
+
 // ---- admonition primitive --------------------------------------------------
 #let _admon(title, col, body) = block(
   width: 100%, breakable: true,
@@ -98,7 +102,7 @@
 )[
   #block(width: 100%, fill: c-algo, inset: (x: 11pt, y: 7pt),
          radius: (top: 5pt))[
-    #text(fill: white, weight: "bold", size: 11.5pt)[#name]
+    #text(fill: white, weight: "bold", size: 11.5pt)[#_mk(name)]
     #h(1fr)
     #if year != "" { text(fill: white.darken(5%), size: 9.5pt)[#year] }
   ]
@@ -106,7 +110,7 @@
     #set text(size: 9.8pt)
     #let row(k, val) = if val != "" [
       #grid(columns: (78pt, 1fr), gutter: 6pt,
-        text(weight: "bold", fill: c-accent2)[#k], [#val])
+        text(weight: "bold", fill: c-accent2)[#k], [#_mk(val)])
       #v(2pt)
     ]
     #row("Authors", authors)
@@ -128,13 +132,13 @@
 #let definition(term, body) = block(width: 100%, breakable: true,
   inset: (x: 10pt, y: 8pt), radius: 4pt, fill: rgb("#fbf7ef"),
   stroke: (left: 3pt + c-accent2), above: 9pt, below: 9pt)[
-  #text(weight: "bold")[Definition (#term).] #h(3pt) #body
+  #text(weight: "bold")[Definition (#_mk(term)).] #h(3pt) #body
 ]
 
 #let theorem(name, body) = block(width: 100%, breakable: true,
   inset: (x: 10pt, y: 8pt), radius: 4pt, fill: rgb("#eef4fb"),
   stroke: (left: 3pt + c-accent), above: 9pt, below: 9pt)[
-  #text(weight: "bold", style: "italic")[Theorem (#name).] #h(3pt)
+  #text(weight: "bold", style: "italic")[Theorem (#_mk(name)).] #h(3pt)
   #emph(body)
 ]
 

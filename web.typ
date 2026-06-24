@@ -25,6 +25,8 @@
   s
 }
 #let _e = html.elem
+// parse string fields that contain math ($...$) as markup so math renders (MathML)
+#let _mk(v) = if type(v) == str and "$" in v { eval(v, mode: "markup") } else { v }
 
 // ---- Go Further boxes (skippable primers) ----------------------------------
 #let gomaths(topic, body) = _e("aside", attrs: (class: "gobox gomaths"))[
@@ -41,9 +43,9 @@
 // ---- algorithm / technique profile -----------------------------------------
 #let algo(name: "", year: "", authors: "", aim: "", strengths: "",
           weaknesses: "", superseded: "", complexity: "", body) = _e("div", attrs: (class: "algo"))[
-  #_e("div", attrs: (class: "algo-head"))[#name#if year != "" [#_e("span", attrs: (class: "algo-year"))[#year]]]
+  #_e("div", attrs: (class: "algo-head"))[#_mk(name)#if year != "" [#_e("span", attrs: (class: "algo-year"))[#year]]]
   #{
-    let row(k, v) = if v != "" { _e("dt")[#k] + _e("dd")[#v] }
+    let row(k, v) = if v != "" { _e("dt")[#k] + _e("dd")[#_mk(v)] }
     _e("dl", attrs: (class: "algo-meta"))[#row("Authors", authors)#row("Aim", aim)#row("Complexity", complexity)#row("Strengths", strengths)#row("Weaknesses", weaknesses)#row("Superseded by", superseded)]
   }
   #if body != none { _e("div", attrs: (class: "algo-body"))[#body] }
@@ -62,8 +64,8 @@
 #let misconception(claim, body) = _e("div", attrs: (class: "misconception"))[#_e("strong")[Myth. ]#emph(claim) #_e("strong")[Reality. ]#body]
 
 // ---- definition / theorem / proof ------------------------------------------
-#let definition(term, body) = _e("div", attrs: (class: "definition"))[#_e("strong")[Definition (#term).] #body]
-#let theorem(name, body)    = _e("div", attrs: (class: "theorem"))[#_e("strong")[Theorem (#name).] #emph(body)]
+#let definition(term, body) = _e("div", attrs: (class: "definition"))[#_e("strong")[Definition (#_mk(term)).] #body]
+#let theorem(name, body)    = _e("div", attrs: (class: "theorem"))[#_e("strong")[Theorem (#_mk(name)).] #emph(body)]
 #let proof(body)            = _e("div", attrs: (class: "proof"))[#emph[Proof.] #body #h(0.3em)▪]
 
 // ---- chapter connectors ----------------------------------------------------
