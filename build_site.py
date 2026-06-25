@@ -101,8 +101,12 @@ for i in range(1, 6):
 # ---- landing page ----
 def pages_of(pdf):
     try:
-        d = open(pdf, "rb").read(); return len(re.findall(rb"/Type\s*/Page[^s]", d))
-    except: return 0
+        r = subprocess.run(["pdftoppm", "-f", "999999", "-l", "999999", pdf, "/tmp/_ppc"],
+                           capture_output=True, text=True)
+        m = re.search(r"last page \((\d+)\)", r.stderr or "")
+        return int(m.group(1)) if m else 0
+    except Exception:
+        return 0
 cards = []
 for i, v in enumerate(volumes, 1):
     cs = [c for c in chapters if c["volume"] == v]
@@ -127,7 +131,7 @@ solutions, and diagrams throughout. Read it in your browser, or download each vo
 <p class="dl"><b>Start reading:</b> <a href="ch01.html">Chapter 1: What Is Compression?</a>
 &nbsp;·&nbsp; {total_pp} pages total</p>
 <p class="dl"><b>Download:</b>
-<a href="{PDF_BASE}/TheCompressionBook-Complete.pdf">Complete book, single PDF (~4,000 pp)</a>
+<a href="{PDF_BASE}/TheCompressionBook-Complete.pdf">Complete book, single PDF (~2,000 pp)</a>
 &nbsp;·&nbsp; per-volume PDFs via each volume card or the in-chapter menu</p>
 </div></body></html>'''
 open(f"{SITE}/index.html", "w").write(index)

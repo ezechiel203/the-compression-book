@@ -5,6 +5,8 @@
 // so chapters are self-contained and individually compilable.
 // =============================================================================
 
+#import "bookindex.typ": _idxpat, _index-mark, make-index
+
 // ---- palette ---------------------------------------------------------------
 #let c-ink    = rgb("#1a1a1a")
 #let c-accent = rgb("#0b5394")   // deep blue
@@ -347,8 +349,9 @@
   outline(title: [Contents], depth: tocdepth, indent: auto)
   pagebreak()
 
-  // ---- body ----
+  // ---- body (index terms marked here; title page + TOC above are not) ----
   set page(numbering: "1")
   counter(page).update(1)
+  show _idxpat: _index-mark
   body
 }

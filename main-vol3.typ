@@ -49,3 +49,5 @@
 
 #pagebreak(weak: true)
 #solutions-appendix()
+
+#make-index()

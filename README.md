@@ -3,7 +3,7 @@
 **A Complete History and Technical Treatise on Data Compression** — June 2026 edition.
 
 A from-zero-to-expert book that assumes only **9th-grade mathematics** and builds everything
-else from scratch. Five volumes, **81 chapters, ~768,000 words, ~4,068 pages**.
+else from scratch. Five volumes, **81 chapters, ~750,000 words, ~2,030 pages**, each volume ending with an alphabetical index.
 
 ## What makes it different
 
