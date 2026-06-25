@@ -677,8 +677,7 @@ For the Hutter Prize:
 ]
 
 #solution("1.1")[
-  Average bits = $0.5 times 1 + 0.25 times 2 + 0.125 times 3 + 0.125 times 3
-               = 0.5 + 0.5 + 0.375 + 0.375 = 1.75$ bits per character.
+  Average bits = $0.5 times 1 + 0.25 times 2 + 0.125 times 3 + 0.125 times 3 = 0.5 + 0.5 + 0.375 + 0.375 = 1.75$ bits per character.
   ASCII uses 8 bits per character. So this simple variable-length code achieves
   $8 / 1.75 approx 4.6 times$ compression, without losing any information.
   We will prove in Chapter 24 that this particular code is actually optimal for these

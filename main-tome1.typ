@@ -5,8 +5,10 @@
   subtitle: "A Complete History and Technical Treatise on Data Compression",
   author: "Alexandre Betry, M.D., M.Sc. C.S.",
   date: "June 2026 Edition",
-  volume: "Volume I - Foundations: The Language of Information",
+  volume: "Tome I - Foundations: Mathematics, Logic, and Programming",
 )
+
+#counter(heading).update(0)   // continuous chapter numbers across the set
 
 #pagebreak(weak: true)
 #include "chapters/01-what-is-compression.typ"
@@ -42,18 +44,6 @@
 #include "chapters/16-a-python-primer-ii-data-structures-functions-a.typ"
 #pagebreak(weak: true)
 #include "chapters/17-a-python-primer-iii-bytes-bits-files-and-binar.typ"
-#pagebreak(weak: true)
-#include "chapters/18-shannon-and-the-birth-of-information-theory.typ"
-#pagebreak(weak: true)
-#include "chapters/19-the-source-coding-theorem.typ"
-#pagebreak(weak: true)
-#include "chapters/20-mutual-information-channels-and-the-noisy-chan.typ"
-#pagebreak(weak: true)
-#include "chapters/21-rate-distortion-the-theory-of-lossy-compressio.typ"
-#pagebreak(weak: true)
-#include "chapters/22-kolmogorov-complexity-and-algorithmic-informat.typ"
-#pagebreak(weak: true)
-#include "chapters/23-compression-prediction-learning.typ"
 
 #pagebreak(weak: true)
 #solutions-appendix()

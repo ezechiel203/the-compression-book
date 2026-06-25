@@ -363,8 +363,7 @@ evaluate $u^3/3$ at the two ends and subtract. No new machinery, only the
 #proof[
   Let $u$ be uniform on $(-1/2, 1/2)$. Its mean is, by symmetry, $0$. Its variance
   (Chapter 10: the average squared distance from the mean) is the integral
-  $ "Var"(u) = integral_(-1/2)^(1/2) u^2 dif u = [u^3/3]_(-1/2)^(1/2)
-            = 1/3 (1/8 + 1/8) = 1/12. $
+  $ "Var"(u) = integral_(-1/2)^(1/2) u^2 dif u = [u^3/3]_(-1/2)^(1/2) = 1/3 (1/8 + 1/8) = 1/12. $
   Now the rounding error. For an input $y$ uniformly distributed within its cell,
   the error $r = round(y) - y$ ranges over $(-1/2, 1/2)$ and is itself uniform
   there, so it has the identical mean $0$ and variance $1/12$. The additive

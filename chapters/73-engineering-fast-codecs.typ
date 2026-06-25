@@ -895,8 +895,7 @@ makes that logic run in nanoseconds.
 
 #solution("73.1")[
   At 9 cycles per symbol and 3.5 GHz, we get
-  $3.5 times 10^9 / 9 approx 389 times 10^6$ symbols per second. If one symbol
-  = one byte, that is ~389 MB/s. Notice that 4 instructions/cycle × 3.5 GHz =
+  $3.5 times 10^9 / 9 approx 389 times 10^6$ symbols per second. If one symbol = one byte, that is ~389 MB/s. Notice that 4 instructions/cycle × 3.5 GHz =
   14 billion instructions per second, but we only use 1/9 of that capacity
   because of the dependency chain: 96% of the execution units are idle.
 ]
@@ -945,8 +944,7 @@ makes that logic run in nanoseconds.
 
 #solution("73.4")[
   512 MB / 1 MB per frame = 512 frames. With 16 threads, all 16 run
-  simultaneously, so the time is approximately (512 frames / 16 threads) × (1 MB / 400 MB/s)
-  = 32 × 2.5 ms = 80 ms total, giving a throughput of 512 MB / 80 ms ≈ 6,400 MB/s
+  simultaneously, so the time is approximately (512 frames / 16 threads) × (1 MB / 400 MB/s) = 32 × 2.5 ms = 80 ms total, giving a throughput of 512 MB / 80 ms ≈ 6,400 MB/s
   (about 16x the single-threaded speed). The ratio penalty for 1 MB frames is
   typically -1 to -2% relative to single-threaded (from the table in the
   chapter), because matches cannot cross frame boundaries.

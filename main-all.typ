@@ -4,12 +4,12 @@
   title: "The Compression Book",
   subtitle: "A Complete History and Technical Treatise on Data Compression",
   author: "Alexandre Betry, M.D., M.Sc. C.S.",
-  date: "June 2026, Complete Edition (all five volumes)",
-  volume: "Complete Edition · Volumes I–V",
+  date: "June 2026 - Complete Edition (all seven tomes)",
+  volume: "Complete Edition - Tomes I-VII",
   tocdepth: 1,
 )
 
-#partdivider("I", [Foundations: The Language of Information])
+#partdivider("I", [Foundations: Mathematics, Logic, and Programming])
 #pagebreak(weak: true)
 #include "chapters/01-what-is-compression.typ"
 #pagebreak(weak: true)
@@ -44,6 +44,7 @@
 #include "chapters/16-a-python-primer-ii-data-structures-functions-a.typ"
 #pagebreak(weak: true)
 #include "chapters/17-a-python-primer-iii-bytes-bits-files-and-binar.typ"
+#partdivider("II", [Information Theory and Entropy Coding])
 #pagebreak(weak: true)
 #include "chapters/18-shannon-and-the-birth-of-information-theory.typ"
 #pagebreak(weak: true)
@@ -56,7 +57,6 @@
 #include "chapters/22-kolmogorov-complexity-and-algorithmic-informat.typ"
 #pagebreak(weak: true)
 #include "chapters/23-compression-prediction-learning.typ"
-#partdivider("II", [Classical Lossless Compression])
 #pagebreak(weak: true)
 #include "chapters/24-entropy-coding-i-shannon-fano-and-huffman.typ"
 #pagebreak(weak: true)
@@ -65,6 +65,7 @@
 #include "chapters/26-arithmetic-coding.typ"
 #pagebreak(weak: true)
 #include "chapters/27-asymmetric-numeral-systems-ans.typ"
+#partdivider("III", [Dictionary Coding and the Lossless Toolkit])
 #pagebreak(weak: true)
 #include "chapters/28-dictionary-coding-i-lz77-and-lz78.typ"
 #pagebreak(weak: true)
@@ -83,7 +84,7 @@
 #include "chapters/35-the-burrows-wheeler-transform-and-bzip2.typ"
 #pagebreak(weak: true)
 #include "chapters/36-benchmarks-corpora-and-the-hutter-prize.typ"
-#partdivider("III", [Lossy and Perceptual Media Compression])
+#partdivider("IV", [Transforms and Image Compression])
 #pagebreak(weak: true)
 #include "chapters/37-signals-sampling-and-the-frequency-domain.typ"
 #pagebreak(weak: true)
@@ -102,6 +103,7 @@
 #include "chapters/44-lossless-and-simple-image-formats-gif-png-qoi.typ"
 #pagebreak(weak: true)
 #include "chapters/45-the-modern-image-wars-webp-heic-avif-jpeg-xl.typ"
+#partdivider("V", [Audio and Video Compression])
 #pagebreak(weak: true)
 #include "chapters/46-psychoacoustics-compressing-for-the-ear.typ"
 #pagebreak(weak: true)
@@ -122,7 +124,7 @@
 #include "chapters/54-the-open-codecs-vp8-vp9-av1-av2.typ"
 #pagebreak(weak: true)
 #include "chapters/55-the-successor-frontier-and-encoding-at-scale.typ"
-#partdivider("IV", [The Neural and AI Era])
+#partdivider("VI", [The Neural and AI Era])
 #pagebreak(weak: true)
 #include "chapters/56-a-machine-learning-primer-for-compression.typ"
 #pagebreak(weak: true)
@@ -143,7 +145,7 @@
 #include "chapters/64-model-compression-ii-pruning-distillation-low-.typ"
 #pagebreak(weak: true)
 #include "chapters/65-kv-cache-context-and-embedding-compression.typ"
-#partdivider("V", [Specialized Domains, Systems, and Reflections])
+#partdivider("VII", [Specialized Domains, Systems, and the Future])
 #pagebreak(weak: true)
 #include "chapters/66-scientific-and-floating-point-compression.typ"
 #pagebreak(weak: true)

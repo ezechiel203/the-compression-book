@@ -239,7 +239,7 @@
 // solution renders NOTHING inline; it is collected into the volume's appendix.
 #let solution(ref, body) = [#metadata((ref: ref, body: body)) <booksol>]
 #let solutions-appendix() = context {
-  heading(level: 1)[Solutions to Exercises]
+  heading(level: 1, numbering: none)[Solutions to Exercises]
   for el in query(<booksol>) {
     block(above: 9pt, breakable: true)[
       #text(weight: "bold", fill: c-accent)[Solution #el.value.ref.] #h(3pt) #el.value.body
@@ -258,7 +258,7 @@
   v(1fr)
   align(center)[
     #set text(hyphenate: false)
-    #text(size: 13pt, fill: c-accent, weight: "bold", tracking: 3pt)[VOLUME #numeral]
+    #text(size: 13pt, fill: c-accent, weight: "bold", tracking: 3pt)[TOME #numeral]
     #v(10pt)
     #line(length: 30%, stroke: 1.2pt + c-accent)
     #v(14pt)
@@ -274,68 +274,85 @@
 #let book(title: "", subtitle: "", author: "", date: "", volume: "", tocdepth: 2, body) = {
   set document(title: if volume != "" { title + ": " + volume } else { title }, author: author)
   set page(
-    width: 176mm, height: 250mm,
-    margin: (inside: 24mm, outside: 18mm, top: 22mm, bottom: 22mm),
+    width: 178mm, height: 235mm,                          // O'Reilly trim (7 x 9.25 in)
+    margin: (inside: 24mm, outside: 18mm, top: 20mm, bottom: 18mm),
     numbering: "1",
-    number-align: center,
+    footer: none,                                          // page number lives in the running head
+    header: context {
+      let pg = counter(page).at(here()).first()
+      let chs = query(heading.where(level: 1).before(here()))
+      if chs.len() == 0 { return none }                   // front matter / before first chapter
+      if counter(page).at(chs.last().location()).first() == pg { return none }  // chapter-opener page
+      let secs = query(heading.where(level: 2).before(here()))
+      let cht = chs.last().body
+      let sct = if secs.len() > 0 { secs.last().body } else { cht }
+      set text(font: "Source Sans 3", size: 8pt, fill: c-ink.lighten(15%))
+      block(width: 100%, stroke: (bottom: 0.4pt + c-rule), inset: (bottom: 3pt), {
+        if calc.even(pg) {
+          grid(columns: (auto, 1fr), align: (left + bottom, right + bottom),
+               strong(counter(page).display()), upper(cht))
+        } else {
+          grid(columns: (1fr, auto), align: (left + bottom, right + bottom),
+               upper(sct), strong(counter(page).display()))
+        }
+      })
+    },
   )
-  set text(font: ("Libertinus Serif", "New Computer Modern", "DejaVu Serif"),
-           size: 10.5pt, lang: "en", fill: c-ink, hyphenate: true)
+  set text(font: ("EB Garamond", "Libertinus Serif"), size: 11.6pt, lang: "en",
+           fill: c-ink, hyphenate: true)
   set smartquote(enabled: false)   // plain straight quotes
-  set par(justify: true, leading: 0.62em, first-line-indent: 1.1em)
-  // headings stick to the following content (no subsection orphaned at page bottom)
-  // and never break a word across lines
-  show heading: set block(above: 1.2em, below: 0.7em, sticky: true)
-  show heading: set text(hyphenate: false)
-  show outline.entry: set text(hyphenate: false)   // no mid-word breaks in the contents
+  set par(justify: true, leading: 0.74em, spacing: 0.74em, first-line-indent: 1.2em)
+  // headings: humanist sans, stick to following content, never break a word
+  show heading: set text(font: "Source Sans 3", weight: "semibold", hyphenate: false)
+  show heading: set block(above: 1.4em, below: 0.72em, sticky: true)
+  show outline.entry: set text(hyphenate: false)
   set heading(numbering: "1.1")
   set figure(numbering: "1")
-  show figure: set block(breakable: false)   // a figure + caption never split across pages
-  show figure.caption: set text(size: 9pt, fill: c-ink.lighten(20%))
-  // tables: compact rows, smaller text that wraps, never clipping the page
+  show figure: set block(breakable: false)
+  show figure.caption: set text(font: "Source Sans 3", size: 8.5pt, fill: c-ink.lighten(20%))
   set table(inset: (x: 6pt, y: 3.5pt), stroke: 0.5pt + c-rule)
-  show table: set text(size: 9pt, hyphenate: true)
-  show table.cell: set par(justify: false, leading: 0.5em)
+  show table: set text(size: 9.2pt, hyphenate: true)
+  show table.cell: set par(justify: false, leading: 0.5em, first-line-indent: 0pt)
 
-  // raw / code styling
-  show raw.where(block: true): it => block(width: 100%, fill: rgb("#f6f8fa"),
-    inset: 9pt, radius: 4pt, breakable: true,
-    text(font: ("DejaVu Sans Mono","Liberation Mono"), size: 8.8pt, it))
-  show raw.where(block: false): it => box(fill: rgb("#f0f2f4"),
+  // code in Source Code Pro
+  show raw.where(block: true): it => block(width: 100%, fill: rgb("#f7f8fa"),
+    inset: 8pt, radius: 3pt, breakable: true, stroke: 0.5pt + rgb("#e6eaee"),
+    text(font: ("Source Code Pro", "DejaVu Sans Mono"), size: 9pt, it))
+  show raw.where(block: false): it => box(fill: rgb("#eef1f4"),
     inset: (x: 2.5pt, y: 0pt), outset: (y: 2.5pt), radius: 2pt,
-    text(font: ("DejaVu Sans Mono","Liberation Mono"), size: 9pt, it))
+    text(font: ("Source Code Pro", "DejaVu Sans Mono"), size: 9.4pt, it))
 
   show link: set text(fill: c-accent)
 
-  // chapter headings (level 1) are big; the page break is emitted by the volume
-  // file BEFORE each #include (not here) — doing it in the show rule breaks when a
-  // heading is measured inside a container (e.g. a CeTZ canvas).
+  // chapter opener (O'Reilly style): small kicker + big sans title + rule
   show heading.where(level: 1): it => {
-    block(above: 0pt, below: 18pt)[
-      #set text(size: 9pt, fill: c-accent, weight: "bold", tracking: 1.5pt)
-      #if it.numbering != none [#upper[Chapter] #counter(heading).display("1")]
-      #v(4pt)
-      #set text(size: 23pt, fill: c-ink, weight: "bold", tracking: 0pt)
-      #it.body
-      #v(3pt)
-      #line(length: 38%, stroke: 1.2pt + c-accent)
+    block(above: 0pt, below: 20pt)[
+      #set text(font: "Source Sans 3")
+      #if it.numbering != none [
+        #text(size: 11pt, fill: c-accent, weight: "bold", tracking: 2pt)[#upper[Chapter] #counter(heading).display("1")]
+        #v(6pt)
+      ]
+      #text(size: 25pt, fill: c-ink, weight: "bold")[#it.body]
+      #v(6pt)
+      #line(length: 100%, stroke: 0.8pt + c-accent.lighten(25%))
     ]
   }
-  show heading.where(level: 2): set text(size: 14pt, fill: c-accent)
-  show heading.where(level: 3): set text(size: 11.5pt, fill: c-accent2)
+  show heading.where(level: 2): set text(size: 15pt, fill: c-accent)
+  show heading.where(level: 3): set text(size: 12pt, fill: c-accent2)
 
   // ---- title page ----
-  set page(numbering: none)
+  set page(numbering: none, header: none)
+  set text(font: "Source Sans 3")
   v(1fr)
   align(center)[
     #set text(hyphenate: false)
-    #if volume != "" [#text(size: 13pt, fill: c-accent2, weight: "bold", tracking: 1pt)[#upper(volume)] #v(14pt)]
-    #text(size: 34pt, weight: "bold")[#title]
-    #v(8pt)
-    #block(width: 86%)[#text(size: 15pt, fill: c-accent)[#subtitle]]
-    #v(20pt)
-    #line(length: 45%, stroke: 1pt + c-rule)
-    #v(20pt)
+    #if volume != "" [#text(size: 13pt, fill: c-accent2, weight: "bold", tracking: 1.5pt)[#upper(volume)] #v(16pt)]
+    #text(size: 36pt, weight: "bold")[#title]
+    #v(10pt)
+    #block(width: 84%)[#text(size: 15pt, fill: c-accent, weight: "regular")[#subtitle]]
+    #v(22pt)
+    #line(length: 42%, stroke: 1pt + c-rule)
+    #v(22pt)
     #text(size: 13pt)[#author]
     #v(3pt)
     #text(size: 10.5pt, fill: c-ink.lighten(30%))[#date]
@@ -344,8 +361,9 @@
   pagebreak()
 
   // ---- table of contents ----
-  set page(numbering: "i")
+  set page(numbering: "i", header: none)
   counter(page).update(1)
+  show outline.entry.where(level: 1): set text(font: "Source Sans 3", weight: "semibold", size: 10.5pt)
   outline(title: [Contents], depth: tocdepth, indent: auto)
   pagebreak()
 

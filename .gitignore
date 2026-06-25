@@ -16,6 +16,7 @@ papers/
 
 # PDFs are distributed via GitHub Releases, not committed (keeps the repo lean)
 /TheCompressionBook-Vol*.pdf
+/TheCompressionBook-Tome*.pdf
 /TheCompressionBook-VolI.pdf
 /TheCompressionBook-Complete.pdf
 /sk.pdf

@@ -218,11 +218,11 @@ Code: `0 0 0 1 1 0 1`. (7 bits.)
     // Legend
     let ly = -5.2
     rect((0.8, ly - 0.15), (1.0, ly + 0.15), fill: rgb("#783f04").lighten(85%), stroke: 0.4pt + rgb("#783f04"))
-    content((1.05, ly), anchor: "west", text(size: 7.5pt)[= leading zeros (k of them)])
+    content((1.05, ly), anchor: "west", text(size: 7.5pt)[\= leading zeros (k of them)])
     rect((0.8, ly - 0.55), (1.0, ly - 0.25), fill: rgb("#0b6e4f").lighten(85%), stroke: 0.4pt + rgb("#0b6e4f"))
-    content((1.05, ly - 0.4), anchor: "west", text(size: 7.5pt)[= separator 1])
+    content((1.05, ly - 0.4), anchor: "west", text(size: 7.5pt)[\= separator 1])
     rect((0.8, ly - 0.95), (1.0, ly - 0.65), fill: rgb("#0b5394").lighten(85%), stroke: 0.4pt + rgb("#0b5394"))
-    content((1.05, ly - 0.8), anchor: "west", text(size: 7.5pt)[= payload bits])
+    content((1.05, ly - 0.8), anchor: "west", text(size: 7.5pt)[\= payload bits])
   })
 )
 

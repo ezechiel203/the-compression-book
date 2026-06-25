@@ -1031,8 +1031,7 @@ The paper reported the following compression results on Facebook's operational d
   Max value is 3, needing 2 bits. Selector 3 packs 30 integers of 2 bits each (only 8
   used, rest zero-padded). Payload bits for 8 values: `00 01 00 00 11 10 01 00` plus
   22 zero-padded pairs. The 4-bit selector 3 = `0011`. Full 64-bit word:
-  `0011` + `00 01 00 00 11 10 01 00` + 22×`00`
-  = 0x3010_E400_0000_0000 (approximately; exact value depends on bit ordering).
+  `0011` + `00 01 00 00 11 10 01 00` + 22×`00` = 0x3010_E400_0000_0000 (approximately; exact value depends on bit ordering).
   Decoder: read top 4 bits = 3 → 30 integers of 2 bits each; extract 8 values with
   a 2-bit mask: 0,1,0,0,3,2,1,0. Remaining 22 pairs are zero padding.
 ]

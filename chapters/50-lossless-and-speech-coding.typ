@@ -1007,8 +1007,7 @@ robustness. This is an engineering choice, not a failure of the math.
   value are $q+1+2$: (0+1+2)+(0+1+2)+(0+1+2)+(1+1+2)+(2+1+2)+(5+1+2) =
   3+3+3+4+5+8 = 26.
   k=3 gives: same zigzag; quotients $q = u >> 3$ are $[0,0,0,0,1,2]$; bits per value are
-  $q+1+3$: (0+1+3)+(0+1+3)+(0+1+3)+(0+1+3)+(1+1+3)+(2+1+3)
-  = 4+4+4+4+5+6 = 27.
+  $q+1+3$: (0+1+3)+(0+1+3)+(0+1+3)+(0+1+3)+(1+1+3)+(2+1+3) = 4+4+4+4+5+6 = 27.
   k=2 is better (26 < 27 bits) for this distribution of values.
 ]
 

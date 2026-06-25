@@ -98,7 +98,7 @@ $
 "(length 0)" + "  (length 1)" + dots + "(length n-1)"
 $
 $
-= 1 + 2 + 4 + dots + 2^(n-1) = 2^n - 1.
+$ 1 + 2 + 4 + dots + 2^(n-1) = 2^n - 1. $
 $
 
 So: we have $2^n$ different input files, and only $2^n - 1$ possible output

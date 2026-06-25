@@ -73,8 +73,7 @@ for mean squared error when the reconstruction is uncertain.
   MSE means less average pixel-level difference, which sounds good.
 
   The problem appears when the decoder is uncertain: suppose pixel $i$ could plausibly be 80 or
-  120 (on a 0–255 scale). If the decoder outputs 100 (the average), it incurs error $(100-80)^2
-  = 400$ or $(100-120)^2 = 400$, a middle-of-the-road penalty. If it guesses boldly and outputs
+  120 (on a 0–255 scale). If the decoder outputs 100 (the average), it incurs error $(100-80)^2 = 400$ or $(100-120)^2 = 400$, a middle-of-the-road penalty. If it guesses boldly and outputs
   80, it scores 0 on the 80-case but 1600 on the 120-case, which is much worse on average. So MSE
   *punishes boldness* and rewards bland averaging. Applied across millions of pixels, this produces
   the characteristic smooth blur.

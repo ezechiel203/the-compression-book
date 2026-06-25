@@ -5,8 +5,10 @@
   subtitle: "A Complete History and Technical Treatise on Data Compression",
   author: "Alexandre Betry, M.D., M.Sc. C.S.",
   date: "June 2026 Edition",
-  volume: "Volume IV - The Neural and AI Era",
+  volume: "Tome VI - The Neural and AI Era",
 )
+
+#counter(heading).update(55)   // continuous chapter numbers across the set
 
 #pagebreak(weak: true)
 #include "chapters/56-a-machine-learning-primer-for-compression.typ"

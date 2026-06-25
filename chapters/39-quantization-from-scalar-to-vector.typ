@@ -1101,8 +1101,7 @@ $Delta = 4$ improve the signal-to-noise ratio?][
   $Delta$ multiplies the noise by $4$ (equivalently, $+6$ dB).
 ]
 #solution("39.3")[
-  With flat density $1\/Delta$, $D = integral_(-Delta\/2)^(Delta\/2) e^2 (1\/Delta) thin d e
-  = (1\/Delta)[e^3\/3]_(-Delta\/2)^(Delta\/2) = (1\/Delta)(2 (Delta\/2)^3\/3) =
+  With flat density $1\/Delta$, $D = integral_(-Delta\/2)^(Delta\/2) e^2 (1\/Delta) thin d e = (1\/Delta)[e^3\/3]_(-Delta\/2)^(Delta\/2) = (1\/Delta)(2 (Delta\/2)^3\/3) =
   (1\/Delta)(Delta^3\/12) = Delta^2\/12$. Values: $4^2\/12 = 1.333$; $8^2\/12 = 5.333$;
   $16^2\/12 = 21.33$. Each step is $4times$ the previous, i.e. $10 log_10 4 approx 6.02$ dB
   louder noise per doubling of $Delta$.

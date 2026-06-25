@@ -387,8 +387,7 @@ in the growth of one integer.
   Start from state $x_0$ and encode symbols $s_1, s_2, dots, s_n$, producing states
   $x_1, x_2, dots, x_n$. Each step multiplies the state by approximately the
   reciprocal probability: $x_i approx x_(i-1) \/ p_(s_i)$. Chaining all $n$ steps,
-  $ x_n approx x_0 dot 1/(p_(s_1)) dot 1/(p_(s_2)) dots 1/(p_(s_n))
-        = x_0 / (product_(i=1)^n p_(s_i)). $
+  $ x_n approx x_0 dot 1/(p_(s_1)) dot 1/(p_(s_2)) dots 1/(p_(s_n)) = x_0 / (product_(i=1)^n p_(s_i)). $
   Take $log_2$ of both sides and use the "log of a product is a sum of logs" rule
   from Chapter 7:
   $ log_2 x_n approx log_2 x_0 + sum_(i=1)^n (-log_2 p_(s_i)). $
@@ -972,11 +971,9 @@ longer optional for anyone serious about compression.
   find the slot $x' mod 8$, identify the symbol, and invert. Show every step.
 ]
 #solution("27.3")[
-  *Encode `b`* ($F_b = 3, B_b = 4$): $x' = floor(8 slash 3) dot 8 + 4 + (8 mod 3)
-  = 2 dot 8 + 4 + 2 = 16 + 6 = 22$. *Decode from $x' = 22$:* slot $= 22 mod 8 = 6$.
+  *Encode `b`* ($F_b = 3, B_b = 4$): $x' = floor(8 slash 3) dot 8 + 4 + (8 mod 3) = 2 dot 8 + 4 + 2 = 16 + 6 = 22$. *Decode from $x' = 22$:* slot $= 22 mod 8 = 6$.
   Which block contains slot 6? `b` owns slots $4, 5, 6$ (since $B_b = 4, F_b = 3$),
-  so the symbol is `b`. ✓ Invert: $x = F_b dot floor(22 slash 8) + (22 mod 8) - B_b
-  = 3 dot 2 + 6 - 4 = 6 + 2 = 8$. We recovered the original state $x = 8$. ✓
+  so the symbol is `b`. ✓ Invert: $x = F_b dot floor(22 slash 8) + (22 mod 8) - B_b = 3 dot 2 + 6 - 4 = 6 + 2 = 8$. We recovered the original state $x = 8$. ✓
 ]
 
 #exercise("27.4", 2)[

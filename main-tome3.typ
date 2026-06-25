@@ -5,17 +5,11 @@
   subtitle: "A Complete History and Technical Treatise on Data Compression",
   author: "Alexandre Betry, M.D., M.Sc. C.S.",
   date: "June 2026 Edition",
-  volume: "Volume II - Classical Lossless Compression",
+  volume: "Tome III - Dictionary Coding and the Lossless Toolkit",
 )
 
-#pagebreak(weak: true)
-#include "chapters/24-entropy-coding-i-shannon-fano-and-huffman.typ"
-#pagebreak(weak: true)
-#include "chapters/25-integer-and-universal-codes.typ"
-#pagebreak(weak: true)
-#include "chapters/26-arithmetic-coding.typ"
-#pagebreak(weak: true)
-#include "chapters/27-asymmetric-numeral-systems-ans.typ"
+#counter(heading).update(27)   // continuous chapter numbers across the set
+
 #pagebreak(weak: true)
 #include "chapters/28-dictionary-coding-i-lz77-and-lz78.typ"
 #pagebreak(weak: true)

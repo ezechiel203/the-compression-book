@@ -966,8 +966,7 @@ first.
   $(5, 5, 5, 6)$: which coefficients become nonzero, and why?
 ]
 #solution("38.2")[
-  For $(5,5,5,5)$: only $X_0 != 0$. The DC basis is constant, so $X_0 = sqrt(1\/4)(5+5+5+5)
-  = (1\/2)(20) = 10$. Every higher basis wave ($k >= 1$) has equal positive and negative
+  For $(5,5,5,5)$: only $X_0 != 0$. The DC basis is constant, so $X_0 = sqrt(1\/4)(5+5+5+5) = (1\/2)(20) = 10$. Every higher basis wave ($k >= 1$) has equal positive and negative
   lobes, so summed against a constant it gives exactly $0$. Result: $(10, 0, 0, 0)$, pure
   DC, $100%$ energy compaction. For $(5,5,5,6)$: the single raised sample breaks the
   flatness, so *all* coefficients become nonzero, but $X_0$ stays large (the average rose

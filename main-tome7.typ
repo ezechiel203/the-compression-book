@@ -5,8 +5,10 @@
   subtitle: "A Complete History and Technical Treatise on Data Compression",
   author: "Alexandre Betry, M.D., M.Sc. C.S.",
   date: "June 2026 Edition",
-  volume: "Volume V - Specialized Domains, Systems, and Reflections",
+  volume: "Tome VII - Specialized Domains, Systems, and the Future",
 )
+
+#counter(heading).update(65)   // continuous chapter numbers across the set
 
 #pagebreak(weak: true)
 #include "chapters/66-scientific-and-floating-point-compression.typ"

@@ -75,7 +75,7 @@ def chapnav(n):
     out.append('</div>')
     return "".join(out)
 
-volfile = {volumes[i]: f"Vol{i+1}" for i in range(len(volumes))}
+volfile = {volumes[i]: f"Tome{i+1}" for i in range(len(volumes))}
 volnum = {volumes[i]: i+1 for i in range(len(volumes))}
 
 def assemble(c):
@@ -94,8 +94,8 @@ for c in chapters:
         assemble(c)
 
 # ---- copy PDFs (before computing page counts) ----
-for i in range(1, 6):
-    s = f"{ROOT}/TheCompressionBook-Vol{i}.pdf"
+for i in range(1, 8):
+    s = f"{ROOT}/TheCompressionBook-Tome{i}.pdf"
     if os.path.exists(s): shutil.copy(s, f"{SITE}/pdf/")
 
 # ---- landing page ----
@@ -111,12 +111,12 @@ cards = []
 for i, v in enumerate(volumes, 1):
     cs = [c for c in chapters if c["volume"] == v]
     first = cs[0]["number"]
-    pdf = f"{SITE}/pdf/TheCompressionBook-Vol{i}.pdf"
+    pdf = f"{SITE}/pdf/TheCompressionBook-Tome{i}.pdf"
     pp = pages_of(pdf)
     cards.append(f'<a class="volcard" href="ch{first:02d}.html"><div class="vn">{html.escape(vol_short[v])}</div>'
                  f'<div class="vt">{html.escape(vol_title[v])}</div>'
-                 f'<div class="vm">{len(cs)} chapters · {pp} pp · <a href="{PDF_BASE}/TheCompressionBook-Vol{i}.pdf">PDF</a></div></a>')
-total_pp = sum(pages_of(f"{SITE}/pdf/TheCompressionBook-Vol{i}.pdf") for i in range(1, 6))
+                 f'<div class="vm">{len(cs)} chapters · {pp} pp · <a href="{PDF_BASE}/TheCompressionBook-Tome{i}.pdf">PDF</a></div></a>')
+total_pp = sum(pages_of(f"{SITE}/pdf/TheCompressionBook-Tome{i}.pdf") for i in range(1, 8))
 index = f'''<!doctype html><html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The Compression Book</title><link rel="stylesheet" href="book.css"></head><body>

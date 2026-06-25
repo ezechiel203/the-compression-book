@@ -3,7 +3,7 @@
 **A Complete History and Technical Treatise on Data Compression** — June 2026 edition.
 
 A from-zero-to-expert book that assumes only **9th-grade mathematics** and builds everything
-else from scratch. Five volumes, **81 chapters, ~750,000 words, ~2,030 pages**, each volume ending with an alphabetical index.
+else from scratch. **Seven tomes, 81 chapters, ~750,000 words, ~2,360 pages**, typeset O'Reilly-style (Garamond body, 7x9.25" trim), each tome ending with an alphabetical index.
 
 ## What makes it different
 
@@ -19,13 +19,15 @@ else from scratch. Five volumes, **81 chapters, ~750,000 words, ~2,030 pages**, 
 
 ## The five volumes
 
-| Vol | Title | Chapters |
-|-----|-------|----------|
-| I   | Foundations: The Language of Information | 1–23 |
-| II  | Classical Lossless Compression | 24–36 |
-| III | Lossy and Perceptual Media Compression | 37–55 |
-| IV  | The Neural and AI Era | 56–65 |
-| V   | Specialized Domains, Systems, and Reflections | 66–81 |
+| Tome | Title | Chapters |
+|------|-------|----------|
+| I    | Foundations: Mathematics, Logic, and Programming | 1–17 |
+| II   | Information Theory and Entropy Coding | 18–27 |
+| III  | Dictionary Coding and the Lossless Toolkit | 28–36 |
+| IV   | Transforms and Image Compression | 37–45 |
+| V    | Audio and Video Compression | 46–55 |
+| VI   | The Neural and AI Era | 56–65 |
+| VII  | Specialized Domains, Systems, and the Future | 66–81 |
 
 ## Read it
 
